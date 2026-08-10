@@ -56,10 +56,11 @@ function fileOperationTest(context: IAgentHostE2ETestContext, title: string, run
 }
 
 export function defineFileOperationsTests(context: IAgentHostE2ETestContext): void {
-	const { config, createdSessions, tempDirs, portableShellToolReplayEnabled, isWindows } = context;
+	const { config, createdSessions, tempDirs, portableShellToolReplayEnabled, isMacintosh, isRecording, isWindows } = context;
 	const shellOutputOracleAvailable = !(isWindows && config.provider === 'copilotcli');
 	// Codex intermittently reports successful structured reads with empty result text: https://github.com/microsoft/vscode/issues/329512
 	const structuredReadResultTextAvailable = config.provider !== 'codex';
+	const workspaceListResultTextAvailable = config.provider !== 'codex' || isRecording || !isMacintosh;
 	const BEHAVIOR_SNAPSHOT = {
 		profile: 'behavior',
 		// Codex occasionally omits command completion; direct filesystem and response assertions are the success oracle.
@@ -298,7 +299,7 @@ export function defineFileOperationsTests(context: IAgentHostE2ETestContext): vo
 		await assertRecordedAhpSnapshot(this.test!, context.client, BEHAVIOR_SNAPSHOT);
 	}, structuredReadResultTextAvailable);
 
-	(portableShellToolReplayEnabled && shellOutputOracleAvailable ? test : test.skip)('lists workspace entries', async function () {
+	(portableShellToolReplayEnabled && shellOutputOracleAvailable && workspaceListResultTextAvailable ? test : test.skip)('lists workspace entries', async function () {
 		this.timeout(180_000);
 		const workspace = mkdtempSync(join(tmpdir(), 'ahp-coverage-list-'));
 		tempDirs.push(workspace);

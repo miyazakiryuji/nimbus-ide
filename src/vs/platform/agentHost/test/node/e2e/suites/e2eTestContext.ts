@@ -39,7 +39,9 @@ export interface IAgentHostE2ETestContext {
 	 */
 	readonly portableShellToolReplayEnabled: boolean;
 	readonly isLinux: boolean;
+	readonly isMacintosh: boolean;
 	readonly isWindows: boolean;
+	readonly isRecording: boolean;
 	readonly runRecordOnlyTests: boolean;
 	/** Whether explicitly requested known-issue reproductions should run against live recording. */
 	readonly runKnownIssueTests: boolean;

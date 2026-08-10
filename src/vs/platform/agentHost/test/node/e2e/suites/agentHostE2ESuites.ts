@@ -26,6 +26,7 @@ import { defineCopilotCoverageTests } from './copilotCoverageSuite.js';
 import type { AgentHostE2ETier, IAgentHostE2ETestContext } from './e2eTestContext.js';
 
 const isLinux = process.platform === 'linux';
+const isMacintosh = process.platform === 'darwin';
 
 const RECORD = process.env['AGENT_HOST_REPLAY_RECORD'] === '1' || process.env['AGENT_HOST_UPDATE_SNAPSHOTS'] === '1';
 const RUN_RECORD_ONLY_TESTS = process.env['AGENT_HOST_REPLAY_RECORD'] === '1';
@@ -54,7 +55,9 @@ function defineSuite(config: IAgentHostE2EProviderConfig, options: IDefineOption
 			tempDirs,
 			portableShellToolReplayEnabled,
 			isLinux,
+			isMacintosh,
 			isWindows,
+			isRecording: RECORD,
 			runRecordOnlyTests: RUN_RECORD_ONLY_TESTS,
 			runKnownIssueTests: RUN_KNOWN_ISSUE_TESTS,
 			registerNoModelTrafficTest: title => noModelTrafficTestTitles.add(title),

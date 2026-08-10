@@ -673,6 +673,27 @@ Use the affected provider command with `--grep "<exact test title>"` and tempora
   - [PR #329492](https://github.com/microsoft/vscode/actions/runs/31130785836/job/92718953820?pr=329492)
   - [PR #329517](https://github.com/microsoft/vscode/actions/runs/31148098482/job/92771783938?pr=329517)
 
+### Codex workspace-list result text on macOS
+
+When a user asks Codex to list files in the workspace, the shell command can succeed and the final response can name the files while the completed Agent Host Protocol tool call contains no result text. Clients that present completed tool calls therefore cannot show the command output even though Codex used it, which can make a successful operation appear incomplete.
+
+- Test: `lists workspace entries`.
+- Scope: Codex on macOS in deterministic replay.
+- Expected: the successful shell tool completion includes `first.txt second.md` in its result text.
+- Observed: the final response includes both filenames, but the successful tool completion has an empty `text` field.
+- Gate: the test is skipped only for Codex replay on macOS. Recording, Windows, and other providers remain enabled; Codex shell replay is already disabled on Linux.
+- Tracking issue: [#329512](https://github.com/microsoft/vscode/issues/329512).
+- Failing run: [PR #329716](https://github.com/microsoft/vscode/actions/runs/31413941743/job/93538354681?pr=329716).
+- Reproduce:
+
+  ```bash
+  ./scripts/test-integration.sh --run \
+    src/vs/platform/agentHost/test/node/e2e/providers/codexAgentHostE2E.integrationTest.ts \
+    --grep "lists workspace entries"
+  ```
+
+  Temporarily disable `workspaceListResultTextAvailable`.
+
 ### Claude subagent replay on Windows
 
 - Test: `reopening a session keeps sub-agent messages out of the parent transcript (replay path)`.
