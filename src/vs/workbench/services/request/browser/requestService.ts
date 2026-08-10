@@ -6,7 +6,7 @@
 import { IRequestOptions, IRequestContext } from '../../../../base/parts/request/common/request.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { MANAGED_SETTINGS_REQUEST_CALL_SITE } from '../../../../platform/defaultAccount/common/defaultAccount.js';
+import { MANAGED_SETTINGS_REQUEST_CALL_SITE } from '../../../../platform/defaultAccount/common/managedSettingsRequestIpc.js';
 import { RequestChannelClient } from '../../../../platform/request/common/requestIpc.js';
 import { IRemoteAgentService, IRemoteAgentConnection } from '../../remote/common/remoteAgentService.js';
 import { ServicesAccessor } from '../../../../editor/browser/editorExtensions.js';

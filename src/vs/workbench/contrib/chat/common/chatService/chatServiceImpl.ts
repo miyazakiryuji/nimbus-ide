@@ -320,6 +320,9 @@ export class ChatService extends Disposable implements IChatService {
 				this.rejectQueuedRequestsForManagedSettingsUpdate();
 			}
 		}));
+		if (this.defaultAccountService.managedSettingsCompatibilityError) {
+			this.rejectQueuedRequestsForManagedSettingsUpdate();
+		}
 	}
 
 	public get editingSessions() {
@@ -2240,6 +2243,10 @@ export class ChatService extends Disposable implements IChatService {
 	syncPendingRequestsFromRemote(sessionResource: URI, requests: readonly IRemotePendingRequest[]): void {
 		const model = this._sessionModels.get(sessionResource) as ChatModel | undefined;
 		if (!model) {
+			return;
+		}
+		if (this.defaultAccountService.managedSettingsCompatibilityError) {
+			this.rejectQueuedRequestsForManagedSettingsUpdate(model);
 			return;
 		}
 

@@ -63,6 +63,21 @@ suite('DefaultAccountProvider managed settings', () => {
 		});
 	});
 
+	test('User-Agent omits the runtime segment when the runtime version is unavailable', async () => {
+		const requestService = new TestRequestService(async () => jsonResponse({}));
+		const provider = await createProvider(requestService, false, null);
+
+		await provider['getManagedSettings'](sessions, undefined);
+
+		assert.deepStrictEqual({
+			userAgent: provider.managedSettingsUserAgent,
+			requestUserAgent: requestService.requests[0].headers?.['User-Agent'],
+		}, {
+			userAgent: 'vscode/1.132.0',
+			requestUserAgent: 'vscode/1.132.0',
+		});
+	});
+
 	test('404 clears cached server managed settings', async () => {
 		const requestService = new TestRequestService(async () => jsonResponse({}, 404));
 		const provider = await createProvider(requestService);
@@ -121,6 +136,30 @@ suite('DefaultAccountProvider managed settings', () => {
 		}, {
 			data: { managedSettings: undefined },
 			compatibilityError: { errorCode: 'copilot_runtime_update_required' },
+		});
+	});
+
+	test('browser-only client does not negotiate compatibility or block on 466', async () => {
+		const requestService = new TestRequestService(async () => jsonResponse({
+			error_code: 'copilot_runtime_update_required',
+		}, 466));
+		const provider = await createProvider(requestService, true);
+		const cachedPolicy = createCachedPolicy(false);
+
+		const result = await provider['getManagedSettings'](sessions, cachedPolicy);
+
+		assert.deepStrictEqual({
+			userAgent: provider.managedSettingsUserAgent,
+			requestUserAgent: requestService.requests[0].headers?.['User-Agent'],
+			status: provider.managedSettingsFetchStatus,
+			data: result.data,
+			compatibilityError: provider.managedSettingsCompatibilityError,
+		}, {
+			userAgent: null,
+			requestUserAgent: undefined,
+			status: 466,
+			data: cachedPolicy.policyData,
+			compatibilityError: null,
 		});
 	});
 
@@ -258,7 +297,7 @@ suite('DefaultAccountProvider managed settings', () => {
 		});
 	});
 
-	async function createProvider(requestService: TestRequestService): Promise<DefaultAccountProvider> {
+	async function createProvider(requestService: TestRequestService, webEnvironment = false, runtimeVersion: string | null = '1.0.80'): Promise<DefaultAccountProvider> {
 		const instantiationService = disposables.add(new TestInstantiationService());
 		instantiationService.stub(IConfigurationService, new TestConfigurationService());
 		instantiationService.stub(IAuthenticationService, {
@@ -286,7 +325,7 @@ suite('DefaultAccountProvider managed settings', () => {
 		instantiationService.stub(IProductService, {
 			...TestProductService,
 			version: '1.132.0',
-			copilotVersions: { runtime: '1.0.80', sdk: '1.0.9' },
+			copilotVersions: runtimeVersion ? { runtime: runtimeVersion, sdk: '1.0.9' } : undefined,
 		});
 		instantiationService.stub(IContextKeyService, new MockContextKeyService());
 		instantiationService.stub(IStorageService, disposables.add(new InMemoryStorageService()));
@@ -309,7 +348,7 @@ suite('DefaultAccountProvider managed settings', () => {
 			entitlementUrl: 'https://api.github.com/copilot_internal/user',
 			mcpRegistryDataUrl: '',
 			managedSettingsUrl: 'https://api.github.com/copilot_internal/managed_settings',
-		}));
+		}, webEnvironment));
 		await provider.refresh();
 		return provider;
 	}

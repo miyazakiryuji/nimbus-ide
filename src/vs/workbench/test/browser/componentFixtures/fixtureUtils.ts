@@ -590,6 +590,7 @@ export function createEditorServices(disposables: DisposableStore, options?: Cre
 		managedSettingsFetchStatus: null,
 		managedSettingsFetchedAt: null,
 		managedSettingsRawResponse: null,
+		managedSettingsUserAgent: null,
 		managedSettingsCompatibilityError: null,
 		onDidChangeManagedSettingsCompatibilityError: Event.None,
 		getDefaultAccount: async () => null,

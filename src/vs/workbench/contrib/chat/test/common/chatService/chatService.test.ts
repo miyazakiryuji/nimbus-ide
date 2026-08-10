@@ -1253,6 +1253,39 @@ suite('ChatService', () => {
 		]]);
 	});
 
+	test('cached compatibility block rejects Agent Host queues hydrated after ChatService construction', async () => {
+		const sessionType = 'agent-host-copilot';
+		const sessionResource = URI.from({ scheme: sessionType, path: '/session-restored-blocked' });
+		const mockSessionsService = new MockChatSessionsService();
+		mockSessionsService.setContributions([{
+			type: sessionType,
+			name: 'Agent Host',
+			displayName: 'Agent Host',
+			description: 'Agent Host',
+		}]);
+		testDisposables.add(mockSessionsService.registerChatSessionContentProvider(sessionType, {
+			provideChatSessionContent: resource => Promise.resolve({
+				sessionResource: resource,
+				history: [],
+				onWillDispose: Event.None,
+				dispose: () => { },
+			}),
+		}));
+		instantiationService.stub(IChatSessionsService, mockSessionsService);
+		defaultAccountService.setManagedSettingsCompatibilityError({ errorCode: 'copilot_runtime_update_required' });
+
+		const testService = createChatService();
+		const ref = await testService.acquireOrLoadSession(sessionResource, ChatAgentLocation.Chat, CancellationToken.None);
+		assert.ok(ref);
+		testDisposables.add(ref);
+
+		testService.syncPendingRequestsFromRemote(sessionResource, [
+			{ id: 'remote-queued', kind: ChatRequestQueueKind.Queued, message: 'Do not run' },
+		]);
+
+		assert.deepStrictEqual(ref.object.getPendingRequests(), []);
+	});
+
 	test('managed settings update leaves the active request running and rejects queued requests', async () => {
 		const firstStarted = new DeferredPromise<void>();
 		const finishFirst = new DeferredPromise<void>();

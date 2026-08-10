@@ -917,7 +917,7 @@ class PolicyDiagnosticsAction extends Action2 {
 			const fetchStatus = defaultAccountService.managedSettingsFetchStatus;
 			const fetchedAt = defaultAccountService.managedSettingsFetchedAt;
 			content += `| Last fetch | ${fetchStatus === null ? '*never*' : `\`${fetchStatus}\`${fetchedAt ? ` at ${new Date(fetchedAt).toLocaleString()}` : ''}`} |\n`;
-			content += `| User-Agent | \`vscode/${productService.version} copilot-runtime/${productService.copilotVersions?.runtime ?? 'unknown'}\` |\n`;
+			content += `| User-Agent | ${defaultAccountService.managedSettingsUserAgent ? `\`${defaultAccountService.managedSettingsUserAgent}\`` : '*not sent (browser-only client)*'} |\n`;
 			const compatibilityError = defaultAccountService.managedSettingsCompatibilityError;
 			content += `| Compatibility | ${compatibilityError ? `\`update required\` (${compatibilityError.clientVersion ?? '?'} → ${compatibilityError.minimumClientVersion ?? '?'})` : '`compatible or not evaluated`'} |\n`;
 			content += `| Contributes winning keys | ${channelContributes('server') ? 'yes' : 'no'} |\n\n`;

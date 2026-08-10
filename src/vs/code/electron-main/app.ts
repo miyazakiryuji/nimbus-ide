@@ -111,9 +111,8 @@ import { INativeManagedSettingsService, IFileManagedSettingsService } from '../.
 import { NativeManagedSettingsChannel } from '../../platform/policy/common/nativeManagedSettingsIpc.js';
 import { FileManagedSettingsChannel } from '../../platform/policy/common/fileManagedSettingsIpc.js';
 import { PolicyChannel } from '../../platform/policy/common/policyIpc.js';
-import { MANAGED_SETTINGS_REQUEST_CALL_SITE, MANAGED_SETTINGS_REQUEST_CHANNEL } from '../../platform/defaultAccount/common/defaultAccount.js';
 import { IRequestService } from '../../platform/request/common/request.js';
-import { RequestChannel } from '../../platform/request/common/requestIpc.js';
+import { buildManagedSettingsUserAgent, ManagedSettingsRequestChannel, MANAGED_SETTINGS_REQUEST_CHANNEL } from '../../platform/defaultAccount/common/managedSettingsRequestIpc.js';
 import { IUserDataProfilesMainService } from '../../platform/userDataProfile/electron-main/userDataProfile.js';
 import { IExtensionsProfileScannerService } from '../../platform/extensionManagement/common/extensionsProfileScannerService.js';
 import { IExtensionsScannerService } from '../../platform/extensionManagement/common/extensionsScannerService.js';
@@ -1334,7 +1333,11 @@ export class CodeApplication extends Disposable {
 
 		mainProcessElectronServer.registerChannel(
 			MANAGED_SETTINGS_REQUEST_CHANNEL,
-			new RequestChannel(accessor.get(IRequestService), options => options.callSite === MANAGED_SETTINGS_REQUEST_CALL_SITE)
+			new ManagedSettingsRequestChannel(
+				accessor.get(IRequestService),
+				() => this.getManagedSettingsUrls(),
+				buildManagedSettingsUserAgent(this.productService.version, this.productService.copilotVersions?.runtime),
+			)
 		);
 
 		const nativeManagedSettingsChannel = disposables.add(new NativeManagedSettingsChannel(accessor.get(INativeManagedSettingsService)));
@@ -1466,6 +1469,22 @@ export class CodeApplication extends Disposable {
 		// Utility Process Worker
 		const utilityProcessWorkerChannel = ProxyChannel.fromService(accessor.get(IUtilityProcessWorkerMainService), disposables);
 		mainProcessElectronServer.registerChannel(ipcUtilityProcessWorkerChannelName, utilityProcessWorkerChannel);
+	}
+
+	private getManagedSettingsUrls(): string[] {
+		const defaultChatAgent = this.productService.defaultChatAgent;
+		const urls = [defaultChatAgent.managedSettingsUrl];
+		const provider = this.configurationService.getValue<string>(`${defaultChatAgent.completionsAdvancedSetting}.authProvider`);
+		const enterpriseUrlValue = this.configurationService.getValue(defaultChatAgent.providerUriSetting);
+		if (provider === defaultChatAgent.provider.enterprise.id && typeof enterpriseUrlValue === 'string') {
+			try {
+				const enterpriseUrl = new URL(enterpriseUrlValue);
+				urls.push(`${enterpriseUrl.protocol}//api.${enterpriseUrl.hostname}${enterpriseUrl.port ? ':' + enterpriseUrl.port : ''}/copilot_internal/managed_settings`);
+			} catch (error) {
+				this.logService.error('[managed settings] Invalid enterprise URL', error);
+			}
+		}
+		return urls;
 	}
 
 	private async openFirstWindow(accessor: ServicesAccessor, initialProtocolUrls: IInitialProtocolUrls | undefined): Promise<ICodeWindow[]> {
