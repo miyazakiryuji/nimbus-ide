@@ -25,6 +25,7 @@ import { newWriteableStream, ReadableStreamEvents } from '../../../base/common/s
 import { ThemeIcon } from '../../../base/common/themables.js';
 import { assertReturnsDefined, upcast } from '../../../base/common/types.js';
 import { URI } from '../../../base/common/uri.js';
+import { mock } from '../../../base/test/common/mock.js';
 import { ICodeEditor } from '../../../editor/browser/editorBrowser.js';
 import { ICodeEditorService } from '../../../editor/browser/services/codeEditorService.js';
 import { Position as EditorPosition, IPosition } from '../../../editor/common/core/position.js';
@@ -191,7 +192,6 @@ import { IWorkingCopyEditorService, WorkingCopyEditorService } from '../../servi
 import { IWorkingCopyFileService, WorkingCopyFileService } from '../../services/workingCopy/common/workingCopyFileService.js';
 import { IWorkingCopyService, WorkingCopyService } from '../../services/workingCopy/common/workingCopyService.js';
 import { TestChatEntitlementService, TestContextService, TestExtensionService, TestFileService, TestHistoryService, TestLifecycleService, TestLoggerService, TestMarkerService, TestProductService, TestStorageService, TestTextResourcePropertiesService, TestWorkspaceTrustManagementService, TestWorkspaceTrustRequestService } from '../common/workbenchTestServices.js';
-import { DefaultAccountService } from '../../services/accounts/browser/defaultAccount.js';
 
 // Backcompat export
 export { TestFileService, TestLifecycleService };
@@ -381,9 +381,18 @@ export function workbenchInstantiationService(
 	instantiationService.stub(IChatEntitlementService, new TestChatEntitlementService());
 	instantiationService.stub(IMarkdownRendererService, instantiationService.createInstance(MarkdownRendererService));
 	instantiationService.stub(IChatWidgetService, instantiationService.createInstance(TestChatWidgetService));
-	instantiationService.stub(IDefaultAccountService, DefaultAccountService);
+	instantiationService.stub(IDefaultAccountService, new NullDefaultAccountService());
 
 	return instantiationService;
+}
+
+class NullDefaultAccountService extends mock<IDefaultAccountService>() {
+	override readonly managedSettingsCompatibilityError = null;
+	override readonly onDidChangeManagedSettingsCompatibilityError = Event.None;
+
+	override async getDefaultAccount() {
+		return null;
+	}
 }
 
 export class TestServiceAccessor {
