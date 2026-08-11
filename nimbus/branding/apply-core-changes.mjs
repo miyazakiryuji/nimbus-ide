@@ -1,14 +1,16 @@
 /**
- * コアに残る製品名の直書きを、product.nameLong 参照に置き換える。
+ * upstream のソース（`src/**` と `build/**`）に対する Nimbus のパッチを当てる。
  *
- * 「Visual Studio Code」「VS Code」の名称はフォークでは使えない（商標）。
- * ただし直書きを "Nimbus" に置換すると upstream 追従のたびに衝突するため、
- * **製品名を差し込む形（localize のプレースホルダ）に一般化**しておく。こうすると
- * upstream にとっても意味の通る変更になり、名前を変えても追随が要らない。
+ * 方針:
+ * - 商標にあたる直書き（"Visual Studio Code" / "VS Code"）は、"Nimbus" への置換ではなく
+ *   **製品名を差し込む形に一般化**する。upstream にとっても意味の通る変更になり、名前を変えても追随が要らない
+ * - 既定値の変更は、なぜそうしないと壊れるのかを必ずコメントに残す（すべて実機で確認したもの）
+ * - 変更箇所は `// --- Start Nimbus ---` / `// --- End Nimbus ---` で囲み、
+ *   `nimbus/docs/core-changes.md` の台帳と対応させる
  *
  * 対象文字列が見つからない場合は失敗させる（upstream 側の変更に気づけるように）。
  *
- *   node nimbus/branding/apply-product-strings.mjs
+ *   node nimbus/branding/apply-core-changes.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -16,6 +18,8 @@ import { join } from 'node:path'
 const WELCOME_CONTENT = 'src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts'
 const WELCOME_PAGE = 'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts'
 const CHAT_CONTRIB = 'src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts'
+const EXTENSIONS_CONTRIB = 'src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts'
+const GULPFILE_VSCODE = 'build/gulpfile.vscode.ts'
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
@@ -67,6 +71,32 @@ const replacements = [
 			// Nimbus は Claude の操縦席であり Copilot を同梱しない。既定で内蔵 AI 機能を隠す。
 			default: true,
 			// --- End Nimbus ---`
+  ],
+  // 拡張の署名検証は Microsoft の署名を前提にしており、Open VSX の拡張には署名が無い。
+  // さらに OSS ビルドには検証ライブラリが同梱されないため、検証は「実行されなかった（undefined）」となり、
+  // 実測でインストールが "Signature verification was not executed." で必ず失敗する。
+  // トレードオフ: 署名による改ざん検知が効かなくなる。代わりに product.json の
+  // extensionsGallery.controlUrl（Eclipse が管理する悪意ある拡張の停止リスト）を有効にしてある。
+  [
+    EXTENSIONS_CONTRIB,
+    `			[VerifyExtensionSignatureConfigKey]: {
+				type: 'boolean',
+				description: localize('extensions.verifySignature', "When enabled, extensions are verified to be signed before getting installed."),
+				default: true,`,
+    `			[VerifyExtensionSignatureConfigKey]: {
+				type: 'boolean',
+				description: localize('extensions.verifySignature', "When enabled, extensions are verified to be signed before getting installed."),
+				// --- Start Nimbus ---
+				// Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドには検証機構も無いため既定で無効。
+				default: false,
+				// --- End Nimbus ---`
+  ],
+  // macOS 版のターミナル用コマンドが `bin/code` 固定になっている。
+  // 本物の VS Code と衝突するうえ、Nimbus の中で `code` と名乗るのは誤解を招くため製品名から決める。
+  [
+    GULPFILE_VSCODE,
+    `				.pipe(rename('bin/code'));`,
+    `				.pipe(rename(\`bin/\${product.applicationName}\`));`
   ],
   // Welcome 画面の副題は VS Code のキャッチコピーそのものなので、Nimbus のものに差し替える
   [

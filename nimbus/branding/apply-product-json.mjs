@@ -61,13 +61,24 @@ for (const [key, value] of Object.entries(identity)) {
 // 「Onboarding requires a default chat agent product configuration.」で例外になり、
 // 画面が真っ白のまま起動しない。Copilot の導線を外すのは、Nimbus 自身のチャット
 // エージェント（F2 で作る組み込み拡張）を既定として差す形で行う。
+// キーごと消してよいものと、「空にする」べきものがある。
+// 実測: `builtInExtensionsEnabledWithAutoUpdates` を削除すると拡張の管理が
+// `productService.builtInExtensionsEnabledWithAutoUpdates is not iterable` で落ちる（CLI の --install-extension が失敗）。
+// 中身だけ空にすれば同じ効果で壊れない。
+const emptyValues = {
+  trustedExtensionAuthAccess: {}, // GitHub.copilot-chat への無確認の認証アクセス許可を外す
+  builtInExtensionsEnabledWithAutoUpdates: [] // copilot-chat の自動更新枠を外す（配列であること自体は必要）
+}
 const removeKeys = [
-  'trustedExtensionAuthAccess', // GitHub.copilot-chat への無確認の認証アクセス許可
-  'builtInExtensionsEnabledWithAutoUpdates', // 同上（copilot-chat の自動更新枠）
   'voiceWsUrl', // Microsoft の音声サービス
   'webviewContentExternalBaseUrlTemplate' // upstream のコミットハッシュを含む MS CDN。自前ビルドでは無効
 ]
 const removed = []
+for (const [key, value] of Object.entries(emptyValues)) {
+  // upstream に無くても必ず置く。キーが存在しないと参照側が落ちるため（下のコメント参照）
+  product[key] = value
+  removed.push(`${key}（空に）`)
+}
 for (const key of removeKeys) {
   if (key in product) {
     delete product[key]

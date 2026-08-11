@@ -234,5 +234,7 @@
 	},
 	"linkProtectionTrustedDomains": [
 		"https://open-vsx.org"
-	]
+	],
+	"trustedExtensionAuthAccess": {},
+	"builtInExtensionsEnabledWithAutoUpdates": []
 }

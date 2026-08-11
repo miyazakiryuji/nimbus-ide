@@ -15,12 +15,14 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | --- | --- | --- | --- | --- |
 | 1 | `product.json` | 身元（名称・データフォルダ・バンドル ID・URL スキーム・Windows ID）を Nimbus に | 商標を使わず、VS Code と設定・インストールが衝突しないようにするため | `nimbus/branding/apply-product-json.mjs` |
 | 2 | `product.json` | `extensionsGallery` を Open VSX に追加、`linkProtectionTrustedDomains` に open-vsx.org | Microsoft Marketplace は利用規約でフォークに開放されていない | 同上 |
-| 3 | `product.json` | `trustedExtensionAuthAccess` / `builtInExtensionsEnabledWithAutoUpdates` / `voiceWsUrl` / `webviewContentExternalBaseUrlTemplate` を削除 | Copilot への無確認の認証許可と、Microsoft のサービス・CDN への既定接続を持ち込まないため | 同上 |
+| 3 | `product.json` | `trustedExtensionAuthAccess` / `builtInExtensionsEnabledWithAutoUpdates` を**空にする**、`voiceWsUrl` / `webviewContentExternalBaseUrlTemplate` を削除 | Copilot への無確認の認証許可と、Microsoft のサービス・CDN への既定接続を持ち込まないため | 同上 |
 | 4 | `product.json` | `builtInExtensions[].sha256` を Open VSX 版に | 同じバージョンでもビルド主体が違いハッシュが一致しない（実測で起動が失敗） | `nimbus/branding/sync-builtin-extension-hashes.mjs` |
 | 5 | `resources/darwin/code.icns`, `resources/linux/code.png` | Nimbus のアイコンに差し替え | VS Code のアイコンは商標。独自意匠（雨雲＋光背）を生成して使う | `nimbus/branding/make-icon.mjs` |
-| 6 | `src/.../welcomeGettingStarted/common/gettingStartedContent.ts` | ウォークスルーの "VS Code" を `product.nameLong` の差し込みに | 商標。かつ製品名を変数化しておけば追従で壊れにくい | `nimbus/branding/apply-product-strings.mjs` |
+| 6 | `src/.../welcomeGettingStarted/common/gettingStartedContent.ts` | ウォークスルーの "VS Code" を `product.nameLong` の差し込みに | 商標。かつ製品名を変数化しておけば追従で壊れにくい | `nimbus/branding/apply-core-changes.mjs` |
 | 7 | `src/.../welcomeGettingStarted/browser/gettingStarted.ts` | 副題を "Editing evolved" → "A cockpit for your agents" | VS Code のキャッチコピーをそのまま使わない | 同上 |
 | 8 | `src/.../chat/browser/chat.shared.contribution.ts` | `chat.disableAIFeatures` の既定値を `false` → `true` | 初回起動の「Sign in to use GitHub Copilot」モーダルを止める（下記の実測を参照） | 同上 |
+| 9 | `src/.../extensions/browser/extensions.contribution.ts` | `extensions.verifySignature` の既定値を `true` → `false` | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無いため、既定のままだと**拡張を 1 つもインストールできない**（実測） | 同上 |
+| 10 | `build/gulpfile.vscode.ts` | macOS のターミナル用コマンドを `bin/code` 固定から `bin/${product.applicationName}` に | 本物の VS Code の `code` と衝突する。製品名から決めるのが素直（upstream にも通る一般化） | 同上 |
 
 ## 実測でわかったこと（重要）
 
@@ -32,3 +34,9 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
   起動シーケンスより前に効かせたい既定値は、コアの既定値そのものを変える必要がある
 - Copilot はビルド基盤にも配線されている（`build/lib/copilot.ts`・`gulpfile.vscode.ts` の ripgrep シム・
   `@github/copilot*` の依存）。**同梱物としての完全除去は別タスク**とし、まずは UI 露出を止めた
+- **`builtInExtensionsEnabledWithAutoUpdates` はキーごと消してはいけない。** 消すと拡張管理が
+  `productService.builtInExtensionsEnabledWithAutoUpdates is not iterable` で落ち、**拡張を一切インストールできなくなる**。
+  空配列にすれば同じ効果で壊れない。「不要なキーは消す」ではなく「**空にする**」が正解の場合がある
+- **署名検証を無効化するトレードオフ**: Open VSX を使う以上ここは避けられない（VSCodium など他のフォークも同様）。
+  代わりに `extensionsGallery.controlUrl`（Eclipse が管理する悪意ある拡張の停止リスト）を有効にしてある。
+  拡張を推奨・同梱する際は、Open VSX 上の名前squatting に注意し、実在と発行者を都度確認する

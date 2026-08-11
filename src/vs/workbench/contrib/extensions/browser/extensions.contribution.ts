@@ -331,7 +331,10 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 			[VerifyExtensionSignatureConfigKey]: {
 				type: 'boolean',
 				description: localize('extensions.verifySignature', "When enabled, extensions are verified to be signed before getting installed."),
-				default: true,
+				// --- Start Nimbus ---
+				// Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドには検証機構も無いため既定で無効。
+				default: false,
+				// --- End Nimbus ---
 				scope: ConfigurationScope.APPLICATION,
 				included: isNative
 			},
