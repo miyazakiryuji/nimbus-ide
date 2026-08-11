@@ -675,6 +675,11 @@ function prepareCopilotRipgrepShimTask(platform: string, arch: string, destinati
 	};
 }
 
+// --- Start Nimbus ---
+// Nimbus は Copilot を同梱しない。戻したいときはこのフラグを true にする。
+const NIMBUS_BUNDLE_COPILOT = false;
+// --- End Nimbus ---
+
 const buildRoot = path.dirname(root);
 
 const BUILD_TARGETS = [
@@ -700,7 +705,9 @@ BUILD_TARGETS.forEach(buildTarget => {
 			compileNativeExtensionsBuildTask,
 			util.rimraf(path.join(buildRoot, destinationFolderName)),
 			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
-			prepareCopilotRipgrepShimTask(platform, arch, destinationFolderName)
+			// --- Start Nimbus ---
+			...(NIMBUS_BUNDLE_COPILOT ? [prepareCopilotRipgrepShimTask(platform, arch, destinationFolderName)] : [])
+			// --- End Nimbus ---
 		];
 
 		if (platform === 'win32') {
@@ -726,7 +733,9 @@ BUILD_TARGETS.forEach(buildTarget => {
 				copyCodiconsTask,
 				cleanExtensionsBuildTask,
 				compileNonNativeExtensionsBuildTask,
-				compileCopilotExtensionBuildTask,
+				// --- Start Nimbus ---
+				...(NIMBUS_BUNDLE_COPILOT ? [compileCopilotExtensionBuildTask] : []),
+				// --- End Nimbus ---
 				compileExtensionMediaBuildTask,
 				writeISODate('out-build'),
 				esbuildBundleTask,
@@ -737,7 +746,9 @@ BUILD_TARGETS.forEach(buildTarget => {
 				minified ? compileBuildWithManglingTask : compileBuildWithoutManglingTask,
 				cleanExtensionsBuildTask,
 				compileNonNativeExtensionsBuildTask,
-				compileCopilotExtensionBuildTask,
+				// --- Start Nimbus ---
+				...(NIMBUS_BUNDLE_COPILOT ? [compileCopilotExtensionBuildTask] : []),
+				// --- End Nimbus ---
 				compileExtensionMediaBuildTask,
 				minified ? minifyVSCodeTask : bundleVSCodeTask,
 				vscodeTaskCI

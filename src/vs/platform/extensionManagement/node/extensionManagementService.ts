@@ -340,7 +340,10 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 	private async downloadExtension(extension: IGalleryExtension, operation: InstallOperation, verifySignature: boolean, clientTargetPlatform?: TargetPlatform): Promise<{ readonly location: URI; readonly verificationStatus: ExtensionSignatureVerificationCode | undefined }> {
 		if (verifySignature) {
 			const value = this.configurationService.getValue(VerifyExtensionSignatureConfigKey);
-			verifySignature = isBoolean(value) ? value : true;
+			// --- Start Nimbus ---
+			// Open VSX の拡張は Microsoft 署名を持たないため、設定が無い経路（CLI 等）でも既定を false にする。
+			verifySignature = isBoolean(value) ? value : false;
+			// --- End Nimbus ---
 		}
 		const { location, verificationStatus } = await this.extensionsDownloader.download(extension, operation, verifySignature, clientTargetPlatform);
 		const shouldRequireSignature = shouldRequireRepositorySignatureFor(extension.private, await this.extensionGalleryManifestService.getExtensionGalleryManifest());

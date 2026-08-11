@@ -42,6 +42,8 @@
 | D-1 | `extensionsGallery` が Open VSX を向く                     | OK   | product.json                    |
 | D-2 | 組み込み拡張のダウンロードが成功する                       | OK   | js-debug ほか 3 件取得          |
 | D-3 | ハッシュ不一致を検知して**中身の身元を検証してから**固定した | OK   | VSIX 内 package.json で publisher/name/version 一致を確認 |
+| D-4 | **実際に拡張をインストールできる**（Open VSX から）        | 要再確認 | パッケージ版 CLI `--install-extension redhat.vscode-yaml` |
+| D-5 | 悪意ある拡張の停止リスト（`controlUrl`）を設定している      | OK   | product.json                    |
 
 ## 5. パッケージ版（`npm run gulp vscode-darwin-arm64`）
 
@@ -74,3 +76,6 @@
 | ワークベンチが真っ白・例外 | `defaultChatAgent` を削除した | 削除は不可。`chat.disableAIFeatures` の既定値で止める |
 | 拡張の `configurationDefaults` で抑止できない | 起動時のオンボーディング判定に間に合わない | コアの既定値そのものを変更（Nimbus マーカーで囲む） |
 | スクリーンショットに**別ウィンドウの個人的な内容が写り込んだ** | 対象アプリが前面でないまま座標指定で撮影した | 前面化 → frontmost が Nimbus であることを確認 → ウィンドウ矩形のみ撮影、の順を必須手順にした（写り込んだ画像は破棄） |
+| 拡張が 1 つもインストールできない（`not iterable`） | `builtInExtensionsEnabledWithAutoUpdates` をキーごと削除した | 削除ではなく空配列に。「消す」ではなく「空にする」が正解の場合がある |
+| 拡張のインストールが `Signature verification was not executed.` で失敗 | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無い | `extensions.verifySignature` の既定値を false に（停止リスト `controlUrl` を代替の防御として維持） |
+| パッケージビルドが `Copilot SDK directory not found` で失敗 | 出力先 `VSCode-darwin-arm64/` を手で書き換えた状態で再ビルドした（差分パッケージが不整合に） | 出力先を消してクリーンビルド。Copilot の ripgrep シムがビルド成功の前提になっている点も要注意 |

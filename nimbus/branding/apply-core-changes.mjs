@@ -20,6 +20,7 @@ const WELCOME_PAGE = 'src/vs/workbench/contrib/welcomeGettingStarted/browser/get
 const CHAT_CONTRIB = 'src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts'
 const EXTENSIONS_CONTRIB = 'src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts'
 const GULPFILE_VSCODE = 'build/gulpfile.vscode.ts'
+const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extensionManagementService.ts'
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
@@ -90,6 +91,79 @@ const replacements = [
 				// Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドには検証機構も無いため既定で無効。
 				default: false,
 				// --- End Nimbus ---`
+  ],
+  // 設定 `extensions.verifySignature` の既定値を false にするだけでは足りない。
+  // 設定の登録はワークベンチ側の contribution なので、CLI（`--install-extension`）や
+  // ワークベンチ外の経路では値が undefined になり、ここのフォールバックで true に戻る（実測で
+  // CLI からのインストールが失敗し続けた）。分岐そのものを Nimbus の既定に合わせる。
+  [
+    EXTENSION_MANAGEMENT,
+    `		if (verifySignature) {
+			const value = this.configurationService.getValue(VerifyExtensionSignatureConfigKey);
+			verifySignature = isBoolean(value) ? value : true;
+		}`,
+    `		if (verifySignature) {
+			const value = this.configurationService.getValue(VerifyExtensionSignatureConfigKey);
+			// --- Start Nimbus ---
+			// Open VSX の拡張は Microsoft 署名を持たないため、設定が無い経路（CLI 等）でも既定を false にする。
+			verifySignature = isBoolean(value) ? value : false;
+			// --- End Nimbus ---
+		}`
+  ],
+  // Copilot を同梱しない。Nimbus は Claude の操縦席であり、UI を隠したうえで中身だけ配るのは筋が悪い。
+  // 実害もある: `prepareBuiltInCopilotRipgrepShim` が Copilot SDK ディレクトリを要求し、
+  // 見つからないと**パッケージビルド全体が失敗する**（実測）。
+  // フラグ 1 つで戻せる形にしておく（upstream の関数はそのまま残す）。
+  [
+    GULPFILE_VSCODE,
+    `const buildRoot = path.dirname(root);`,
+    `// --- Start Nimbus ---
+// Nimbus は Copilot を同梱しない。戻したいときはこのフラグを true にする。
+const NIMBUS_BUNDLE_COPILOT = false;
+// --- End Nimbus ---
+
+const buildRoot = path.dirname(root);`
+  ],
+  [
+    GULPFILE_VSCODE,
+    `			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
+			prepareCopilotRipgrepShimTask(platform, arch, destinationFolderName)
+		];`,
+    `			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
+			// --- Start Nimbus ---
+			...(NIMBUS_BUNDLE_COPILOT ? [prepareCopilotRipgrepShimTask(platform, arch, destinationFolderName)] : [])
+			// --- End Nimbus ---
+		];`
+  ],
+  [
+    GULPFILE_VSCODE,
+    `				cleanExtensionsBuildTask,
+				compileNonNativeExtensionsBuildTask,
+				compileCopilotExtensionBuildTask,
+				compileExtensionMediaBuildTask,
+				writeISODate('out-build'),`,
+    `				cleanExtensionsBuildTask,
+				compileNonNativeExtensionsBuildTask,
+				// --- Start Nimbus ---
+				...(NIMBUS_BUNDLE_COPILOT ? [compileCopilotExtensionBuildTask] : []),
+				// --- End Nimbus ---
+				compileExtensionMediaBuildTask,
+				writeISODate('out-build'),`
+  ],
+  [
+    GULPFILE_VSCODE,
+    `				cleanExtensionsBuildTask,
+				compileNonNativeExtensionsBuildTask,
+				compileCopilotExtensionBuildTask,
+				compileExtensionMediaBuildTask,
+				minified ? minifyVSCodeTask : bundleVSCodeTask,`,
+    `				cleanExtensionsBuildTask,
+				compileNonNativeExtensionsBuildTask,
+				// --- Start Nimbus ---
+				...(NIMBUS_BUNDLE_COPILOT ? [compileCopilotExtensionBuildTask] : []),
+				// --- End Nimbus ---
+				compileExtensionMediaBuildTask,
+				minified ? minifyVSCodeTask : bundleVSCodeTask,`
   ],
   // macOS 版のターミナル用コマンドが `bin/code` 固定になっている。
   // 本物の VS Code と衝突するうえ、Nimbus の中で `code` と名乗るのは誤解を招くため製品名から決める。

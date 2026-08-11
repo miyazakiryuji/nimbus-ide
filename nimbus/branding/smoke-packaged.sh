@@ -36,11 +36,13 @@ printf '  %-20s %s\n' "CLI" "$(ls "$APP/Contents/Resources/app/bin/" 2>/dev/null
 
 echo "== 2. Open VSX から拡張をインストール =="
 CLI="$APP/Contents/Resources/app/bin/$(ls "$APP/Contents/Resources/app/bin/" | head -1)"
-"$CLI" --user-data-dir "$UD" --extensions-dir "$EXT" --install-extension redhat.vscode-yaml 2>&1 | grep -viE "DeprecationWarning|trace-deprecation" | tail -3
-echo "  インストール済み: $("$CLI" --user-data-dir "$UD" --extensions-dir "$EXT" --list-extensions 2>/dev/null | tr '\n' ' ')"
+env -u NODE_OPTIONS "$CLI" --user-data-dir "$UD" --extensions-dir "$EXT" --install-extension redhat.vscode-yaml 2>&1 | grep -viE "DeprecationWarning|trace-deprecation" | tail -3
+echo "  インストール済み: $(env -u NODE_OPTIONS "$CLI" --user-data-dir "$UD" --extensions-dir "$EXT" --list-extensions 2>/dev/null | tr '\n' ' ')"
 
 echo "== 3. 起動して webview を確認 =="
-( nohup "$APP/Contents/MacOS/Nimbus" --user-data-dir "$UD" --extensions-dir "$EXT" "$WS/webview-check.md" > /tmp/nimbus-smoke-run.log 2>&1 & )
+# NODE_OPTIONS は必ず外す。Electron の main は無視するが、拡張ホストなどの子 Node プロセスは
+# 引き継いでしまい、`--require` が解決できないと**ウィンドウが出ないまま無言で止まる**（実測）。
+( nohup env -u NODE_OPTIONS "$APP/Contents/MacOS/Nimbus" --user-data-dir "$UD" --extensions-dir "$EXT" "$WS/webview-check.md" > /tmp/nimbus-smoke-run.log 2>&1 & )
 n=0
 until pgrep -f "VSCode-darwin-arm64/Nimbus.app/Contents/MacOS/Nimbus" >/dev/null 2>&1 || [ $n -ge 60 ]; do sleep 1; n=$((n+1)); done
 sleep 14
@@ -52,7 +54,8 @@ BOUNDS=$(osascript -e 'tell application "System Events" to tell process "Nimbus"
 if [ "$FRONT" = "Nimbus" ] && [ -n "$BOUNDS" ]; then
   screencapture -x -R"$BOUNDS" "$OUT/packaged.png" && echo "  撮影: $OUT/packaged.png"
 else
-  echo "  撮影を中止（frontmost=$FRONT）— 別ウィンドウが写る危険があるため"
+  # 変数展開は必ず ${} で囲む。macOS の bash 3.2 は直後の全角文字を変数名の一部と解釈する
+  echo "  撮影を中止（frontmost=${FRONT}）— 別ウィンドウが写る危険があるため"
 fi
 
 echo "== 4. 例外の有無 =="
