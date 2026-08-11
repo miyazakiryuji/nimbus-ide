@@ -358,6 +358,16 @@ export class RemoteAgentHostService extends Disposable implements IRemoteAgentHo
 				this._onDidChangeConnections.fire();
 			}
 		}));
+		store.add(protocolClient.onDidChangeConnectionState(state => {
+			if (this._entries.get(address) !== connEntry || state !== AgentHostClientState.Incompatible) {
+				return;
+			}
+			connEntry.connected = false;
+			connEntry.status = protocolClient.connectionError
+				? RemoteAgentHostConnectionStatus.fromConnectError(protocolClient.connectionError, [PROTOCOL_VERSION]) ?? RemoteAgentHostConnectionStatus.disconnected
+				: RemoteAgentHostConnectionStatus.disconnected;
+			this._onDidChangeConnections.fire();
+		}));
 
 		const config = getEntryTypeConfig(entry.connection.type);
 		if (config.store !== 'runtime') {
@@ -568,8 +578,15 @@ export class RemoteAgentHostService extends Disposable implements IRemoteAgentHo
 					entry.status = RemoteAgentHostConnectionStatus.connected;
 					this._onDidChangeConnections.fire();
 					break;
-				case AgentHostClientState.Connecting:
 				case AgentHostClientState.Incompatible:
+					entry.connected = false;
+					entry.status = client.connectionError
+						? RemoteAgentHostConnectionStatus.fromConnectError(client.connectionError, [PROTOCOL_VERSION]) ?? RemoteAgentHostConnectionStatus.disconnected
+						: RemoteAgentHostConnectionStatus.disconnected;
+					this._reconnectAttempts.delete(address);
+					this._onDidChangeConnections.fire();
+					break;
+				case AgentHostClientState.Connecting:
 				case AgentHostClientState.Closed:
 					break;
 			}

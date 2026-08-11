@@ -14,6 +14,7 @@ import { TestInstantiationService } from '../../../instantiation/test/common/ins
 import { IConfigurationService, type IConfigurationChangeEvent } from '../../../configuration/common/configuration.js';
 import { IInstantiationService } from '../../../instantiation/common/instantiation.js';
 import { ILabelService, type ResourceLabelFormatter } from '../../../label/common/label.js';
+import { AgentHostClientState } from '../../browser/remoteAgentHostProtocolClient.js';
 import { AgentsWindowRemoteAgentHostService, RemoteAgentHostService } from '../../browser/remoteAgentHostServiceImpl.js';
 import { getEntryTypeConfig, parseRemoteAgentHostInput, RemoteAgentHostConnectionStatus, RemoteAgentHostEntryType, RemoteAgentHostsEnabledSettingId, RemoteAgentHostsSettingId, type IRawRemoteAgentHostEntry, type IRemoteAgentHostEntry } from '../../common/remoteAgentHostService.js';
 import { AGENT_HOST_SCHEME, agentHostAuthority } from '../../common/agentHostUri.js';
@@ -22,6 +23,8 @@ import { InMemoryStorageService, IStorageService, StorageScope, StorageTarget } 
 import type { StorageValue } from '../../../../base/parts/storage/common/storage.js';
 import type { Implementation } from '../../common/state/protocol/common/commands.js';
 import { agentsWindowAgentHostClientInfo, editorWindowAgentHostClientInfo } from '../../common/agentHostClientInfo.js';
+import { AhpErrorCodes } from '../../common/state/protocol/errors.js';
+import { ProtocolError } from '../../common/state/sessionProtocol.js';
 
 // ---- Mock transport ---------------------------------------------------------
 
@@ -42,11 +45,14 @@ class MockProtocolClient extends Disposable {
 
 	private readonly _onDidClose = this._register(new Emitter<void>());
 	readonly onDidClose = this._onDidClose.event;
+	private readonly _onDidChangeConnectionState = this._register(new Emitter<AgentHostClientState>());
+	readonly onDidChangeConnectionState = this._onDidChangeConnectionState.event;
 	readonly onDidAction = Event.None;
 	readonly onDidNotification = Event.None;
-	readonly onDidChangeConnectionState = Event.None;
 	readonly onDidReceiveOtlpLogs = Event.None;
-	readonly connectionState = 'connecting' as const;
+	private _connectionState = AgentHostClientState.Connecting;
+	get connectionState(): AgentHostClientState { return this._connectionState; }
+	connectionError: ProtocolError | undefined;
 	readonly initializeResult = undefined;
 	readonly telemetryCapabilities = undefined;
 	readonly triggerVscodeUpgradeCalls: string[] = [];
@@ -68,6 +74,12 @@ class MockProtocolClient extends Disposable {
 
 	fireClose(): void {
 		this._onDidClose.fire();
+	}
+
+	fireConnectionState(state: AgentHostClientState, error?: ProtocolError): void {
+		this._connectionState = state;
+		this.connectionError = error;
+		this._onDidChangeConnectionState.fire(state);
 	}
 }
 
@@ -302,6 +314,25 @@ suite('RemoteAgentHostService', () => {
 		const connection = service.getConnection('ws://host1:8080');
 		assert.ok(connection);
 		assert.strictEqual(connection.clientId, createdClients[0].clientId);
+	});
+
+	test('incompatible transition removes a previously connected client without reconnecting', async () => {
+		configService.setEntries([{ name: 'Host 1', connection: { type: RemoteAgentHostEntryType.WebSocket, address: 'ws://host1:8080' } }]);
+		createdClients[0].connectDeferred.complete();
+		await waitForConnected();
+
+		const changed = Event.toPromise(service.onDidChangeConnections);
+		createdClients[0].fireConnectionState(
+			AgentHostClientState.Incompatible,
+			new ProtocolError(AhpErrorCodes.UnsupportedProtocolVersion, 'Managed permissions require a newer host.', { supportedVersions: ['>=0.8.0'] }),
+		);
+		await changed;
+
+		assert.strictEqual(service.getConnection('ws://host1:8080'), undefined);
+		const entry = service.connections.find(connection => connection.address === 'host1:8080');
+		assert.ok(entry);
+		assert.strictEqual(entry.status.kind, 'incompatible');
+		assert.strictEqual(createdClients.length, 1);
 	});
 
 	test('removes connection when setting entry is removed', async () => {
@@ -592,19 +623,23 @@ suite('RemoteAgentHostService', () => {
 					},
 				},
 				mockClient as unknown as Parameters<typeof service.addManagedConnection>[1],
-				undefined,
-				RemoteAgentHostConnectionStatus.incompatible('Unsupported protocol version', ['0.3.0'], ['^0.2.0'], '_vscodeUpgrade'),
 			);
+			const changed = Event.toPromise(service.onDidChangeConnections);
+			mockClient.fireConnectionState(
+				AgentHostClientState.Incompatible,
+				new ProtocolError(AhpErrorCodes.UnsupportedProtocolVersion, 'Managed permissions are unsupported.'),
+			);
+			await changed;
 
 			const upgradeResult = await service.triggerServerUpgrade('ssh:remote.example', '_vscodeUpgrade');
 
 			assert.deepStrictEqual({
-				status: service.connections[0].status,
+				status: service.connections[0].status.kind,
 				connectedConnection: service.getConnection('ssh:remote.example'),
 				upgradeCalls: mockClient.triggerVscodeUpgradeCalls,
 				upgradeResult,
 			}, {
-				status: RemoteAgentHostConnectionStatus.incompatible('Unsupported protocol version', ['0.3.0'], ['^0.2.0'], '_vscodeUpgrade'),
+				status: 'incompatible',
 				connectedConnection: undefined,
 				upgradeCalls: ['_vscodeUpgrade'],
 				upgradeResult: { ok: true, upgradeStarted: true },
