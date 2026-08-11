@@ -49,3 +49,6 @@ dist
 .github/prompts/*.local.prompt.md
 .agents/skills/.local/
 .github/skills/.local/
+
+# Nimbus: 生成したブランディング素材の中間物
+nimbus/branding/out/
