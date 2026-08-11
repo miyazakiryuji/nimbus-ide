@@ -2098,7 +2098,10 @@ configurationRegistry.registerConfiguration({
 		[ChatAIDisabledSettingId]: {
 			type: 'boolean',
 			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features provided by GitHub Copilot, including chat and inline suggestions."),
-			default: false,
+			// --- Start Nimbus ---
+			// Nimbus は Claude の操縦席であり Copilot を同梱しない。既定で内蔵 AI 機能を隠す。
+			default: true,
+			// --- End Nimbus ---
 			scope: ConfigurationScope.WINDOW,
 		},
 		[ChatConfiguration.TitleBarSignInEnabled]: {

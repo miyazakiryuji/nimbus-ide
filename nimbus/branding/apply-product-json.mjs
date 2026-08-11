@@ -54,6 +54,27 @@ for (const [key, value] of Object.entries(identity)) {
   product[key] = value
 }
 
+// Nimbus は Claude の操縦席であり、Copilot は同梱しない。
+// また Microsoft のサービスに向いた既定値（音声・Webview CDN）は、フォークが勝手に叩くべきではないので外す。
+//
+// 注意: `defaultChatAgent` は消してはいけない。実測で、削除するとワークベンチが
+// 「Onboarding requires a default chat agent product configuration.」で例外になり、
+// 画面が真っ白のまま起動しない。Copilot の導線を外すのは、Nimbus 自身のチャット
+// エージェント（F2 で作る組み込み拡張）を既定として差す形で行う。
+const removeKeys = [
+  'trustedExtensionAuthAccess', // GitHub.copilot-chat への無確認の認証アクセス許可
+  'builtInExtensionsEnabledWithAutoUpdates', // 同上（copilot-chat の自動更新枠）
+  'voiceWsUrl', // Microsoft の音声サービス
+  'webviewContentExternalBaseUrlTemplate' // upstream のコミットハッシュを含む MS CDN。自前ビルドでは無効
+]
+const removed = []
+for (const key of removeKeys) {
+  if (key in product) {
+    delete product[key]
+    removed.push(key)
+  }
+}
+
 // 拡張機能ギャラリー: Microsoft Marketplace は利用規約でフォークに開放されていないため Open VSX を使う。
 // controlUrl は Eclipse が管理する「無効化すべき拡張」のリスト。
 product.extensionsGallery = {
@@ -70,3 +91,4 @@ product.linkProtectionTrustedDomains = [
 
 writeFileSync(file, JSON.stringify(product, null, '\t') + '\n')
 console.log('product.json を Nimbus 用に更新しました')
+if (removed.length > 0) console.log(`削除したキー: ${removed.join(', ')}`)
