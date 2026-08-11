@@ -42,7 +42,7 @@
 | D-1 | `extensionsGallery` が Open VSX を向く                     | OK   | product.json                    |
 | D-2 | 組み込み拡張のダウンロードが成功する                       | OK   | js-debug ほか 3 件取得          |
 | D-3 | ハッシュ不一致を検知して**中身の身元を検証してから**固定した | OK   | VSIX 内 package.json で publisher/name/version 一致を確認 |
-| D-4 | **実際に拡張をインストールできる**（Open VSX から）        | 要再確認 | パッケージ版 CLI `--install-extension redhat.vscode-yaml` |
+| D-4 | **実際に拡張をインストールできる**（Open VSX から）        | OK   | パッケージ版 CLI で `redhat.vscode-yaml v1.24.0` の導入に成功 |
 | D-5 | 悪意ある拡張の停止リスト（`controlUrl`）を設定している      | OK   | product.json                    |
 
 ## 5. パッケージ版（`npm run gulp vscode-darwin-arm64`）
@@ -60,7 +60,14 @@
 | E-7 | `extensions/nimbus` が同梱される            | OK   | app 内 extensions を確認          |
 | E-8 | 実起動し、Copilot モーダルが出ない          | OK   | 素の user-data-dir で起動・目視    |
 | E-9 | Welcome が「Nimbus / A cockpit for your agents」 | OK | スクリーンショット目視         |
-| E-10 | **Copilot 拡張が同梱されたまま**（要対応）  | NG   | app 内に `extensions/copilot` あり（1.4GB の一因） |
+| E-10 | Copilot を同梱しない                        | OK   | app 内に `extensions/copilot` が無い。サイズ 1.4G → **1.0G** |
+| E-11 | CLI コマンド名が `nimbus`（`code` と衝突しない） | OK | `Nimbus.app/Contents/Resources/app/bin/nimbus` |
+| E-12 | 起動時に例外が出ない                        | OK   | 起動ログ 0 件                     |
+
+> E-9 のスクリーンショット確認は **Copilot 除去前のビルド**で実施済み。除去後の再撮影は、
+> macOS の補助アクセス（Accessibility）権限が osascript に無く、ウィンドウ矩形を取得できないため未実施。
+> **前面化できないまま画面全体を撮ると他ウィンドウの内容が写るため、撮影は行わない**（過去に実際に写り込んだ）。
+> 権限を許可すれば `nimbus/branding/smoke-packaged.sh` がそのまま撮影まで行う。
 
 ## 6. 未了・次のタスク
 
