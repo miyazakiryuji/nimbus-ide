@@ -260,6 +260,9 @@ import '../workbench/contrib/files/browser/files.contribution.js';
 // Scratch Files
 import './contrib/scratchFiles/browser/scratchFiles.contribution.js';
 
+// Macros
+import './contrib/macros/browser/macros.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
