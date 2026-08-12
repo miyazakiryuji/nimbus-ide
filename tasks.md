@@ -244,7 +244,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       OSS 代替（open-remote-ssh 等）の調査が前提 [P2]
 - [ ] T-085 マシンをまたぐセッション同期 — 会社の Mac で始めて、家の PC で続きを見る [P3]
 - [ ] T-086 iPad から様子見 — 閲覧と承認だけの軽量クライアント（T-054 と同じ線）[P3]
-- [ ] T-205 環境差分の検出 — 「自分の環境では動くのに」問題の切り分け [P2]
 
 ### 🧠 メンタル・集中
 
@@ -478,6 +477,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-205 環境の食い違い（パッチ違いで騒がない・どちらに合わせるかは言わない）— 2026-08-13 / 仕様 [env-check](nimbus/docs/specs/env-check.md)
 - [x] T-203 / T-204 使い始めの設定（言語別プリセット・入るものを見せてから書く）— 2026-08-13 / 仕様 [setup](nimbus/docs/specs/setup.md)
 - [x] T-061 Mermaid の図を確かめる（落ちる書き方を先に・描画はプレビューに任せる）— 2026-08-13 / 仕様 [mermaid](nimbus/docs/specs/mermaid.md)
 - [x] T-206 セッションをたどり直す（間隔つき・止まっていた場所を先に）— 2026-08-13 / 仕様 [replay](nimbus/docs/specs/replay.md)
