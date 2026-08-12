@@ -23,6 +23,8 @@ export interface TestResultNode {
 	/** 0 起点の行 */
 	line?: number;
 	failed: boolean;
+	/** 通った（T-108 の比較に使う。「実行されなかった」と区別する） */
+	passed?: boolean;
 	messages: string[];
 	children: readonly TestResultNode[];
 }
@@ -34,6 +36,8 @@ export interface TestFailure {
 	/** 0 起点の行 */
 	line?: number;
 	messages: string[];
+	/** 前回は通っていたのに落ちた（T-108）。直近の変更が壊した可能性が高い */
+	regression?: boolean;
 }
 
 /** 1 件あたりのメッセージの上限。スタックトレースは長くなりがち */
@@ -51,8 +55,9 @@ function hasFailureInside(node: TestResultNode): boolean {
  */
 export function collectFailures(
 	nodes: readonly TestResultNode[],
-	limit: number
-): { failures: TestFailure[]; total: number } {
+	limit: number,
+	previouslyPassed?: ReadonlySet<string>
+): { failures: TestFailure[]; total: number; regressions: number } {
 	const all: TestFailure[] = [];
 
 	const walk = (children: readonly TestResultNode[], prefix: string): void => {
@@ -77,11 +82,53 @@ export function collectFailures(
 	};
 	walk(nodes, '');
 
-	return { failures: all.slice(0, Math.max(1, limit)), total: all.length };
+	// 回帰（前回まで通っていたもの）は上限で切られてはいけないので、先に並べる（T-108）
+	const marked = previouslyPassed ? markRegressions(all, previouslyPassed) : all;
+	const sorted = [...marked].sort((a, b) => Number(b.regression ?? false) - Number(a.regression ?? false));
+	return {
+		failures: sorted.slice(0, Math.max(1, limit)),
+		total: sorted.length,
+		regressions: sorted.filter((failure) => failure.regression).length
+	};
 }
 
-/** 通知に出す一行 */
-export function testFailureHeadline(total: number): string {
+/**
+ * 通った末端テストの名前（T-108 の基準になる）。
+ * スイートは数えない — 中の 1 つが落ちればスイートも落ちるので、比較の単位にならない。
+ */
+export function collectPassed(nodes: readonly TestResultNode[]): Set<string> {
+	const passed = new Set<string>();
+	const walk = (children: readonly TestResultNode[], prefix: string): void => {
+		for (const node of children) {
+			const name = prefix ? `${prefix} › ${node.label}` : node.label;
+			if (node.passed && node.children.length === 0) {
+				passed.add(name);
+			}
+			walk(node.children, name);
+		}
+	};
+	walk(nodes, '');
+	return passed;
+}
+
+/**
+ * 前回通っていたのに落ちたものに印を付ける（T-108 回帰の検知）。
+ * 「もともと落ちている」と「いま壊した」はまったく別の話なので、混ぜない。
+ */
+export function markRegressions(
+	failures: readonly TestFailure[],
+	previouslyPassed: ReadonlySet<string>
+): TestFailure[] {
+	return failures.map((failure) =>
+		previouslyPassed.has(failure.name) ? { ...failure, regression: true } : failure
+	);
+}
+
+/** 通知に出す一行。回帰があるならそれを先に言う */
+export function testFailureHeadline(total: number, regressions = 0): string {
+	if (regressions > 0) {
+		return `前回通っていたテストが ${regressions} 件落ちました（失敗は全部で ${total} 件）`;
+	}
 	return `テストが ${total} 件失敗しました`;
 }
 
@@ -93,9 +140,15 @@ export function buildTestFailurePrompt(failures: readonly TestFailure[], total: 
 	if (failures.length === 0) {
 		return '';
 	}
-	const parts = [`テストが ${total} 件失敗しました。`, ''];
+	const regressions = failures.filter((failure) => failure.regression).length;
+	const parts = [
+		regressions > 0
+			? `テストが ${total} 件失敗しました。うち ${regressions} 件は**前回まで通っていた**もので、直近の変更が壊した可能性が高いです。`
+			: `テストが ${total} 件失敗しました。`,
+		''
+	];
 	failures.forEach((failure, index) => {
-		parts.push(`${index + 1}. ${failure.name}`);
+		parts.push(`${index + 1}. ${failure.name}${failure.regression ? '（前回は通っていました）' : ''}`);
 		if (failure.file) {
 			// 行は 1 起点に戻す（エディタの表示と Read ツールの出力に合わせる）
 			parts.push(`   ${failure.file}${failure.line === undefined ? '' : `:${failure.line + 1}`}`);

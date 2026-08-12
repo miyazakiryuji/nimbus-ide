@@ -10,7 +10,9 @@ import { test } from 'node:test';
 import {
 	buildTestFailurePrompt,
 	collectFailures,
+	collectPassed,
 	isFailedState,
+	markRegressions,
 	testFailureHeadline,
 	type TestResultNode
 } from '../core/testFailures';
@@ -44,6 +46,7 @@ test('Failed と Errored だけを失敗として扱う', () => {
 test('失敗した末端だけを、親から辿った名前で集める', () => {
 	assert.deepStrictEqual(collectFailures(tree, 10), {
 		total: 2,
+		regressions: 0,
 		failures: [
 			{
 				name: 'session › イベントを正規化する',
@@ -86,7 +89,11 @@ test('投入する文は名前・場所・メッセージを含み、行は 1 �
 
 test('失敗が無ければ何も組み立てない', () => {
 	assert.strictEqual(buildTestFailurePrompt([], 0), '');
-	assert.deepStrictEqual(collectFailures([node({ label: '通る方' })], 10), { failures: [], total: 0 });
+	assert.deepStrictEqual(collectFailures([node({ label: '通る方' })], 10), {
+		failures: [],
+		total: 0,
+		regressions: 0
+	});
 });
 
 test('長いメッセージは切り、1 件あたり 3 つまでにする', () => {
@@ -100,6 +107,41 @@ test('長いメッセージは切り、1 件あたり 3 つまでにする', () 
 	);
 });
 
-test('見出しは件数を言う', () => {
+test('見出しは件数を言う。回帰があるならそれを先に言う', () => {
 	assert.strictEqual(testFailureHeadline(3), 'テストが 3 件失敗しました');
+	assert.strictEqual(
+		testFailureHeadline(3, 1),
+		'前回通っていたテストが 1 件落ちました（失敗は全部で 3 件）'
+	);
+});
+
+test('通った末端だけを次回の基準にする（スイートは数えない）', () => {
+	const passedTree: TestResultNode[] = [
+		node({
+			label: 'suite',
+			passed: true,
+			children: [node({ label: '通る方', passed: true }), node({ label: '落ちた方', failed: true })]
+		})
+	];
+	assert.deepStrictEqual([...collectPassed(passedTree)], ['suite › 通る方']);
+});
+
+test('前回通っていた失敗には印が付き、上限で切られる前に先頭へ回る（T-108）', () => {
+	const previously = new Set(['単独で落ちたもの']);
+	assert.deepStrictEqual(
+		markRegressions([{ name: '単独で落ちたもの', messages: [] }], previously),
+		[{ name: '単独で落ちたもの', messages: [], regression: true }]
+	);
+	const result = collectFailures(tree, 1, previously);
+	assert.deepStrictEqual(
+		[result.failures[0].name, result.failures[0].regression, result.regressions],
+		['単独で落ちたもの', true, 1]
+	);
+});
+
+test('回帰があると、投入する文の冒頭でそれを言う', () => {
+	const { failures, total } = collectFailures(tree, 10, new Set(['単独で落ちたもの']));
+	const prompt = buildTestFailurePrompt(failures, total);
+	assert.ok(prompt.startsWith('テストが 2 件失敗しました。うち 1 件は**前回まで通っていた**もので'), prompt);
+	assert.ok(prompt.includes('1. 単独で落ちたもの（前回は通っていました）'), prompt);
 });

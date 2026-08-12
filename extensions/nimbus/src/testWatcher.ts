@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import {
 	buildTestFailurePrompt,
 	collectFailures,
+	collectPassed,
 	isFailedState,
 	testFailureHeadline,
 	type TestResultNode
@@ -34,6 +35,8 @@ export class TestWatcher implements vscode.Disposable {
 	/** 同じ実行を二度知らせない */
 	private lastReportedAt = 0;
 	private lastPrompt?: string;
+	/** 前回の実行で通っていたテスト（T-108 回帰の検知の基準） */
+	private previouslyPassed = new Set<string>();
 
 	constructor(private readonly deps: TestWatcherDeps) {
 		const tests = vscode.tests as Partial<typeof vscode.tests>;
@@ -86,12 +89,15 @@ export class TestWatcher implements vscode.Disposable {
 		this.lastReportedAt = latest.completedAt;
 
 		const limit = config.get<number>('tests.maxFailures') ?? DEFAULT_MAX_FAILURES;
-		const { failures, total } = collectFailures(latest.results.map(toNode), limit);
+		const nodes = latest.results.map(toNode);
+		const { failures, total, regressions } = collectFailures(nodes, limit, this.previouslyPassed);
+		// 次の実行と比べるための基準を更新する。落ちたぶんは基準から外れる
+		this.previouslyPassed = collectPassed(nodes);
 		if (total === 0) {
 			return;
 		}
 		this.lastPrompt = buildTestFailurePrompt(failures, total);
-		const headline = testFailureHeadline(total);
+		const headline = testFailureHeadline(total, regressions);
 		this.deps.log(`[test] ${headline}`);
 
 		const SEND = 'セッションに投入';
@@ -117,6 +123,8 @@ function toNode(snapshot: vscode.TestResultSnapshot): TestResultNode {
 		file: snapshot.uri?.fsPath,
 		line: snapshot.range?.start.line,
 		failed: states.some((state) => isFailedState(state.state)),
+		// Passed = 3。「実行されなかった」と「通った」を混ぜない（T-108）
+		passed: states.length > 0 && states.every((state) => state.state === 3),
 		messages: states.flatMap((state) =>
 			state.messages.map((message) =>
 				typeof message.message === 'string' ? message.message : message.message.value
