@@ -8,10 +8,13 @@
  * 文脈ビュー（`contextView.ts`）が「いま何が渡っているか」を**見せる**場所なのに対し、
  * ここは**直す**場所。編集そのものは標準のエディタに任せる（自前のエディタは作らない）。
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
+import { join } from 'path';
 import * as vscode from 'vscode';
 import { findClaudeMdFiles } from './core/claudeMd';
+import { findRepeatedInstructions, type RepeatedInstruction } from './core/repeatedInstructions';
+import { parseTranscript, projectDirName } from './core/transcripts';
 import {
 	appendSection,
 	classifyOrigin,
@@ -26,6 +29,8 @@ import {
 } from './core/claudeMdDoc';
 
 type ClaudeMdNode =
+	| { kind: 'repeated'; items: RepeatedInstruction[] }
+	| { kind: 'repeatedItem'; item: RepeatedInstruction }
 	| { kind: 'file'; path: string; label: string; origin: ClaudeMdOrigin }
 	| { kind: 'section'; path: string; section: ClaudeMdSection }
 	| { kind: 'findings'; path: string; findings: ClaudeMdFinding[] }
@@ -37,6 +42,15 @@ const ORIGIN_LABEL: Record<ClaudeMdOrigin, string> = {
 	ancestor: '親フォルダから継承',
 	user: 'ユーザー設定'
 };
+
+/** 直近いくつの記録を見るか（昔の癖ではなく「いま毎回言っていること」を出したい） */
+const RECENT_TRANSCRIPTS = 20;
+
+/** 1 ファイルの読み込み上限。ツリーを開くだけで固まらせないための保険 */
+const MAX_TRANSCRIPT_BYTES = 8 * 1024 * 1024;
+
+/** 提案の上限。多すぎると読まれない */
+const MAX_SUGGESTIONS = 5;
 
 const ORIGIN_ICON: Record<ClaudeMdOrigin, string> = {
 	project: 'root-folder',
@@ -76,7 +90,65 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 		}));
 	}
 
+	/**
+	 * 過去のセッションで何度も言っている指示を拾う（T-041）。
+	 *
+	 * 読むのは Claude Code 本体が残している記録（`~/.claude/projects/…`）。
+	 * 直近のものだけ見る — 昔の癖ではなく「いま毎回言っていること」を出したいのと、
+	 * ツリーを開くたびに全履歴を舐めると重いため。
+	 */
+	private repeatedInstructions(): RepeatedInstruction[] {
+		const root = this.workspaceRoot();
+		if (!root) {
+			return [];
+		}
+		const dir = join(this.home, '.claude', 'projects', projectDirName(root));
+		let files: { path: string; mtime: number }[];
+		try {
+			files = readdirSync(dir)
+				.filter((name) => name.endsWith('.jsonl'))
+				.map((name) => {
+					const path = join(dir, name);
+					return { path, mtime: statSync(path).mtimeMs };
+				});
+		} catch {
+			return [];
+		}
+		const messages: string[] = [];
+		for (const file of files.sort((a, b) => b.mtime - a.mtime).slice(0, RECENT_TRANSCRIPTS)) {
+			try {
+				// 大きすぎる記録は飛ばす（ツリーを開くだけで固まらせない）
+				if (statSync(file.path).size > MAX_TRANSCRIPT_BYTES) {
+					continue;
+				}
+				for (const entry of parseTranscript(readFileSync(file.path, 'utf8'))) {
+					if (entry.role === 'user') {
+						messages.push(entry.text);
+					}
+				}
+			} catch {
+				continue;
+			}
+		}
+		return findRepeatedInstructions(messages).slice(0, MAX_SUGGESTIONS);
+	}
+
 	getTreeItem(node: ClaudeMdNode): vscode.TreeItem {
+		if (node.kind === 'repeated') {
+			const item = new vscode.TreeItem(`何度も言っている指示（${node.items.length} 件）`, vscode.TreeItemCollapsibleState.Collapsed);
+			item.iconPath = new vscode.ThemeIcon('comment-discussion');
+			item.tooltip = '毎回言っているなら、CLAUDE.md に書けば言わずに済みます';
+			return item;
+		}
+		if (node.kind === 'repeatedItem') {
+			const item = new vscode.TreeItem(node.item.text);
+			item.description = `${node.item.count} 回`;
+			item.iconPath = new vscode.ThemeIcon('lightbulb-autofix');
+			item.tooltip = new vscode.MarkdownString(
+				`直近のセッションで **${node.item.count} 回**言っています。\n\nCLAUDE.md に書いておくと、毎回言わずに済みます。`
+			);
+			return item;
+		}
 		if (node.kind === 'hint') {
 			const item = new vscode.TreeItem(node.label);
 			item.iconPath = new vscode.ThemeIcon('info');
@@ -136,6 +208,9 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 		if (node?.kind === 'findings') {
 			return node.findings.map((finding) => ({ kind: 'finding', path: node.path, finding }));
 		}
+		if (node?.kind === 'repeated') {
+			return node.items.map((item) => ({ kind: 'repeatedItem', item }));
+		}
 		if (node?.kind === 'file') {
 			const content = readText(node.path);
 			const sections = parseSections(content);
@@ -158,7 +233,9 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 				{ kind: 'hint', label: 'CLAUDE.md がありません（「節を足す」で作れます）' }
 			];
 		}
-		return files.map((file) => ({ kind: 'file', ...file }));
+		const repeated = this.repeatedInstructions();
+		const suggestions: ClaudeMdNode[] = repeated.length > 0 ? [{ kind: 'repeated', items: repeated }] : [];
+		return [...files.map((file): ClaudeMdNode => ({ kind: 'file', ...file })), ...suggestions];
 	}
 }
 
