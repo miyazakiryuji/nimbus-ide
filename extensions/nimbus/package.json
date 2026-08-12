@@ -253,6 +253,12 @@
         "title": "ふりかえりを開く",
         "category": "Nimbus",
         "icon": "$(graph)"
+      },
+      {
+        "command": "nimbus.explainLockDiff",
+        "title": "ロックファイルの変更を読む",
+        "category": "Nimbus",
+        "icon": "$(package)"
       }
     ],
     "menus": {

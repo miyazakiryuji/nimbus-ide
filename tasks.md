@@ -390,7 +390,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-118 依存追加の妥当性チェック — パッケージを足そうとしたときに、メンテ状況・最終更新・
       既存依存との重複を提示してから承認させる（③ の承認 UI に載る話）[P2]
-- [ ] T-119 ロックファイルの差分説明 — `pubspec.lock` のような読みづらい差分を「何がなぜ上がったか」に翻訳 [P2]
 - [ ] T-121 脆弱性アラート起点の修正 — 警告が出た依存を、破壊的変更の有無を調べた上で上げる [P2]
 - [ ] T-217 ビルド時間の計測と悪化検知 [P2]
 
@@ -504,6 +503,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-119 ロックファイルの変更を読む（pubspec.lock / package-lock.json・メジャーを先頭に）— 2026-08-13 / 仕様 [lock-diff](nimbus/docs/specs/lock-diff.md)
 - [x] T-207 / T-047 ふりかえり（週次ダイジェスト・成長ログ）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-155 読ませたくないファイルを画面から指定する（既定の可視化・取り込み・外すときの確認）— 2026-08-13 / 仕様 [protected-paths](nimbus/docs/specs/protected-paths.md)
 - [x] T-234 何度も言っている指示を、その場で CLAUDE.md の「毎回の指示」に足せるようにする — 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
