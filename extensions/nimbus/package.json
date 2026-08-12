@@ -178,6 +178,12 @@
         "icon": "$(list-ordered)"
       },
       {
+        "command": "nimbus.checkMutations",
+        "title": "テストが守っているかを確かめる",
+        "category": "Nimbus",
+        "icon": "$(bug)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",

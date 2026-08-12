@@ -113,6 +113,7 @@ import { reviewSnapshots } from './snapshotReview';
 import { captureBehavior, verifyEquivalence } from './equivalence';
 import { showConventions } from './conventions';
 import { planBulkChange } from './bulkChange';
+import { checkMutations } from './mutations';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -2108,6 +2109,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// テストが本当に守っているかを、わざと壊して確かめる（T-182）
+		vscode.commands.registerCommand('nimbus.checkMutations', () =>
+			checkMutations({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 破壊的変更への追従は、まとまりに分けて間にテストを挟ませる（T-110）
 		vscode.commands.registerCommand('nimbus.planBulkChange', () =>
 			planBulkChange({
