@@ -250,7 +250,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### ⏰ 時間軸
 
 - [ ] T-051 就寝前の予約実行 — 「朝までにこれ調べといて」を仕込んで寝る [P2]
-- [ ] T-052 朝のダイジェスト — 起きたら夜間タスクの結果が要約で待っている [P2]
 - [ ] T-053 待ち時間の使い方 — エージェント稼働中に、別タスクへの切り替えを提案する [P3]
 
 ### 📱 デスクを離れる
@@ -405,7 +404,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 保存してから `git worktree remove` する（`core/worktree.ts`）。ここに残るのはその先。
 
 - [ ] T-135 スタックした PR の管理 — 積み上げたブランチの依存関係を整理する [P3]
-- [ ] T-220 PR 説明文の自動生成 [P2]
 - [ ] T-221 コードオーナーへの通知 [P3]
 
 ### 📊 コード品質
@@ -494,6 +492,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-220 PR の説明文の下書き（意図は人が書く・テスト無しは警告）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
+- [x] T-052 朝のダイジェスト（ふりかえりに「昨夜から」を追加）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-134 / T-219 ブランチの離れ具合と衝突の予告、命名規則の判定 — 2026-08-13 / 仕様 [branch-health](nimbus/docs/specs/branch-health.md)
 - [x] T-136 / T-138 重いところの可視化と、層の逆流の検知（core/ は vscode に依存しない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-112 使われていない export を挙げる（死骸と「export を外せるだけ」を分ける）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)

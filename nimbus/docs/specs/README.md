@@ -18,6 +18,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
 - [`protected-paths.md`](protected-paths.md) — 読ませたくないファイルを画面から指定する
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
+- [`pr-description.md`](pr-description.md) — PR の説明文の下書き
 - [`branch-health.md`](branch-health.md) — ブランチの離れ具合と衝突の予告
 - [`code-health.md`](code-health.md) — 命名のゆれとそっくりな実装
 - [`change-stats.md`](change-stats.md) — 変更のようす（統計とテスト有無）

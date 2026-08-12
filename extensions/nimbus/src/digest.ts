@@ -18,6 +18,8 @@ const MAX_TRANSCRIPT_BYTES = 8 * 1024 * 1024;
 const MAX_TRANSCRIPTS = 40;
 
 const RANGES: { label: string; days: number; detail: string }[] = [
+	// 夜に仕込んで朝に受け取る使い方（T-052）。1 日だと昨夜ぶんが落ちるので 0.5 日にしてある
+	{ label: '昨夜から', days: 0.5, detail: '寝ている間に動いていたぶん' },
 	{ label: '直近 7 日', days: 7, detail: '週のふりかえり' },
 	{ label: '直近 30 日', days: 30, detail: '月のふりかえり' },
 	{ label: '今日', days: 1, detail: '今日やったこと' }
