@@ -155,7 +155,12 @@ function fromLocalEsbuild(extensionPath: string, esbuildConfigFileName: string):
 	// Extensions built with esbuild can still externalize runtime dependencies.
 	// Ensure those externals are included in the packaged built-in extension.
 	const packagedDependenciesByExtension: Record<string, string[]> = {
-		'git': ['@vscode/fs-copyfile']
+		'git': ['@vscode/fs-copyfile'],
+		// --- Start Nimbus ---
+		// Agent SDK は自分のパッケージ内にある Claude Code 実行ファイルを子プロセスで起動するため、
+		// バンドルに畳み込まず node_modules として同梱する。
+		'nimbus': ['@anthropic-ai/claude-agent-sdk']
+		// --- End Nimbus ---
 	};
 	const packagedDependencies = packagedDependenciesByExtension[extensionName] ?? [];
 

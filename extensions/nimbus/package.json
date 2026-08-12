@@ -11,6 +11,84 @@
   "categories": [
     "Other"
   ],
+  "main": "./out/extension",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": false,
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Nimbus はワークスペース内で Claude Code を実行するため、信頼されたフォルダでのみ動作します。"
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nimbus",
+          "title": "Nimbus",
+          "icon": "resources/nimbus.svg"
+        }
+      ]
+    },
+    "views": {
+      "nimbus": [
+        {
+          "id": "nimbus.cockpit",
+          "name": "コックピット",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "nimbus.newSession",
+        "title": "新しいセッションを開始",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.interrupt",
+        "title": "実行中のセッションを中断",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showLog",
+        "title": "ログを表示",
+        "category": "Nimbus"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "nimbus.interrupt",
+          "when": "nimbus.hasRunningSession"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Nimbus",
+      "properties": {
+        "nimbus.permissions.autoApproveReadOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "読み取り専用のツール（Read / Glob / Grep）を確認なしで許可します。書き込みや実行は常に確認します。"
+        },
+        "nimbus.claudeCodeExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "使用する Claude Code 実行ファイルのパス。空の場合は Nimbus に同梱されたものを使います。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:nimbus",
+    "watch": "gulp watch-extension:nimbus"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.226"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/miyazakiryuji/nimbus-ide.git"
