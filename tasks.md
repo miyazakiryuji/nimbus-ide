@@ -40,7 +40,10 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-005 Copilot をソースとビルドスクリプトからも外す（`extensions/copilot/` と `compile-copilot`）— パッケージからの除去は済み @session-doctor 2026-08-13 [P2]
+- [ ] T-008 / T-009 **CLAUDE.md 専用のタブ**（階層別の一覧・セクション単位の編集・テンプレート追加）
+      — 新規 `core/claudeMdDoc.ts` / `claudeMdView.ts` / `test/claudeMdDoc.test.ts`、配線のみ
+      `extension.ts` と `package.json` @yua 2026-08-13 [P2]
+
 
 
 - [ ] T-033 **スクラッチファイル**（IntelliJ 由来）— 実装・型チェック・単体テスト（13,177 件全通過）
@@ -537,3 +540,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-146 テストコマンド（モジュールテスト＋GUI 操作テスト）— 2026-08-13 / `bash nimbus/scripts/test.sh` / スキル `nimbus-doctor` `spec-drift` `nimbus-test`
 - [x] T-234 重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
 - [x] T-002 `localize()` の "VS Code" 直書き 152 箇所 — 2026-08-13 / nls の集約点（`_format`）で置換。1 ファイルの変更で全部に効き、upstream の新しい文言にも追随する
+- [x] T-005 Copilot をソースとビルドスクリプトからも除去 — 2026-08-13 / `extensions/copilot/`（4193 ファイル・1.8GB）を削除し、npm スクリプトとビルド配線からも外した。**依存 `@github/copilot-sdk` `@vscode/copilot-api` はコアの agent host が使うため残す**（台帳に理由を記載）

@@ -178,6 +178,17 @@ const NIMBUS_BUNDLE_COPILOT = false;
 
 const buildRoot = path.dirname(root);`
   ],
+  // Copilot を同梱しないので、プラットフォーム別 CLI パッケージの取得もしない
+  // （取得しに行くと、同梱しないものをダウンロードすることになる）
+  [
+    GULPFILE_VSCODE,
+    `		ensureCopilotPlatformPackage(platform, arch);`,
+    `		// --- Start Nimbus ---
+		if (NIMBUS_BUNDLE_COPILOT) {
+			ensureCopilotPlatformPackage(platform, arch);
+		}
+		// --- End Nimbus ---`
+  ],
   [
     GULPFILE_VSCODE,
     `			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
