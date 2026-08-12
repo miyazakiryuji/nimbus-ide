@@ -62,9 +62,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 
 
-- [ ] T-033 **スクラッチファイル**（IntelliJ 由来）— 実装・型チェック・単体テスト（13,177 件全通過）
-      まで完了。残るは画面確認とパッケージ版スモーク（`nimbus/docs/testing/scratch-files.md` §2・§3）
-      → 仕様 `nimbus/docs/specs/scratch-files.md` @claude 2026-08-13 [P1]
 
 ## 次にやる
 
@@ -245,23 +242,8 @@ IntelliJ IDEA 2026.2 の機能一覧（公式ドキュメント全 1,273 トピ�
 Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark / Light のテーマ変数に従う**方針
 （T-001 の Claude 配色。スクラッチファイル T-033 の判断と揃える）。
 
-- [ ] T-224 **マクロの記録・再生**（§03）— 編集操作を記録して名前を付け、ショートカットに割り当てる。
-      VS Code は拡張頼みで標準に無い。定型の整形作業をエージェントに投げるまでもなく回せる [P2]
-- [ ] T-225 **Search Everywhere**（§08）— `Shift` 2 回で、クラス・ファイル・シンボル・アクション・設定・
-      テキスト・Git をタブ 1 枚で横断検索。VS Code は `Cmd+P` / `Cmd+Shift+P` / `Cmd+T` に割れている。
-      同義語解決と電卓（`sqrt` / 16 進など）も含む。IntelliJ の看板機能で、体感差が一番大きい [P1]
-- [ ] T-226 **ブックマーク（ニーモニック付き）**（§08）— 行に数字・英字を割り当てて一発で戻る。
-      VS Code に標準機能が無い。専用ビューと一覧も要る [P2]
-- [ ] T-227 **Run Anything**（§10）— コマンド・実行構成・タスクを 1 つの入口から検索して即実行。
-      T-225 と同じ入力面に載る可能性が高いので、設計は揃えて考える [P2]
-- [ ] T-228 **Command completion**（§04）— エディタでドットを打つと IDE アクションが補完候補に出る。
-      ショートカットを覚えなくても操作にたどり着ける。2025.3 の新機能で、思想が Nimbus と近い [P2]
-- [ ] T-229 **構造検索・置換（SSR）**（§08）— テキストではなく構文木のパターンで検索・置換する。
-      正規表現では書けないリファクタリングが機械的にできる。実装は重いので後の波 [P3]
-- [ ] T-230 **依存構造マトリクス（DSM）**（§07）— モジュール間の依存を行列で可視化し、循環を見つける。
-      T-100（依存グラフの提示）と land が重なるので、着手前に統合を検討する [P3]
-- [ ] T-231 **Productivity Guide**（§21）— どの機能をどれだけ使ったかを見せ、使われていない近道を教える。
-      機能を足すほど「知られないまま埋もれる」ので、その対策 [P3]
+**第一波（T-033 / T-224〜T-231）は実装済み。** 完了セクションを参照。
+
 
 ### 配布・運用
 
@@ -494,6 +476,25 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-230 依存構造マトリクス（DSM）（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/dependency-matrix.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-229 構造検索・置換（SSR）（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/structural-search.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-231 Productivity Guide（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/productivity-guide.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-228 Command completion（ドットから IDE アクション）（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/command-completion.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-227 Run Anything（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/run-anything.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-226 ブックマーク（ニーモニック付き）（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/bookmarks.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-225 Search Everywhere（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/search-everywhere.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-224 マクロの記録・再生（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/macros.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
+- [x] T-033 スクラッチファイル（IntelliJ 由来）— 2026-08-13 / 仕様 `nimbus/docs/specs/scratch-files.md` /
+      確認 `nimbus/docs/testing/intellij-features.md`（画面確認は §2 が未実施）
 
 - [x] T-039 テストランナー連携（Test Explorer の結果から落ちたテストの名前・場所・メッセージを
       1 クリックでセッションへ。CI 連携は T-131）— 2026-08-13 / 仕様 [test-runner](nimbus/docs/specs/test-runner.md)
