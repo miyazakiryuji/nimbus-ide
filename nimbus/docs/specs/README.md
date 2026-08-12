@@ -23,6 +23,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`code-health.md`](code-health.md) — 命名のゆれとそっくりな実装
 - [`change-stats.md`](change-stats.md) — 変更のようす（統計とテスト有無）
 - [`release-notes.md`](release-notes.md) — リリースノートの下書き
+- [`build-metrics.md`](build-metrics.md) — ビルド時間と成果物の大きさの変化
 - [`flutter-lint.md`](flutter-lint.md) — Flutter の確認（文言・読み上げ）
 - [`mobile-checks.md`](mobile-checks.md) — 提出前の確認（iOS の権限・プライバシー）
 - [`bisect.md`](bisect.md) — どこで壊れたかを絞り込む

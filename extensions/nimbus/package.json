@@ -403,6 +403,12 @@
         "title": "Flutter の確認（文言・読み上げ）",
         "category": "Nimbus",
         "icon": "$(symbol-color)"
+      },
+      {
+        "command": "nimbus.measureBuild",
+        "title": "ビルドを計って前回と比べる",
+        "category": "Nimbus",
+        "icon": "$(watch)"
       }
     ],
     "menus": {
@@ -758,6 +764,16 @@
           "type": "string",
           "default": "",
           "description": "「ブランチのようす」で比べる先。空のときは main（無ければ master）を使います。フォークで main が upstream になっている場合は、追従元のブランチ名を指定してください。"
+        },
+        "nimbus.build.command": {
+          "type": "string",
+          "default": "",
+          "description": "「ビルドを計って前回と比べる」で実行するコマンド（例: flutter build apk / npm run build）。"
+        },
+        "nimbus.build.artifact": {
+          "type": "string",
+          "default": "",
+          "description": "大きさを見る成果物のパス（プロジェクト相対）。空のときは時間だけ比べます。"
         }
       }
     },

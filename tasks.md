@@ -356,7 +356,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [ ] T-118 依存追加の妥当性チェック — パッケージを足そうとしたときに、メンテ状況・最終更新・
       既存依存との重複を提示してから承認させる（③ の承認 UI に載る話）[P2]
 - [ ] T-121 脆弱性アラート起点の修正 — 警告が出た依存を、破壊的変更の有無を調べた上で上げる [P2]
-- [ ] T-217 ビルド時間の計測と悪化検知 [P2]
 
 ### 🌐 API・スキーマ
 
@@ -376,7 +375,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### ⚡️ パフォーマンス
 
 - [ ] T-128 プロファイル結果の投入 — DevTools の計測結果を渡して、重い箇所を特定させる [P2]
-- [ ] T-129 バンドルサイズの差分 — この変更でアプリサイズがどれだけ増えたか [P3]
 - [ ] T-130 改善前後のベンチ比較 — 「速くなった気がする」を数字で確定させる（T-081 の証跡と同じ考え）[P2]
 - [ ] T-222 メモリリークの調査支援と、起動時間の計測 [P2]
 
@@ -494,6 +492,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-217 / T-129 ビルド時間と成果物の大きさを前回と比べる — 2026-08-13 / 仕様 [build-metrics](nimbus/docs/specs/build-metrics.md)
 - [x] T-194 / T-195 Flutter の確認（直書きの文言・読み上げに渡らない画像・名前の無いボタン）— 2026-08-13 / 仕様 [flutter-lint](nimbus/docs/specs/flutter-lint.md)
 - [x] T-196 / T-197 / T-201 提出前の確認（権限の差分・プライバシーマニフェスト・版）— 2026-08-13 / 仕様 [mobile-checks](nimbus/docs/specs/mobile-checks.md)
 - [x] T-183 どこで壊れたかを絞り込む（残り回数を出す・git は勝手に動かさない）— 2026-08-13 / 仕様 [bisect](nimbus/docs/specs/bisect.md)
