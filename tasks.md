@@ -41,7 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
 
-- [ ] T-165 自作スキルの回帰テスト。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -122,8 +121,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
       補完・検証つきで、書式ミスで動かない事故を無くす [P2]
 - [ ] T-031 **プレビュー実行** — 保存したらすぐ、サンドボックスのセッションで試し打ちできる [P2]
 - [ ] T-032 プラグインのインストールと有効／無効の切り替え [P3]
-- [ ] T-166 ブレ幅の測定 — 同じ課題を複数回走らせて、プロンプトの安定性を数字にする [P2]
-- [ ] T-167 モデル切り替えの比較 — 軽いモデルで足りるタスクを見つける（T-232 と対）[P2]
 
 ### ⑥ IDE との統合（フォークにした旨味が出る場所）
 
@@ -523,6 +520,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-165 自作スキルの回帰テスト（部分点を付けない）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
+- [x] T-166 ブレ幅の測定（合格率だけでなく応答の振れも見る）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
+- [x] T-167 モデル切り替えの比較（通っていないモデルを安いと勧めない）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
 - [x] T-045 解説モード（何をしたかではなく、なぜそうしたかを 1 行で添えさせる）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
 - [x] T-049 チーム設定の同期（リポジトリの配布物との差分を知らせる）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
 - [x] T-149 複数ステップのワークフロー定義（自動では進めない・位置を必ず出す）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
