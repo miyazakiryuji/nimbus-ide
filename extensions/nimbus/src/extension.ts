@@ -34,7 +34,9 @@ import { draftReleaseNotes } from './releaseNotes';
 import { openChangeStats } from './changeStats';
 import { openCodeHealth } from './codeHealth';
 import { openBranchHealth } from './branchHealth';
+import { draftPrDescription } from './prDescription';
 import { generateWidgetTest } from './flutterTests';
+import { proposeCommitSplit } from './commitSplit';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -1511,6 +1513,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openChangeStats', () => openChangeStats()),
 		vscode.commands.registerCommand('nimbus.openCodeHealth', () => openCodeHealth()),
 		vscode.commands.registerCommand('nimbus.openBranchHealth', () => openBranchHealth()),
+		vscode.commands.registerCommand('nimbus.draftPrDescription', () => draftPrDescription()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1543,6 +1546,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
 		// 開いている Dart から Widget / ゴールデンテストの雛形を作る（T-193）
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
+		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
+		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
 		// エディタから直接頼む（T-171 / T-172）。ファイル名も行番号も打ち直さない
 		vscode.commands.registerCommand(
 			'nimbus.askAboutSelection',

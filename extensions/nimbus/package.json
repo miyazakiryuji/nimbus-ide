@@ -361,6 +361,18 @@
         "title": "ブランチのようすを見る",
         "category": "Nimbus",
         "icon": "$(git-branch)"
+      },
+      {
+        "command": "nimbus.proposeCommitSplit",
+        "title": "コミットの分けかたを提案する",
+        "category": "Nimbus",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "nimbus.draftPrDescription",
+        "title": "PR の説明文を作る",
+        "category": "Nimbus",
+        "icon": "$(git-pull-request)"
       }
     ],
     "menus": {
