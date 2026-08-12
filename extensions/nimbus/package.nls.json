@@ -36,7 +36,6 @@
   "command.exportToWiki": "社内 Wiki に貼れる形にする",
   "command.toggleRemoteApproval": "手元の端末から承認だけできるようにする",
   "command.exportSession": "このセッションを持ち運べる形にする",
-  "command.listenForCommand": "声で指示する",
   "command.importSession": "別のマシンから続きを入れる",
   "command.captureSimulator": "シミュレータの画面を撮って渡す",
   "command.writeFlowTest": "確かめたい流れをテストに起こす",

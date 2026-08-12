@@ -213,7 +213,6 @@ import { captureSimulator, writeFlowTest } from './simulator';
 import { exportToWiki } from './wikiExport';
 import { createRemoteApproval } from './remoteApproval';
 import { exportSession, importSession } from './sessionSync';
-import { listenForCommand } from './voiceCommands';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2876,19 +2875,6 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 					void send(text);
 				},
 				log
-			})
-		),
-		// 声で指示する。危ないことは音声で実行しない（T-055）
-		vscode.commands.registerCommand('nimbus.listenForCommand', () =>
-			listenForCommand({
-				send: (text) => {
-					cockpit.reveal();
-					void send(text);
-				},
-				log,
-				runTests: () => void vscode.commands.executeCommand('nimbus.runImpactedTests'),
-				showStatus: () => cockpit.reveal(),
-				stopAll: () => void vscode.commands.executeCommand('nimbus.stopAll')
 			})
 		),
 		// マシンをまたいで続ける。入れる前に手元と突き合わせる（T-085）

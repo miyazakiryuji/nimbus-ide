@@ -250,12 +250,6 @@
         "category": "Nimbus"
       },
       {
-        "command": "nimbus.listenForCommand",
-        "title": "%command.listenForCommand%",
-        "category": "Nimbus",
-        "icon": "$(mic)"
-      },
-      {
         "command": "nimbus.exportSession",
         "title": "%command.exportSession%",
         "category": "Nimbus",
