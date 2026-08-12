@@ -1,0 +1,1175 @@
+{
+  "summary": "Nimbus §10: verify Agent SDK / Claude Code / Electron facts against official docs",
+  "agentCount": 9,
+  "logs": [
+    "Verification complete: 7/7 areas"
+  ],
+  "result": [
+    {
+      "area": "session-api",
+      "findings": {
+        "items": [
+          {
+            "topic": "NPM package name and latest version",
+            "answer": "The exact npm package name is @anthropic-ai/claude-agent-sdk. Current stable version is 0.3.142 and later. The V2 session API was removed in 0.3.142. Main exports: query(), startup(), listSessions(), getSessionMessages(), getSessionInfo(), renameSession(), tagSession(), resolveSettings().",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/agent-sdk/overview"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Single one-shot prompt usage (simplest pattern)",
+            "answer": "The simplest one-shot usage: for await (const message of query({ prompt: 'your prompt', options: { maxTurns: 3 } })) { console.log(message); }. Returns async generator yielding SDKMessage objects. Can also pre-warm with startup() to avoid startup latency.",
+            "codeExample": "import { query } from '@anthropic-ai/claude-agent-sdk';\nfor await (const message of query({\n  prompt: 'Analyze this code',\n  options: { maxTurns: 3 }\n})) {\n  console.log(message);\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Stateful interactive session mechanism for chat UI",
+            "answer": "TWO approaches for multi-turn sessions: (1) SIMPLEST - Use continue: true on each subsequent query() call. SDK auto-finds and resumes most recent session with no session ID tracking. (2) STREAMING INPUT MODE - Pass AsyncIterable<SDKUserMessage> to prompt parameter, yielding { role: 'user', content: '...' } objects. NO session-holding client object in TypeScript (unlike Python). NOTE: V2 session API (unstable_v2_createSession with send/stream) was REMOVED in 0.3.142.",
+            "codeExample": "// Continue mode (simplest)\nfor await (const msg of query({ prompt: 'First', options: { continue: false } })) {}\nfor await (const msg of query({ prompt: 'Follow-up', options: { continue: true } })) {}\n\n// Streaming input\nasync function* gen() {\n  yield { role: 'user', content: 'First' };\n  yield { role: 'user', content: 'Follow-up' };\n}\nfor await (const msg of query({ prompt: gen() })) {}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/sessions",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "User message object shape in streaming input mode",
+            "answer": "SDKUserMessage shape is { role: 'user', content: '...' }. The role field is string 'user' and content is a string. SDK automatically handles session tracking; no explicit session_id field required in yielded message objects.",
+            "codeExample": "async function* messageGenerator() {\n  yield { role: 'user', content: 'First question' };\n  yield { role: 'user', content: 'Follow-up question' };\n}\nfor await (const message of query({\n  prompt: messageGenerator(),\n  options: { maxTurns: 3 }\n})) {\n  console.log(message);\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/agent-sdk/sessions"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "V2 or preview API surface alongside query()",
+            "answer": "The experimental V2 session API (unstable_v2_createSession, unstable_v2_resumeSession, unstable_v2_prompt, SDKSession type) was REMOVED in TypeScript Agent SDK 0.3.142. Last V2 version was 0.2.x. Docs explicitly state: migrate to query() API with session options. The stable, current, and ONLY recommended API is V1 query(). Production code must use V1, not V2.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript-v2-preview"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "How to interrupt a running session",
+            "answer": "The query() function returns a Query object (extends AsyncGenerator<SDKMessage, void>) which has an interrupt() method. Call it as: await q.interrupt(). Returns Promise<SDKControlInterruptResponse | undefined>. Can be called at any time during iteration.",
+            "codeExample": "const q = query({ prompt: 'Start work', options: { maxTurns: 10 } });\n// Later, to stop:\nawait q.interrupt();",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Session ID location and resumption mechanism",
+            "answer": "Session ID appears in: (1) session_id field on SDKResultMessage (present on every result), (2) direct field on init SystemMessage (type='system', subtype='init'). Resume via: query({ prompt: '...', options: { resume: sessionId } }). Fork via: resume + forkSession: true option. Sessions stored at ~/.claude/projects/<encoded-cwd>/*.jsonl.",
+            "codeExample": "// Capture\nlet sessionId;\nfor await (const message of query({\n  prompt: 'Analyze',\n  options: { allowedTools: ['Read'] }\n})) {\n  if (message.type === 'result') {\n    sessionId = message.session_id;\n  }\n}\n// Resume\nfor await (const msg of query({\n  prompt: 'Continue',\n  options: { resume: sessionId }\n})) {}\n// Fork\nfor await (const msg of query({\n  prompt: 'Try alternative',\n  options: { resume: sessionId, forkSession: true }\n})) {}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/sessions",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Fork support for exploring alternatives",
+            "answer": "Forking IS supported via forkSession: true option. Pass both resume: sessionId and forkSession: true to create new session with copy of original's history that branches from that point. Fork gets own session ID (in init SystemMessage); original unchanged. Allows exploring alternatives while keeping option to return to original thread. Note: forks branch conversation history, not filesystem; file edits are real.",
+            "codeExample": "let forkedId;\nfor await (const msg of query({\n  prompt: 'Explore OAuth2 instead',\n  options: { resume: sessionId, forkSession: true }\n})) {\n  if (msg.type === 'system' && msg.subtype === 'init') {\n    forkedId = msg.session_id; // Different from original\n  }\n}\n// Original stays intact\nfor await (const msg of query({\n  prompt: 'Continue JWT path',\n  options: { resume: sessionId }\n})) {}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/sessions"
+            ],
+            "confidence": "confirmed-in-docs"
+          }
+        ],
+        "warnings": [
+          "The V2 session API was removed from the SDK in version 0.3.142. Code written against V2 (unstable_v2_createSession, send/stream pattern) will NOT work with current versions. The current recommended API is V1 query() only.",
+          "The npm package page (npmjs.com) could not be fetched directly, so exact version metadata was inferred from the documentation which states 0.3.142 as the removal boundary. Verify current version with 'npm view @anthropic-ai/claude-agent-sdk' if needed.",
+          "Session ID for TypeScript is NOT available as a direct parameter on query() calls; it is EXTRACTED from received messages (ResultMessage.session_id or SystemMessage.session_id on init). This differs from how some might expect to seed or pass a session ID upfront."
+        ]
+      },
+      "verification": null
+    },
+    {
+      "area": "permissions",
+      "findings": {
+        "items": [
+          {
+            "topic": "canUseTool callback: exact option name and signature",
+            "answer": "TypeScript option name: `canUseTool`. Callback signature: `async (toolName: string, input: unknown, options: { signal: AbortSignal; suggestions?: PermissionUpdate[] }) => Promise<ToolApprovalResponse>`. The `options` parameter includes an `AbortSignal` for cancellation and optional `suggestions` array with pre-made `PermissionUpdate` entries to avoid re-prompting.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "canUseTool return type shape (TypeScript)",
+            "answer": "For approval: `{ behavior: 'allow', updatedInput: unknown, updatedPermissions?: PermissionUpdate[] }`. For denial: `{ behavior: 'deny', message: string }`. The `updatedInput` field in allow responses is required; it can pass through the original input unchanged or a modified version. The `updatedPermissions` field is optional and contains `PermissionUpdate` entries to persist allow rules to `.claude/settings.local.json`.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "canUseTool return type shape (Python)",
+            "answer": "For approval: `PermissionResultAllow(updated_input=..., updated_permissions=None)`. For denial: `PermissionResultDeny(message=...)`. Both are from `claude_agent_sdk.types`. The `updated_input` parameter is required in both cases.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "canUseTool timeout behavior",
+            "answer": "No explicit timeout is documented for `canUseTool`. The callback can stay pending indefinitely. Execution remains paused until your callback returns, and the SDK only cancels the wait when the query itself is cancelled via the `AbortSignal`. For longer-running approvals, use the `defer` hook decision to let the process exit and resume later from the persisted session.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "PreToolUse hook: exact option shape in options.hooks",
+            "answer": "TypeScript: `hooks: { PreToolUse: [{ match?: (request: any) => boolean | Promise<boolean>; handler: async (request, context) => Promise<HookResponse> }] }`. Hooks are registered as an array under the event type key `PreToolUse`. The `match` function is optional (if omitted, the hook runs for all matched tool types). The `handler` receives the hook request and a context object with an `AbortSignal`.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "inferred"
+          },
+          {
+            "topic": "PreToolUse hook callback signature",
+            "answer": "Handler signature: `async (input: HookInput, toolUseId?: string, context: { signal: AbortSignal }) => Promise<HookResponse>`. The `input` object for PreToolUse contains the tool call details (tool name, input, etc.). The `toolUseId` is the unique ID for this tool use. The context includes an `AbortSignal` for cancellation.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "inferred"
+          },
+          {
+            "topic": "PreToolUse hook return type",
+            "answer": "The hook must return an object with: `{ action: 'allow' | 'deny' | 'modify' | 'continue_', input?: unknown, reason?: string }`. When `action` is 'allow', the tool executes as-is. When 'deny', the tool is blocked with an optional `reason` message. When 'modify', provide a new `input` to replace the original. The 'continue_' action (for streaming input) keeps the stream open.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks"
+            ],
+            "confidence": "inferred"
+          },
+          {
+            "topic": "PreToolUse vs canUseTool: when to use each",
+            "answer": "Use **PreToolUse hooks** when you need to gate every tool call regardless of permission mode or allow rules—hooks run first and can block even in `bypassPermissions` mode. They're ideal for audit logging, input sanitization, or blanket tool restrictions. Use **canUseTool callback** for interactive approval flows where users decide at runtime; it only fires for tool calls not already resolved by deny rules, allow rules, permission mode, or hooks. The documentation recommends hooks for gating logic that must apply universally, canUseTool for user-facing approval UI.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/hooks",
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "permissionMode: exact allowed values",
+            "answer": "Six modes: `'default'` (prompt user for unmatched tools), `'dontAsk'` (deny instead of prompting), `'acceptEdits'` (auto-approve file edits), `'bypassPermissions'` (auto-approve all except deny rules and ask rules), `'plan'` (read-only mode, file edits always prompt), and `'auto'` (model-classified approvals, availability varies).",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "permissionMode: runtime changes",
+            "answer": "Yes, can be changed at runtime. TypeScript: call `await query.setPermissionMode(mode)` on the `Query` object. Python: call `await client.set_permission_mode(mode)`. New mode takes effect immediately for all subsequent tool requests during the streaming session.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "allowedTools and disallowedTools: option names and syntax",
+            "answer": "TypeScript: `allowedTools: string[]` and `disallowedTools: string[]`. Bare names auto-approve entire tools: `['Read', 'Bash']`. Scoped rules restrict to patterns: `['Bash(ls *)', 'Edit(/safe/**)']`. Deny rules can use globs: `disallowedTools: ['*']` blocks all tools, `['mcp__*']` blocks all MCP tools, `['mcp__puppeteer__*']` blocks tools from a specific MCP server. Allow rules only accept globs after `mcp__<server>__` prefix. File path rules support anchors: `//absolute/path` for filesystem absolute, `/relative/path` for session working directory.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Permission evaluation order (6 steps)",
+            "answer": "1. **Hooks** (PreToolUse, etc.) — Run first; can deny outright or pass through. Hook allow does not skip later steps. 2. **Deny rules** (from `disallowedTools`, `settings.json`) — Bare deny rules block the tool entirely; scoped rules like `Bash(rm *)` are checked here. 3. **Ask rules** (from `settings.json`, `AskUserQuestion`, MCP tools marked `requiresUserInteraction`) — Route to `canUseTool` callback. 4. **Permission mode** — `bypassPermissions` approves; `acceptEdits` approves file ops; `plan` routes file edits to callback; others fall through. 5. **Allow rules** (from `allowedTools`, `settings.json`) — Auto-approve matching tools. 6. **canUseTool callback** — Last resort; called only if no earlier step resolved the request. Skipped entirely in `dontAsk` mode.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Auto-approved tools never reach canUseTool",
+            "answer": "Tools approved at any earlier step—bare entries in `allowedTools`, matches in allow rules, or by `acceptEdits` or `bypassPermissions`—skip your `canUseTool` callback entirely. Exception: `AskUserQuestion`, MCP tools marked `_meta['anthropic/requiresUserInteraction']`, and connector tools [your organization set to `ask`] always reach `canUseTool` even with allow rules. To gate every tool call, use a `PreToolUse` hook instead.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Implementing approval inbox in Nimbus: recommended pattern",
+            "answer": "Implement a `canUseTool` callback that queues tool calls and returns a deferred decision. The callback should: (1) capture the tool name, input, and suggestions, (2) store in an approval inbox (database, queue, etc.), (3) return immediately or use streaming input to keep the session alive, (4) poll/listen for user approval asynchronously, and (5) resume the session with the approval decision via stored session state. Alternatively, use the `PermissionRequest` hook to notify external systems (Slack, email) and `canUseTool` to collect the decision synchronously if the user can respond quickly. For minutes-later approvals, use session persistence to exit and resume later with `resume: sessionId`.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/user-input",
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "inferred"
+          }
+        ],
+        "warnings": [
+          "The 'auto' permission mode availability is not specified in the fetched docs; check your SDK version for support.",
+          "Hook type definitions may vary slightly between SDK versions; verify the exact `HookResponse` structure against your installed SDK version.",
+          "Some advanced hook behaviors (defer, interrupt) require specific SDK versions; check CHANGELOG.md for version gates.",
+          "Streaming input mode requirements for keeping approval sessions alive are documented but the exact async resume pattern requires testing against your deployment model."
+        ]
+      },
+      "verification": {
+        "verdicts": [
+          {
+            "topic": "canUseTool callback: exact option name and signature",
+            "verdict": "contradicted",
+            "note": "The options parameter includes additional fields not mentioned in the claim. Per https://github.com/anthropics/claude-agent-sdk-typescript, the full signature is: (toolName: string, input: Record<string, unknown>, options: { signal: AbortSignal; suggestions?: PermissionUpdate[]; blockedPath?: string; decisionReason?: string; toolUseID: string; agentID?: string; requestId?: string }) => Promise<PermissionResult>. The claim omits toolUseID (required), agentID, blockedPath, decisionReason, and requestId.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input",
+              "https://github.com/anthropics/claude-agent-sdk-typescript"
+            ]
+          },
+          {
+            "topic": "canUseTool return type shape (TypeScript)",
+            "verdict": "confirmed",
+            "note": "The documented return types match: { behavior: 'allow', updatedInput } for approval and { behavior: 'deny', message } for denial. The updatedInput field is required from v2.1.207 onwards.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ]
+          },
+          {
+            "topic": "canUseTool return type shape (Python)",
+            "verdict": "confirmed",
+            "note": "PermissionResultAllow(updated_input=...) and PermissionResultDeny(message=...) structures are correct. The updated_input field is required from v2.1.207 onwards per the documentation.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ]
+          },
+          {
+            "topic": "canUseTool timeout behavior",
+            "verdict": "confirmed",
+            "note": "Documented as: 'The callback can stay pending indefinitely. Execution remains paused until your callback returns, and the SDK only cancels the wait when the query itself is cancelled.' The defer hook decision is recommended for approvals taking longer than the process can remain running.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ]
+          },
+          {
+            "topic": "PreToolUse hook: exact option shape in options.hooks",
+            "verdict": "confirmed",
+            "note": "Hooks are registered as: hooks: { PreToolUse: [{ match?: (request) => boolean | Promise<boolean>; handler: async (input, toolUseId, context) => Promise<HookResponse> }] }. The structure matches the claim with matchers as optional.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks"
+            ]
+          },
+          {
+            "topic": "PreToolUse hook callback signature",
+            "verdict": "confirmed",
+            "note": "Handler signature matches: async (input: HookInput, toolUseId: string, context: { signal: AbortSignal }) => Promise<HookResponse>. The input contains tool call details and context includes AbortSignal.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks"
+            ]
+          },
+          {
+            "topic": "PreToolUse hook return type",
+            "verdict": "contradicted",
+            "note": "The claim incorrectly states the return type has an 'action' field with values 'allow' | 'deny' | 'modify' | 'continue_'. The actual return structure has: { hookSpecificOutput?: { permissionDecision?: 'allow' | 'deny' | 'ask' | 'defer', updatedInput?: unknown, permissionDecisionReason?: string } }. The field name is permissionDecision (not action), the values are 'allow'|'deny'|'ask'|'defer' (not 'modify'|'continue_'), modifications use updatedInput field (not action: 'modify'), and 'ask' routes to callback (not 'continue_').",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/hooks"
+            ]
+          },
+          {
+            "topic": "PreToolUse vs canUseTool: when to use each",
+            "verdict": "confirmed",
+            "note": "Documentation confirms: hooks run first and can block even in bypassPermissions mode; canUseTool only fires for tool calls not resolved by earlier steps in the evaluation flow. Hooks are recommended for universal gating logic, canUseTool for user-facing approval UI.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/hooks",
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ]
+          },
+          {
+            "topic": "permissionMode: exact allowed values",
+            "verdict": "confirmed",
+            "note": "All six modes documented: 'default' (prompt user), 'dontAsk' (deny instead), 'acceptEdits' (auto-approve file edits), 'bypassPermissions' (auto-approve all except deny rules), 'plan' (read-only mode), and 'auto' (model-classified approvals).",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          },
+          {
+            "topic": "permissionMode: runtime changes",
+            "verdict": "confirmed",
+            "note": "TypeScript: await query.setPermissionMode(mode); Python: await client.set_permission_mode(mode). Both documented as taking effect immediately.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          },
+          {
+            "topic": "allowedTools and disallowedTools: option names and syntax",
+            "verdict": "confirmed",
+            "note": "Documented exactly as claimed: TypeScript allowedTools/disallowedTools, Python allowed_tools/disallowed_tools. Bare names auto-approve entire tools, scoped rules restrict to patterns, glob support documented with examples like 'mcp__*' for all MCP tools.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          },
+          {
+            "topic": "Permission evaluation order (6 steps)",
+            "verdict": "confirmed",
+            "note": "All six steps documented exactly as claimed: (1) Hooks, (2) Deny rules, (3) Ask rules, (4) Permission mode, (5) Allow rules, (6) canUseTool callback. Behavior for each step matches the claim.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          },
+          {
+            "topic": "Auto-approved tools never reach canUseTool",
+            "verdict": "confirmed",
+            "note": "Documented: 'A tool call approved at any earlier step, by allowedTools or allow rules, skips your canUseTool callback.' Exception noted: AskUserQuestion, MCP tools marked requiresUserInteraction, and connector tools set to ask still reach the callback.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          },
+          {
+            "topic": "Implementing approval inbox in Nimbus: recommended pattern",
+            "verdict": "unverifiable",
+            "note": "The pattern described (queue tool calls, store approval inbox, defer decision) is reasonable based on documented capabilities (canUseTool callback, session persistence, streaming input), but no single page documents this specific pattern end-to-end. The pattern is inferred from separate features.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/permissions",
+              "https://code.claude.com/docs/en/agent-sdk/user-input"
+            ]
+          },
+          {
+            "topic": "permissionMode 'auto': availability",
+            "verdict": "confirmed",
+            "note": "Available on Max, Team, and Enterprise plans (shipped March-April 2026). Became the default permission mode for new sessions on Pro, Max, and Team on August 14, 2026. The SDK (@anthropic-ai/claude-agent-sdk@^0.2.96+) supports the mode.",
+            "sources": [
+              "https://www.digitalapplied.com/blog/claude-code-auto-mode-default-permission-model-shift",
+              "https://www.morphllm.com/claude-code-dangerously-skip-permissions",
+              "https://code.claude.com/docs/en/agent-sdk/permissions"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "area": "events",
+      "findings": {
+        "items": [
+          {
+            "topic": "SDKMessage Union - Full Type Coverage",
+            "answer": "The SDKMessage async generator yields these exact type values: 'system', 'assistant', 'user', 'text', 'thinking', 'tool_use', 'tool_result', 'result', 'control_request', 'control_response', 'task_progress', 'hook_started', 'hook_progress', 'hook_response', 'commands_changed', 'stream_event', 'partial'. Additional system subtypes include 'init', 'plugin_install', 'api_retry', 'compact_boundary', 'permission_denied', 'mirror_error', 'background_tasks_changed'.",
+            "codeExample": "for await (const msg of query({prompt: '...'})) {\n  if (msg.type === 'system') { /* init/capabilities */ }\n  else if (msg.type === 'stream_event') { /* raw API event */ }\n  else if (msg.type === 'result') { /* usage & cost */ }\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/agent-sdk/streaming-output",
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "System Initialization Message (SDKSystemMessage) - Exact Fields",
+            "answer": "type: 'system'; fields: model (string), tools (string[]), mcp_servers (Record<string, McpServerInfo>), plugins (PluginInfo[]), skills (SkillInfo[]), slash_commands (SlashCommand[]), agents (AgentInfo[]), cwd (string), permissionMode (PermissionMode), apiKeySource (string), output_style (string), session_id (string), uuid (string), capabilities (string[] - optional, requires v2.1.205+). Capabilities include values like 'interrupt_receipt_v1', 'interrupt_cancel_queued_v1'.",
+            "codeExample": "if (msg.type === 'system') {\n  console.log(msg.model); // e.g. 'claude-opus-4-1-20250805'\n  console.log(msg.permissionMode); // 'dontAsk' | 'AskUserQuestion' | etc\n  console.log(msg.capabilities); // ['interrupt_receipt_v1', ...]\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Result Message (SDKResultMessage) - Cost & Usage Fields",
+            "answer": "type: 'result'; exact field names: stop_reason ('end_turn' | 'max_tokens' | 'tool_use' | 'user_interrupt' | 'max_turns'), total_cost_usd (number, optional, client-side estimate), usage object with: input_tokens, output_tokens, cache_creation_input_tokens (optional), cache_read_input_tokens (optional), modelUsage (Record<modelName, {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, costUSD, contextWindow}>), fast_mode_state ('off' | 'cooldown' | 'on', v2.1.219+), fast_mode_disabled_reason (v2.1.219+), uuid, session_id.",
+            "codeExample": "if (msg.type === 'result') {\n  console.log(msg.total_cost_usd); // $0.00123\n  console.log(msg.usage.input_tokens);\n  console.log(msg.usage.cache_read_input_tokens);\n  for (const [model, stats] of Object.entries(msg.modelUsage)) {\n    console.log(`${model}: $${stats.costUSD}`);\n  }\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Assistant Message Structure (SDKAssistantMessage)",
+            "answer": "type: 'assistant'; wraps nested BetaMessage (from Anthropic Messages API) at message.message with fields: id (string), content (ContentBlock[]), usage (with input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens). When includePartialMessages: true, message.type === 'stream_event' instead yields raw API events; use content_block_delta with delta.type === 'text_delta' for token-level text streaming.",
+            "codeExample": "if (msg.type === 'assistant') {\n  const msgId = msg.message.id;\n  const tokens = msg.message.usage.input_tokens;\n  const contentBlocks = msg.message.content; // text, tool_use, thinking\n}\nif (msg.type === 'stream_event' && msg.event.type === 'content_block_delta') {\n  console.log(msg.event.delta.text); // partial text chunk\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking",
+              "https://code.claude.com/docs/en/agent-sdk/streaming-output"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Partial/Token-Level Streaming (SDKPartialAssistantMessage)",
+            "answer": "Option name: includePartialMessages (TypeScript) or include_partial_messages (Python). Exact type name: SDKPartialAssistantMessage with type: 'stream_event'. Contains: event (BetaRawMessageStreamEvent from Anthropic SDK), parent_tool_use_id (null for main session), uuid, session_id, ttft_ms (optional, time-to-first-token in ms). Event types: 'message_start', 'content_block_start', 'content_block_delta', 'content_block_stop', 'message_delta', 'message_stop'.",
+            "codeExample": "const options = { includePartialMessages: true };\nfor await (const msg of query({prompt: '...', options})) {\n  if (msg.type === 'stream_event') {\n    if (msg.event.type === 'content_block_delta') {\n      console.log(msg.event.delta); // {type: 'text_delta', text: 'chunk'}\n    }\n  }\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/streaming-output"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Task Progress Message (Subagents)",
+            "answer": "type: 'task_progress'; fields: task_id (string), status ('running' | 'completed' | 'failed'), summary (string, optional, when agentProgressSummaries: true in options), uuid, session_id. Emitted when run_in_background spawns background subagents. Subagent messages forward as type: 'assistant' or 'user' with parent_tool_use_id field set to the Agent tool call ID.",
+            "codeExample": "if (msg.type === 'task_progress') {\n  console.log(`Task ${msg.task_id}: ${msg.status}`);\n  if (msg.summary) console.log(msg.summary);\n}\nif (msg.type === 'assistant' && msg.parent_tool_use_id) {\n  console.log(`Subagent output from Agent call ${msg.parent_tool_use_id}`);\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Hook Lifecycle Messages",
+            "answer": "Message types: SDKHookStartedMessage (type: 'hook_started'), SDKHookProgressMessage (type: 'hook_progress'), SDKHookResponseMessage (type: 'hook_response'). Emitted when includeHookEvents: true. Always included for SessionStart and Setup hooks. Fields: hook_event (HookEvent object), progress (unknown), uuid, session_id.",
+            "codeExample": "if (msg.type === 'hook_started') {\n  console.log(`Hook executing: ${msg.hook_event.name}`);\n}\nif (msg.type === 'hook_progress') {\n  console.log(`Progress:`, msg.progress);\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Control Messages (Permissions & Approvals)",
+            "answer": "type: 'control_request' or 'control_response'; fields: request_id (string), request (PermissionRequest | OtherControlRequest), uuid, session_id. Control request types include ask_user_question for permission dialogs. Response callbacks allow tool approval/denial before execution.",
+            "codeExample": "if (msg.type === 'control_request') {\n  if (msg.request.type === 'ask_user_question') {\n    console.log(msg.request.question); // 'Allow Bash execution?'\n    // Send control_response with request_id and approval\n  }\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "System Event Subtypes - Plugin Install & API Retry",
+            "answer": "system/plugin_install subtype (v2.1.x): fields type: 'system', subtype: 'plugin_install', status ('started' | 'installed' | 'failed' | 'completed'), name (optional, marketplace name), error (optional, failure message), uuid, session_id. system/api_retry subtype: fields type: 'system', subtype: 'api_retry', attempt (integer starting at 1), max_retries (integer), retry_delay_ms (integer), error_status (integer or null), error (string category like 'authentication_failed', 'rate_limit', 'overloaded'), uuid, session_id.",
+            "codeExample": "if (msg.type === 'system' && msg.subtype === 'plugin_install') {\n  if (msg.status === 'failed') console.error(msg.error);\n}\nif (msg.type === 'system' && msg.subtype === 'api_retry') {\n  console.log(`Retry ${msg.attempt}/${msg.max_retries} in ${msg.retry_delay_ms}ms`);\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/headless"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Commands Changed Message (Mid-Session Availability)",
+            "answer": "type: 'commands_changed' (SDK v0.3.216+); fields: commands (SlashCommand[]), uuid, session_id. Emitted when available slash commands change during a session.",
+            "codeExample": "if (msg.type === 'commands_changed') {\n  console.log('Available commands now:', msg.commands.map(c => c.name));\n}",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Cost Tracking Caveats & Subagent Accounting",
+            "answer": "total_cost_usd is a client-side estimate; use the Usage & Cost API for authoritative billing. When subagents run: usage field excludes subagent tokens (undercounts), total_cost_usd includes subagent requests (accurate), modelUsage includes subagent requests broken down per model (most accurate for multi-model setups). Cache tokens tracked separately: cache_creation_input_tokens (higher billing rate), cache_read_input_tokens (reduced rate).",
+            "codeExample": "// Use modelUsage for accurate multi-model accounting\nfor (const [model, usage] of Object.entries(msg.modelUsage)) {\n  console.log(`${model}: input=${usage.inputTokens}, cache_read=${usage.cacheReadInputTokens}`);\n}\n// Do NOT use usage field with subagents; use total_cost_usd or modelUsage",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Package & Version Info",
+            "answer": "npm package: @anthropic-ai/claude-agent-sdk; current version: 0.3.226 (Feb 2025, in parity with Claude Code v2.1.226). Requires Node.js 18+. TypeScript types are exported natively; no separate @types package needed.",
+            "codeExample": "npm install @anthropic-ai/claude-agent-sdk\nimport { query } from '@anthropic-ai/claude-agent-sdk';",
+            "sources": [
+              "https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md",
+              "https://code.claude.com/docs/en/agent-sdk/overview"
+            ],
+            "confidence": "confirmed-in-docs"
+          }
+        ],
+        "warnings": [
+          "total_cost_usd and usage fields are client-side estimates only; authoritative billing comes from the Anthropic Usage & Cost API or Claude Console. Do not use for end-user billing.",
+          "When subagents run in parallel, the usage field undercounts because it excludes subagent token consumption; always use modelUsage or total_cost_usd for accurate accounting.",
+          "The SDKSystemMessage structure includes optional capabilities array (requires SDK matching Claude Code v2.1.205+); check presence before accessing to maintain backward compatibility.",
+          "Stream events (includePartialMessages: true) yield raw Claude API BetaRawMessageStreamEvent objects; you must manually reconstruct text from content_block_delta events; this is not a high-level text stream.",
+          "Cache tokens (cache_creation_input_tokens, cache_read_input_tokens) appear only when prompt caching is active; they are optional fields and may be undefined or 0."
+        ]
+      },
+      "verification": null
+    },
+    {
+      "area": "binary-env",
+      "findings": {
+        "items": [
+          {
+            "topic": "SDK bundled executable",
+            "answer": "The TypeScript SDK (@anthropic-ai/claude-agent-sdk) bundles native Claude Code binaries as optional dependencies for macOS (ARM64, x64), Linux (glibc x64, musl x64), and Windows (x64). Installation includes the binary by default. However, some installations receive no binary: (1) `npm ci --omit=optional` skips optional dependencies; (2) custom process spawning scenarios. When no bundled binary is available, the SDK finds Claude Code on PATH. SDK version tracks bundled Claude Code version parity (e.g., SDK v0.3.191 bundles Claude Code v2.1.191).",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/agent-sdk/quickstart"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Executable path configuration option",
+            "answer": "Use `pathToClaudeCodeExecutable` in options to specify a custom path to the Claude Code executable. This is required only when optional dependencies were skipped, your platform is not supported, or you're using a compiled executable with Bun. Default: auto-resolved from bundled native binary.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs",
+            "codeExample": "options: { pathToClaudeCodeExecutable: \"/path/to/claude\" }"
+          },
+          {
+            "topic": "JavaScript runtime selection option",
+            "answer": "Use `executable` to specify which JavaScript runtime to use (values: 'node', 'bun', 'deno'). Use `executableArgs` to pass arguments to the chosen runtime (e.g., node's --max-old-space-size flag). Default: auto-detected.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs",
+            "codeExample": "options: { executable: \"node\", executableArgs: [\"--max-old-space-size=4096\"] }"
+          },
+          {
+            "topic": "Environment variables option",
+            "answer": "Use the `env` option to pass environment variables to the Claude Code subprocess. When set, this REPLACES the subprocess environment instead of merging, so include `process.env` to retain inherited variables like PATH.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs",
+            "codeExample": "options: { env: { ...process.env, ANTHROPIC_API_KEY: \"key\", API_TIMEOUT_MS: \"120000\" } }"
+          },
+          {
+            "topic": "Primary auth env var - Anthropic API",
+            "answer": "ANTHROPIC_API_KEY is the primary environment variable for authenticating with the Anthropic API. Set it from the Claude Console (https://platform.claude.com/). This is the default auth method when not using cloud providers.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript",
+              "https://code.claude.com/docs/en/agent-sdk/quickstart"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Amazon Bedrock routing env var",
+            "answer": "Set CLAUDE_CODE_USE_BEDROCK=1 to enable Amazon Bedrock integration. AWS credentials are resolved via the standard AWS SDK credential chain (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_PROFILE, aws configure, or AWS_BEARER_TOKEN_BEDROCK for Bedrock API keys). Set AWS_REGION to specify region (defaults to us-east-1 if not in AWS profile).",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Amazon Bedrock Mantle endpoint env var",
+            "answer": "Set CLAUDE_CODE_USE_MANTLE=1 to route requests to the Amazon Bedrock Mantle endpoint, which serves Claude models through the native Anthropic API shape. Uses the same AWS credentials as standard Bedrock. Set AWS_REGION to specify the region. Mantle uses model IDs prefixed with 'anthropic.' (e.g., anthropic.claude-sonnet-5). Can run alongside CLAUDE_CODE_USE_BEDROCK=1 to use both endpoints in the same session.",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Google Vertex AI routing env var",
+            "answer": "Set CLAUDE_CODE_USE_VERTEX=1 to enable Google Cloud's Agent Platform (formerly Vertex AI) integration. Configure GCP credentials via Application Default Credentials chain (gcloud auth application-default login) or GOOGLE_APPLICATION_CREDENTIALS pointing to a service account key. Set CLOUD_ML_REGION to 'global', a multi-region location (e.g., 'eu', 'us'), or a specific region. Set ANTHROPIC_VERTEX_PROJECT_ID to your GCP project ID.",
+            "sources": [
+              "https://code.claude.com/docs/en/google-vertex-ai"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Microsoft Foundry routing env var",
+            "answer": "Set CLAUDE_CODE_USE_FOUNDRY=1 to enable Microsoft Foundry integration. Three authentication options: (1) ANTHROPIC_FOUNDRY_API_KEY for API key auth; (2) ANTHROPIC_FOUNDRY_AUTH_TOKEN for bearer token auth issued by Microsoft Entra ID; (3) Azure SDK default credential chain when neither API key nor token is set. Set ANTHROPIC_FOUNDRY_RESOURCE to your Azure resource name, or ANTHROPIC_FOUNDRY_BASE_URL for the full endpoint URL.",
+            "sources": [
+              "https://code.claude.com/docs/en/microsoft-foundry",
+              "https://code.claude.com/docs/en/agent-sdk/quickstart"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Model selection env vars - Primary model",
+            "answer": "Use ANTHROPIC_MODEL to override the primary model for the current session. On Anthropic API: uses built-in defaults. On Amazon Bedrock: set to a Bedrock model ID (e.g., 'us.anthropic.claude-opus-4-8') or inference profile ARN. On Google Cloud's Agent Platform: set to a Vertex AI model ID (e.g., 'claude-opus-4-8'). On Microsoft Foundry: set to a deployment name (e.g., 'claude-opus-4-8').",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock",
+              "https://code.claude.com/docs/en/google-vertex-ai",
+              "https://code.claude.com/docs/en/microsoft-foundry"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Model pinning env vars",
+            "answer": "Use ANTHROPIC_DEFAULT_OPUS_MODEL, ANTHROPIC_DEFAULT_SONNET_MODEL, and ANTHROPIC_DEFAULT_HAIKU_MODEL to pin model versions per model family. These affect which version the 'opus', 'sonnet', and 'haiku' aliases resolve to. Recommended for multi-user deployments to control when users switch to new models. Format depends on provider: bare model name for Anthropic API, Bedrock inference profile ID (e.g., 'us.anthropic.claude-opus-4-8'), Vertex AI ID (e.g., 'claude-opus-4-8'), or Microsoft Foundry deployment name.",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock",
+              "https://code.claude.com/docs/en/google-vertex-ai",
+              "https://code.claude.com/docs/en/microsoft-foundry"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Small/fast model override env var",
+            "answer": "Use ANTHROPIC_DEFAULT_HAIKU_MODEL to specify which model Claude Code uses for background tasks (session title generation, etc.). On Anthropic API and cloud providers, this defaults to a Haiku-class model. On Amazon Bedrock and Google Cloud's Agent Platform, it defaults to the primary model if Haiku is not available in the account/project. Set ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION (Bedrock-specific) to override AWS region for the small/fast model.",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock",
+              "https://code.claude.com/docs/en/google-vertex-ai"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Custom process spawning option",
+            "answer": "Use `spawnClaudeCodeProcess` option to provide a custom function for spawning the Claude Code process. Useful for advanced scenarios like running in VMs, containers, or remote environments. The function receives options and should return a spawned process.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "confirmed-in-docs",
+            "codeExample": "options: { spawnClaudeCodeProcess: (opts) => customSpawn(opts) }"
+          },
+          {
+            "topic": "Bedrock endpoint override env var",
+            "answer": "Use ANTHROPIC_BEDROCK_BASE_URL to override the Amazon Bedrock endpoint URL for custom endpoints or gateways. Use ANTHROPIC_BEDROCK_MANTLE_BASE_URL to override the Mantle endpoint URL specifically. Use ANTHROPIC_BEDROCK_REGION_PREFIX to prefer a specific region prefix (valid values: 'us', 'eu', 'apac', 'jp', 'au', 'global') when resolving built-in default models to cross-region inference profile IDs.",
+            "sources": [
+              "https://code.claude.com/docs/en/amazon-bedrock"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Vertex AI endpoint override env var",
+            "answer": "Use ANTHROPIC_VERTEX_BASE_URL to override the Google Cloud's Agent Platform endpoint URL for custom endpoints or gateways. Use VERTEX_REGION_CLAUDE_* variants (e.g., VERTEX_REGION_CLAUDE_HAIKU_4_5, VERTEX_REGION_CLAUDE_4_6_SONNET) to override the region for specific models that don't support global endpoints when CLOUD_ML_REGION=global.",
+            "sources": [
+              "https://code.claude.com/docs/en/google-vertex-ai"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Foundry endpoint configuration env var",
+            "answer": "Use ANTHROPIC_FOUNDRY_RESOURCE to specify your Azure resource name (Claude Code builds the endpoint URL from this value), or ANTHROPIC_FOUNDRY_BASE_URL to provide the full base URL directly (e.g., https://example-resource.services.ai.azure.com/anthropic).",
+            "sources": [
+              "https://code.claude.com/docs/en/microsoft-foundry"
+            ],
+            "confidence": "confirmed-in-docs"
+          }
+        ],
+        "warnings": [
+          "The TypeScript SDK documentation emphasizes that CLAUDE_CODE_USE_* routing env vars are read from the ENVIRONMENT of the process that runs the agent (not from .env files automatically). Load .env files explicitly if needed.",
+          "For Microsoft Foundry, there is no interactive setup wizard like Bedrock and Vertex AI have. Configuration must be done entirely via environment variables.",
+          "Cloud provider auth takes precedence: ANTHROPIC_FOUNDRY_AUTH_TOKEN > ANTHROPIC_FOUNDRY_API_KEY > Azure default credential chain. Bedrock auth uses AWS SDK credential chain. Vertex AI uses Google Cloud default credential chain.",
+          "Model pinning is STRONGLY RECOMMENDED for multi-user deployments on cloud providers to avoid using unavailable defaults and billing at higher rates than intended.",
+          "The SDK bundles optional dependencies by default, but `npm ci --omit=optional` and similar commands skip them. Users must then install Claude Code natively and use pathToClaudeCodeExecutable."
+        ]
+      },
+      "verification": null
+    },
+    {
+      "area": "billing",
+      "findings": {
+        "items": [
+          {
+            "topic": "Agent SDK Usage Billing Status (Current as of 2026-08-11)",
+            "answer": "As of August 2026, Anthropic PAUSED the June 15, 2026 billing change. Agent SDK usage (`query()` calls), `claude -p`, and third-party apps using Agent SDK authentication still consume the user's subscription's usage limits (for Pro/Max/Team/Enterprise plans) and do NOT draw from a separate monthly credit. This is the current policy; no change has taken effect since the pause announcement.",
+            "sources": [
+              "https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Subscription Authentication via CLAUDE_CODE_OAUTH_TOKEN",
+            "answer": "Users can authenticate the Agent SDK with their subscription (Pro/Max/Team/Enterprise) using a one-year OAuth token: (1) Run `claude setup-token` to open browser auth and receive the token. (2) Export `CLAUDE_CODE_OAUTH_TOKEN=<token>` as an environment variable. (3) The SDK reads this environment variable. Usage via this token draws from the user's subscription limits. This token cannot be used in `--bare` mode (which requires `ANTHROPIC_API_KEY` or `apiKeyHelper` instead).",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Third-Party App Restrictions on Subscription Login",
+            "answer": "Official policy: 'Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK.' Nimbus (a third-party desktop app) must NOT offer users the option to authenticate via their Claude subscription login. Use API key authentication methods instead.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/overview"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "API Key Authentication via ANTHROPIC_API_KEY",
+            "answer": "For non-subscription usage, set `ANTHROPIC_API_KEY` environment variable (an API key created in the Claude Console at platform.claude.com). Usage via API key is billed per-token at standard API rates and does NOT draw from subscription limits. This is the recommended method for third-party applications like Nimbus.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/quickstart"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Detecting Auth Type: total_cost_usd Field Behavior",
+            "answer": "The `total_cost_usd` field in result messages contains cumulative estimated cost (in USD) for that query() call. This field is present REGARDLESS of auth method. For subscription users, total_cost_usd values are client-side estimates and usage counts toward subscription limits. For API-key users, total_cost_usd is the accurate estimate of per-token billing. Both cases have total_cost_usd populated; neither case has zero cost.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking.md"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Authentication Precedence and Priority Order",
+            "answer": "When multiple credentials are present, Claude Code (and the Agent SDK) uses this precedence: (1) Cloud provider env vars (CLAUDE_CODE_USE_BEDROCK, etc.). (2) ANTHROPIC_AUTH_TOKEN. (3) ANTHROPIC_API_KEY. (4) apiKeyHelper script output. (5) CLAUDE_CODE_OAUTH_TOKEN. (6) Subscription OAuth (from /login, default). Nimbus should configure and document which credential the user provides to detect auth type.",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "SDKSystemMessage.apiKeySource Field Values",
+            "answer": "The init message (SDKSystemMessage with type='system' subtype='init') includes an apiKeySource field, but official documentation does NOT enumerate the specific possible string values. You must inspect the TypeScript type definitions in node_modules/@anthropic-ai/claude-agent-sdk/dist/index.d.ts or the GitHub source repository (https://github.com/anthropics/claude-agent-sdk-typescript) to confirm the exact enum values.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "uncertain"
+          },
+          {
+            "topic": "Cost Tracking Recommendation for Nimbus",
+            "answer": "Accumulate total_cost_usd from each result message for the session. Store per-call costs separately; the SDK does not provide a session-level total. For subscription users: display 'Subscription (plan usage)' + show total_cost_usd as an estimate. For API-key users: display 'API Key ($X.XX)' + show total_cost_usd as the billed amount. Example: accumulate across multiple query() calls by summing each result.total_cost_usd.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking.md"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Authentication Precedence Detection Pattern",
+            "answer": "Recommended approach for Nimbus: (1) Check environment variables in this order: ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN → (if neither, assume subscription login). (2) When using Agent SDK, read the SDKSystemMessage in the init event to detect the actual auth source. (3) OR: ask user at app startup which auth method they want to use, then set/configure the corresponding env var before calling query().",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication",
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ],
+            "confidence": "inferred"
+          }
+        ],
+        "warnings": [
+          "CRITICAL POLICY: Nimbus must NOT offer users 'Login with Claude' or subscription-based auth. Third-party developers cannot use claude.ai login without explicit Anthropic approval. Use API-key-only authentication.",
+          "The June 15, 2026 billing change to separate Agent SDK credits has been PAUSED as of August 2026. Agent SDK usage currently draws from subscription limits, not a separate credit pool. This could change again, so check policy regularly.",
+          "total_cost_usd is a CLIENT-SIDE ESTIMATE, not authoritative billing. For accurate billing display, use the Usage & Cost API (platform.claude.com/docs/en/build-with-claude/usage-cost-api) or the Claude Console usage page, not SDK cost fields.",
+          "SDKSystemMessage.apiKeySource exact enum values not documented in official text; must be verified in TypeScript type definitions or source code to ensure Nimbus displays the correct auth label.",
+          "CLAUDE_CODE_OAUTH_TOKEN only works in interactive mode and library calls; it is NOT usable with --bare flag. If Nimbus runs Claude Code with --bare, it must use ANTHROPIC_API_KEY instead."
+        ]
+      },
+      "verification": {
+        "verdicts": [
+          {
+            "topic": "Agent SDK Usage Billing Status (Current as of 2026-08-11)",
+            "verdict": "confirmed",
+            "note": "Verified via support.claude.com: 'We're pausing the changes to Claude Agent SDK usage described below. For now, nothing has changed: Claude Agent SDK, claude -p, and third-party app usage still draw from your subscription's usage limits.' The June 15, 2026 change is paused and billing status quo remains in effect.",
+            "sources": [
+              "https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"
+            ]
+          },
+          {
+            "topic": "Subscription Authentication via CLAUDE_CODE_OAUTH_TOKEN",
+            "verdict": "confirmed",
+            "note": "Verified: claude setup-token opens browser auth and generates a one-year OAuth token. Users export CLAUDE_CODE_OAUTH_TOKEN environment variable. Documentation confirms: 'This token authenticates with your Claude subscription and requires a Pro, Max, Team, or Enterprise plan.' Token cannot be used with --bare flag; requires ANTHROPIC_API_KEY instead.",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication"
+            ]
+          },
+          {
+            "topic": "Third-Party App Restrictions on Subscription Login",
+            "verdict": "confirmed",
+            "note": "Verified in official Agent SDK overview: 'Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK.' Exact wording matches the claim.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/overview"
+            ]
+          },
+          {
+            "topic": "API Key Authentication via ANTHROPIC_API_KEY",
+            "verdict": "confirmed",
+            "note": "Verified: Quickstart docs confirm ANTHROPIC_API_KEY is read from environment, and 'The SDK reads the key from the environment of the process that runs your agent.' Policy states this is the recommended auth method for third-party apps. Billing is per-token at standard API rates.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/quickstart"
+            ]
+          },
+          {
+            "topic": "Detecting Auth Type: total_cost_usd Field Behavior",
+            "verdict": "confirmed",
+            "note": "Verified: Cost tracking documentation confirms total_cost_usd is present in result messages. However, adds important caveat: 'The total_cost_usd and costUSD fields are client-side estimates, not authoritative billing data.' Field is populated regardless of auth method, but values are estimates only.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking.md"
+            ]
+          },
+          {
+            "topic": "Authentication Precedence and Priority Order",
+            "verdict": "confirmed",
+            "note": "Verified exact precedence order from authentication docs: (1) Cloud provider env vars (CLAUDE_CODE_USE_BEDROCK, etc.), (2) ANTHROPIC_AUTH_TOKEN, (3) ANTHROPIC_API_KEY, (4) apiKeyHelper script output, (5) CLAUDE_CODE_OAUTH_TOKEN, (6) Subscription OAuth from /login.",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication"
+            ]
+          },
+          {
+            "topic": "SDKSystemMessage.apiKeySource Field Values",
+            "verdict": "unverifiable",
+            "note": "Official documentation references the apiKeySource field in SDKSystemMessage but does NOT enumerate the specific possible string values in the public docs. Claims in research were accurate—the exact enum values are not documented in the fetched pages. Must inspect TypeScript type definitions (node_modules/@anthropic-ai/claude-agent-sdk/dist/index.d.ts) or GitHub source to confirm values.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/typescript"
+            ]
+          },
+          {
+            "topic": "Cost Tracking Recommendation for Nimbus",
+            "verdict": "confirmed",
+            "note": "Verified: Cost tracking docs show exact accumulation pattern—'If you make multiple query() calls (for example, in a multi-turn session), each result only reflects the cost of that individual call.' SDK does not provide session-level total; must accumulate manually by summing total_cost_usd from each result message.",
+            "sources": [
+              "https://code.claude.com/docs/en/agent-sdk/cost-tracking.md"
+            ]
+          },
+          {
+            "topic": "Authentication Precedence Detection Pattern",
+            "verdict": "confirmed",
+            "note": "Pattern is reasonable and consistent with documented precedence. Checking env vars in order (ANTHROPIC_API_KEY → CLAUDE_CODE_OAUTH_TOKEN) and reading SDKSystemMessage are both valid approaches. The SDKSystemMessage init event would contain auth metadata, allowing runtime detection of which auth method was actually used.",
+            "sources": [
+              "https://code.claude.com/docs/en/authentication",
+              "https://code.claude.com/docs/en/agent-sdk/agent-loop"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "area": "safestorage",
+      "findings": {
+        "items": [
+          {
+            "topic": "safeStorage backends per OS and exact API surface",
+            "answer": "Module: `safeStorage` (main process only). Backends: macOS = Keychain (Keychain Access); Windows = DPAPI; Linux = a secret store that varies by desktop environment — supported options are exactly `kwallet`, `kwallet5`, `kwallet6`, `gnome-libsecret`, with a `basic_text` fallback (hardcoded plaintext password) when no secret store is available; the new async path (os_crypt_async, PR #49054) additionally supports Freedesktop Secret Service / Portal-based backends (e.g. Flatpak portal, KeePassXC). Exact API surface as of Electron 43: `safeStorage.isEncryptionAvailable(): boolean`; `safeStorage.isAsyncEncryptionAvailable(): Promise<boolean>` (initializes lazily on first call after app ready; resolves when init completes); `safeStorage.encryptString(plainText: string): Buffer` (\"An array of bytes representing the encrypted string\"; throws an error if encryption fails); `safeStorage.decryptString(encrypted: Buffer): string`; `safeStorage.encryptStringAsync(plainText: string): Promise<Buffer>`; `safeStorage.decryptStringAsync(encrypted: Buffer): Promise<{ shouldReEncrypt: boolean; result: string }>` — `shouldReEncrypt` signals the key was rotated and you should re-encrypt-and-persist `result`; `safeStorage.setUsePlainTextEncryption(usePlainText: boolean)` — on Linux forces an in-memory password for the symmetric key when no valid OS password manager is found; explicit no-op on Windows and macOS; `safeStorage.getSelectedStorageBackend(): string` — Linux only, returns one of `basic_text`, `gnome_libsecret`, `kwallet`, `kwallet5`, `kwallet6`, or `unknown` (before app ready). Docs recommendation, verbatim: \"We recommend using the asynchronous API (`encryptStringAsync`/`decryptStringAsync`) over the synchronous API. The async API is non-blocking, supports key rotation, and handles temporary unavailability gracefully.\"",
+            "codeExample": "import { app, safeStorage } from 'electron';\n\nawait app.whenReady();\nif (await safeStorage.isAsyncEncryptionAvailable()) {\n  const encrypted: Buffer = await safeStorage.encryptStringAsync(apiKey);\n  // persist encrypted (see base64 item)\n  const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(encrypted);\n  if (shouldReEncrypt) {\n    const reEncrypted = await safeStorage.encryptStringAsync(result);\n    // overwrite the persisted value\n  }\n}",
+            "sources": [
+              "https://www.electronjs.org/docs/latest/api/safe-storage",
+              "https://raw.githubusercontent.com/electron/electron/main/docs/api/safe-storage.md",
+              "https://github.com/electron/electron/pull/49054"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "When encryption is unavailable; behavior before app ready; what basic_text means",
+            "answer": "`isEncryptionAvailable()` semantics, verbatim from docs: \"On Linux, returns true if the app has emitted the `ready` event and the secret key is available. On MacOS, returns true if Keychain is available. On Windows, returns true once the app has emitted the `ready` event.\" So before `ready` it returns false on Linux and Windows (docs note availability cannot be reliably determined before `ready`); on Windows after `ready` it is effectively always true (DPAPI is OS-provided); on macOS it is false only when Keychain access is unavailable (e.g. headless/locked-keychain contexts); on Linux it is false when no secret key/backend is available. `getSelectedStorageBackend()` returns the string `unknown` if called before the `ready` event. `encryptString` \"will throw an error if encryption fails\" — the docs do not document a distinct pre-ready behavior beyond this. `basic_text` IS effectively plaintext: verbatim, \"If no secret store is available, items stored in using the `safeStorage` API will be unprotected as they are encrypted via hardcoded plaintext password\" — detectable when `getSelectedStorageBackend()` returns `basic_text` (triggered by an unrecognized desktop environment or the Chromium flag `--password-store=\"basic\"`). Important operational note, verbatim: \"Note that on macOS, access to the system Keychain is required and these calls can block the current thread to collect user input. The same is true for Linux, if a password management tool is available.\"",
+            "sources": [
+              "https://www.electronjs.org/docs/latest/api/safe-storage",
+              "https://raw.githubusercontent.com/electron/electron/main/docs/api/safe-storage.md"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Recommended fallback strategy when encryption is unavailable",
+            "answer": "The Electron docs do NOT prescribe a fallback; they give you detection primitives (`isEncryptionAvailable`, `isAsyncEncryptionAvailable`, `getSelectedStorageBackend` returning `basic_text`) plus the explicit opt-in `setUsePlainTextEncryption(true)` for Linux, and recommend the async API for graceful handling of temporary unavailability. Note the danger: on Linux with no keyring, `basic_text` is the silent default — `encryptString` still succeeds, so an app that only checks `isEncryptionAvailable()` can write plaintext-equivalent ciphertext without any warning. Mature-app practice (verified for VS Code): when an OS keyring cannot be identified on Linux, VS Code does not silently fall back — it surfaces a warning and requires the user to explicitly choose a backend via the `password-store` flag (`gnome-libsecret`, `kwallet5`, or `basic`); its docs describe the basic/plaintext fallback as \"at best, obfuscation, and should only be used if you are accepting of the risk that any process on the system could, in theory, decrypt your stored secrets.\" Recommended pattern for Nimbus: after `app.whenReady()`, gate on `await safeStorage.isAsyncEncryptionAvailable()` AND (on Linux) `safeStorage.getSelectedStorageBackend() !== 'basic_text'`; if the gate fails, refuse to persist the secret (keep it in-memory for the session and tell the user), offering plaintext-at-rest only behind an explicit, warned opt-in.",
+            "codeExample": "async function canPersistSecrets(): Promise<boolean> {\n  if (!(await safeStorage.isAsyncEncryptionAvailable())) return false;\n  if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {\n    return false; // hardcoded-password 'encryption' == plaintext-equivalent\n  }\n  return true;\n}",
+            "sources": [
+              "https://www.electronjs.org/docs/latest/api/safe-storage",
+              "https://code.visualstudio.com/docs/configure/settings-sync"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Current Electron stable and version requirements for each safeStorage API",
+            "answer": "As of 2026-08-11 the current stable is Electron 43 — latest release v43.3.0 (Aug 5, 2026; Chromium 150, Node.js 24.18.1). Electron 44 reaches stable Aug 25, 2026 (currently 44.0.0-beta.2); 42.0.0 went stable May 5, 2026; 41.0.0 Mar 10, 2026 (EOL Aug 25, 2026 — last 3 stable majors are supported). Version requirements: (a) core sync API — `isEncryptionAvailable`, `encryptString`, `decryptString` — since Electron 15 (backport PR #30430 merged into 15-x-y, Aug 2021); (b) Linux-specific `setUsePlainTextEncryption` and `getSelectedStorageBackend` — first shipped in v25.5.0 (release note: \"Added `safeStorage.setUsePlainTextEncryption` and `safeStorage.getSelectedStorageBackend` api. #39325 (Also in 26)\"), so require Electron >= 25.5.0 (any 26+ has them); (c) async API — `isAsyncEncryptionAvailable`, `encryptStringAsync`, `decryptStringAsync` — merged to main Feb 15, 2026 (PR #49054, labeled semver/major, no-backport), which per the release schedule (41 branch cut Jan 15, 42 branch cut Mar 12) first shipped in Electron 42.0.0; a follow-up fix (PR #50419, merged Mar 23, 2026, backported to 42-x-y) made the async encryptor initialize lazily and made `isAsyncEncryptionAvailable()` return `Promise<boolean>`. Practical requirement for Nimbus: target Electron 43 (current stable) — every API listed above is available there; if you must support the sync-only surface, floor is 25.5.0.",
+            "sources": [
+              "https://releases.electronjs.org/",
+              "https://releases.electronjs.org/schedule",
+              "https://www.electronjs.org/docs/latest/tutorial/electron-timelines",
+              "https://github.com/electron/electron/pull/49054",
+              "https://github.com/electron/electron/pull/50419",
+              "https://github.com/electron/electron/pull/30430",
+              "https://github.com/electron/electron/releases/tag/v25.5.0"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "Buffer/base64 pattern for persisting encrypted values",
+            "answer": "Docs-confirmed contract: `encryptString`/`encryptStringAsync` return a Node `Buffer` (\"An array of bytes representing the encrypted string\"), and `decryptString`/`decryptStringAsync` take that exact `Buffer` back. I verified the official safeStorage page and its source markdown contain NO persistence example, so the serialization step is not specified by Electron. The standard, correct pattern is: serialize with `buffer.toString('base64')` for storage in JSON/SQLite/electron-store, and rehydrate with `Buffer.from(stored, 'base64')` before decrypting. Any encoding that round-trips bytes losslessly works (`'hex'` too, or a BLOB column storing the raw Buffer directly — for SQLite a BLOB avoids the base64 step entirely); never use `'utf8'`, which corrupts binary ciphertext. Also persist `decryptStringAsync`'s `shouldReEncrypt` handling: when true, re-encrypt `result` and overwrite the stored value.",
+            "codeExample": "// persist (e.g. into SQLite TEXT column or JSON)\nconst b64: string = (await safeStorage.encryptStringAsync(secret)).toString('base64');\n\n// restore\nconst { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(Buffer.from(b64, 'base64'));\nif (shouldReEncrypt) {\n  const next = (await safeStorage.encryptStringAsync(result)).toString('base64');\n  // overwrite stored b64 with next\n}",
+            "sources": [
+              "https://www.electronjs.org/docs/latest/api/safe-storage",
+              "https://raw.githubusercontent.com/electron/electron/main/docs/api/safe-storage.md"
+            ],
+            "confidence": "inferred"
+          }
+        ],
+        "warnings": [
+          "The safeStorage async API (isAsyncEncryptionAvailable / encryptStringAsync / decryptStringAsync) is NEW — merged Feb 15, 2026, first shipped in Electron 42.0.0 (May 2026). It postdates most training data; code written from memory will miss it. The docs now explicitly recommend it over the sync API.",
+          "decryptStringAsync does NOT resolve to a string — it resolves to an object { shouldReEncrypt: boolean; result: string }. Treating it like decryptString is a type bug; you must also handle shouldReEncrypt by re-encrypting and re-persisting.",
+          "isAsyncEncryptionAvailable() returns Promise<boolean>, not boolean, and initialization is lazy on first call (behavior fixed by PR #50419, merged Mar 23, 2026, backported to 42-x-y). Very early 42.0.x builds predate the lazy-init fix — use a current 42.x patch or Electron 43.",
+          "PR #49054 was labeled semver/major, so Electron 42 treated it as a breaking-change release area for safeStorage — review the Electron 42 breaking-changes notes if you support both sync and async paths.",
+          "Silent plaintext trap on Linux: with no keyring, the backend is basic_text and encryptString SUCCEEDS with a hardcoded plaintext password — no error, no warning. isEncryptionAvailable() alone does not protect you; you must also check getSelectedStorageBackend() !== 'basic_text' on Linux.",
+          "A web-search snippet claimed the current stable was v42.8.1; the official releases.electronjs.org page (fetched directly) shows v43.3.0 (Aug 5, 2026) — I trusted the official page. Note Electron 44 goes stable Aug 25, 2026, two weeks from today, and Electron 41 hits end-of-support the same day.",
+          "The Electron docs provide NO official example for persisting the encrypted Buffer — the base64 round-trip pattern is standard practice, not doc-specified (marked 'inferred').",
+          "Docs warn that encryptString/decryptString calls can BLOCK the current thread on macOS (Keychain, may collect user input) and on Linux when a password manager is available — another reason to use the async variants in the Electron main process.",
+          "This verification covered only the Electron safeStorage scope requested; the Claude Agent SDK doc bases listed in the task preamble were not needed for these items and were not fetched."
+        ]
+      },
+      "verification": null
+    },
+    {
+      "area": "build-stack",
+      "findings": {
+        "items": [
+          {
+            "topic": "1. Scaffolding: electron-vite vs create-electron-vite vs Electron Forge Vite plugin",
+            "answer": "Recommended: electron-vite. Versions/dates (npm registry, authoritative): electron-vite latest 5.0.0 (published 2025-12-07; dist-tag beta = 6.0.0-beta.1, 2026-04-12), and its scaffolder @quick-start/create-electron 1.0.30 (2025-12-07) — actively maintained. create-electron-vite latest 0.7.1 (2024-08-29) — no release in ~2 years, effectively stale. @electron-forge/plugin-vite latest 7.11.2 (2026-05-20) — actively released BUT the official Forge docs still mark Vite support 'experimental' since Forge v7.5.0, warning 'Future minor releases may contain breaking changes'. electron-vite is purpose-built for the three-target build: its config exports exactly { main: {...}, preload: {...}, renderer: {...} }, has TypeScript templates (react-ts, vue-ts, vanilla-ts, svelte-ts, solid-ts), and requires Node 20.19+/22.12+ (engines: ^20.19.0 || >=22.12.0). Exact scaffold command: `npm create @quick-start/electron@latest nimbus -- --template react-ts`. Peer deps of electron-vite 5.0.0: vite ^5.0.0 || ^6.0.0 || ^7.0.0 (NOT Vite 8) and @swc/core ^1.0.0.",
+            "codeExample": "// scaffold\n// npm create @quick-start/electron@latest nimbus -- --template react-ts\n\n// electron.vite.config.ts — three targets\nimport { defineConfig } from 'electron-vite'\nexport default defineConfig({\n  main: { /* vite config */ },\n  preload: { /* vite config */ },\n  renderer: { /* vite config */ }\n})",
+            "sources": [
+              "https://registry.npmjs.org/electron-vite",
+              "https://registry.npmjs.org/create-electron-vite",
+              "https://registry.npmjs.org/@electron-forge%2Fplugin-vite",
+              "https://registry.npmjs.org/@quick-start%2Fcreate-electron",
+              "https://registry.npmjs.org/electron-vite/5.0.0",
+              "https://electron-vite.org/guide/",
+              "https://www.electronforge.io/config/plugins/vite"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "2. better-sqlite3 in the Electron main process (version, ABI story, Vite externalization)",
+            "answer": "Latest: better-sqlite3 13.0.3 (published 2026-08-05); v13.0.0 (2026-07-21) is a landmark release: 'the first version of better-sqlite3 to run on the N-API' (depends on node-addon-api ^8.0.0, engines node >=22). The release notes say prebuilt binaries now ship INSIDE the npm package (the deprecated prebuild-install dependency was removed) and 'should theoretically work across different versions of Node.js and Electron' — so with v13 the classic @electron/rebuild step is generally no longer needed for ABI matching (the old troubleshooting doc still carries legacy 'use electron-rebuild' advice for version-mismatch errors). If a rebuild is ever needed: @electron/rebuild latest is 4.2.0 (2026-07-07), and electron-builder handles it automatically — its `npmRebuild` option (default `true`) runs @electron/rebuild over node_modules against the Electron ABI; `nodeGypRebuild` and `buildDependenciesFromSource` both default `false` (confirmed in app-builder-lib/src/configuration.ts). Vite bundle exclusion: electron-vite already treats package.json `dependencies` as external for main/preload by default; in electron-vite 5 the old `externalizeDepsPlugin` is REPLACED by the `build.externalizeDeps` option (with `include`/`exclude`), and the docs explicitly state native Node addons 'must remain external, which can be configured using `build.rollupOptions.external`'. So: put better-sqlite3 in `dependencies` (not devDependencies) and, to be explicit, add it to `build.rollupOptions.external`.",
+            "codeExample": "// electron.vite.config.ts (electron-vite 5)\nexport default defineConfig({\n  main: {\n    build: {\n      // deps in package.json \"dependencies\" are external by default;\n      // native addons MUST stay external:\n      rollupOptions: { external: ['better-sqlite3'] }\n    }\n  }\n})\n// electron-builder: npmRebuild defaults to true — @electron/rebuild\n// runs automatically at package time (harmless with N-API prebuilds).",
+            "sources": [
+              "https://registry.npmjs.org/better-sqlite3",
+              "https://github.com/WiseLibs/better-sqlite3/releases/tag/v13.0.0",
+              "https://raw.githubusercontent.com/WiseLibs/better-sqlite3/master/docs/troubleshooting.md",
+              "https://registry.npmjs.org/@electron%2Frebuild",
+              "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/src/configuration.ts",
+              "https://electron-vite.org/guide/dependency-handling"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "3. Monaco Editor + Vite in 2026 (versions, worker setup, Shiki)",
+            "answer": "Versions: monaco-editor 0.56.0 (2026-07-20); @monaco-editor/react 4.7.0 (2025-02-13; next tag 4.8.0-rc.3). Worker setup best practice is Vite-native `?worker` imports — the official monaco-editor ESM integration doc documents `self.MonacoEnvironment = { getWorker(workerId, label) }` returning `new Worker(...)` built from `monaco-editor/esm/vs/.../*.worker?worker` module imports, and does NOT mention vite-plugin-monaco-editor. vite-plugin-monaco-editor's last publish was v1.1.0 on 2022-07-02 (4 years stale) — do not use it. CRITICAL for Electron: @monaco-editor/react 'By default, monaco files are being downloaded from CDN' — an offline/CSP'd Electron app must call `loader.config({ monaco })` with the locally bundled `monaco-editor` package (the README has a dedicated Vite section with exact code, plus an Electron section about CDN restrictions). Shiki: yes, viable and current — @shikijs/monaco 4.4.3 (published 2026-08-10, same-day as shiki 4.4.3). Its API is `shikiToMonaco(highlighter, monaco)`: create a Shiki highlighter with themes+langs, register each language ID with `monaco.languages.register`, then call shikiToMonaco to replace Monaco's non-TextMate built-in highlighter with full TextMate-grammar highlighting. Caveat: only explicitly registered languages get highlighted.",
+            "codeExample": "import * as monaco from 'monaco-editor'\nimport { loader } from '@monaco-editor/react'\nimport editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'\nimport tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'\nimport { createHighlighter } from 'shiki'\nimport { shikiToMonaco } from '@shikijs/monaco'\n\nself.MonacoEnvironment = {\n  getWorker(_: unknown, label: string) {\n    if (label === 'typescript' || label === 'javascript') return new tsWorker()\n    return new editorWorker()\n  },\n}\nloader.config({ monaco }) // no CDN — required for Electron\n\nconst highlighter = await createHighlighter({ themes: ['vitesse-dark'], langs: ['typescript'] })\nmonaco.languages.register({ id: 'typescript' })\nshikiToMonaco(highlighter, monaco)",
+            "sources": [
+              "https://registry.npmjs.org/monaco-editor",
+              "https://registry.npmjs.org/@monaco-editor%2Freact",
+              "https://registry.npmjs.org/vite-plugin-monaco-editor",
+              "https://registry.npmjs.org/@shikijs%2Fmonaco",
+              "https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-esm.md",
+              "https://raw.githubusercontent.com/suren-atoyan/monaco-react/master/README.md",
+              "https://shiki.style/packages/monaco"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "4. Latest majors: zod / zustand / simple-git / electron-builder / eslint / React 19",
+            "answer": "All from npm registry on 2026-08-11: zod 4.4.3 (2026-05-04) — v4 is stable ('Zod 4 is now stable!'), import path is plain `\"zod\"` (`import * as z from 'zod'`; `zod/mini` for the small build). zustand 5.0.14 (2026-05-28) — v5 is current. simple-git 3.36.0 (2026-04-12) — still v3 line. electron-builder 26.15.3 (2026-06-09) is latest stable; a 27.0.0-alpha.6 exists on the `next` tag (v27 renames e.g. electronDownload→electronGet), so target v26 now. eslint 10.8.1 (2026-08-07); v10.0.0 released 2026-02-06 — eslintrc is COMPLETELY REMOVED, flat config (eslint.config.js/.mjs/.cjs/.ts/.mts/.cts) is the only format, use `import { defineConfig } from 'eslint/config'` (plus `globalIgnores()`); requires Node ^20.19.0 || ^22.13.0 || >=24. React 19: stable since 2024-12-05 ('React 19 is now stable!'), current latest react/react-dom 19.2.8 (2026-07-21) — long-since routine with Vite; electron-vite ships an official react-ts template (React works in the renderer like any Vite SPA; no Electron-specific caveat found in docs). Also verified context versions: electron 43.3.0 (2026-08-04), vite 8.2.1 (2026-08-06 — note electron-vite 5 peer-supports only Vite ^5||^6||^7).",
+            "codeExample": "// eslint.config.ts (ESLint 10 — flat config only)\nimport { defineConfig, globalIgnores } from 'eslint/config'\nexport default defineConfig([\n  globalIgnores(['dist/', 'out/']),\n  { rules: { semi: 'error' } },\n])",
+            "sources": [
+              "https://registry.npmjs.org/zod",
+              "https://registry.npmjs.org/zustand",
+              "https://registry.npmjs.org/simple-git",
+              "https://registry.npmjs.org/electron-builder",
+              "https://registry.npmjs.org/eslint",
+              "https://registry.npmjs.org/react",
+              "https://zod.dev/v4",
+              "https://eslint.org/blog/2026/02/eslint-v10.0.0-released/",
+              "https://eslint.org/docs/latest/use/configure/configuration-files",
+              "https://react.dev/blog/2024/12/05/react-19"
+            ],
+            "confidence": "confirmed-in-docs"
+          },
+          {
+            "topic": "5. Electron sandbox:true + preload with contextBridge — what a sandboxed preload may require",
+            "answer": "Per the official Electron sandbox tutorial: 'Starting from Electron 20, the sandbox is enabled for renderer processes without any further configuration' — sandbox:true is the default. In a sandboxed renderer the preload script gets only a POLYFILLED `require` limited to this exact set: `electron` (only the renderer-process APIs: `contextBridge`, `crashReporter`, `ipcRenderer`, `nativeImage`, `webFrame`, `webUtils`), `events`, `timers`, `url` (also via `node:events`, `node:timers`, `node:url`), plus polyfilled globals `Buffer`, `process`, `clearImmediate`, `setImmediate`. The polyfilled require CANNOT load arbitrary CommonJS/node modules — the docs say preload code that needs other modules must be bundled ahead of time (electron-vite's preload target does exactly this; anything beyond the allowed set must be bundled in, and Node-native things like better-sqlite3 must live in the MAIN process, reached from the preload via ipcRenderer). contextBridge itself works fine under sandbox — that is the intended pattern (contextBridge.exposeInMainWorld + ipcRenderer.invoke) — but the docs warn privileged APIs can still leak to renderer code unless `contextIsolation` is enabled (it is by default). So the correct Nimbus config is sandbox:true + contextIsolation:true, a bundled preload that only uses contextBridge/ipcRenderer, and all SDK/SQLite/git work in the main process.",
+            "codeExample": "// preload.ts — everything here is allowed under sandbox:true\nimport { contextBridge, ipcRenderer } from 'electron'\ncontextBridge.exposeInMainWorld('nimbus', {\n  send: (ch: string, ...args: unknown[]) => ipcRenderer.invoke(ch, ...args),\n  on: (ch: string, fn: (...a: unknown[]) => void) => {\n    ipcRenderer.on(ch, (_e, ...a) => fn(...a))\n  },\n})\n// NOT allowed in sandboxed preload: require('fs'), require('better-sqlite3'), ...",
+            "sources": [
+              "https://www.electronjs.org/docs/latest/tutorial/sandbox"
+            ],
+            "confidence": "confirmed-in-docs"
+          }
+        ],
+        "warnings": [
+          "electron-vite 5 API break vs training data: `externalizeDepsPlugin` (the pattern in most pre-2026 tutorials) was REMOVED/replaced in v5 by the `build.externalizeDeps` config option; native addons are excluded via `build.rollupOptions.external`. Code copied from older examples will not compile against electron-vite 5.",
+          "Vite version mismatch: Vite latest is 8.2.1, but electron-vite 5.0.0's peerDependencies only allow vite ^5 || ^6 || ^7. Do not hand-upgrade the scaffolded project's Vite to 8 (electron-vite 6.0.0-beta.1 exists but is beta; its Vite-8 support was not verified).",
+          "better-sqlite3 v13 (2026-07) changed the ABI story fundamentally: it now uses N-API with prebuilt binaries shipped inside the npm package, so the traditional '@electron/rebuild for better-sqlite3' advice (still present in its troubleshooting.md) is largely obsolete. It also requires Node >=22 (engines).",
+          "GitHub's releases pages returned wrong-looking years via the fetch summarizer (relative dates); npm registry timestamps were used as the authoritative source for all version dates.",
+          "npmjs.com package pages 403-block WebFetch; all version data was pulled from the registry.npmjs.org JSON API instead — the sources arrays list those registry URLs.",
+          "The task preamble mentions verifying Claude Agent SDK identifiers and lists agent-sdk doc URLs, but none of the five numbered questions ask about the SDK, so no SDK API facts are included here — if SDK identifier verification is needed, run it as a separate pass.",
+          "electron-builder v27 is in alpha (27.0.0-alpha.6 on the `next` tag) and renames config keys (e.g. electronDownload → electronGet); pin v26 (26.15.3) for now. The npmRebuild/nodeGypRebuild/buildDependenciesFromSource defaults were confirmed from master-branch source (v27 line); the same options and defaults apply in v26 per the same doc set.",
+          "@monaco-editor/react loads monaco from a CDN by default — in an offline/CSP-restricted Electron renderer this silently breaks unless you call loader.config({ monaco }) with the bundled monaco-editor package."
+        ]
+      },
+      "verification": null
+    }
+  ],
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Research"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Cross-check"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "research:session-api",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a10406e4d60bbc8c5",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378598659,
+      "queuedAt": 1786378598649,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378756724,
+      "tokens": 64542,
+      "toolCalls": 13,
+      "durationMs": 158065,
+      "resultPreview": "{\"items\":[{\"topic\":\"NPM package name and latest version\",\"answer\":\"The exact npm package name is @anthropic-ai/claude-agent-sdk. Current stable version is 0.3.142 and later. The V2 session API was removed in 0.3.142. Main exports: query(), startup(), listSessions(), getSessionMessages(), getSessionInfo(), renameSession(), tagSession(), resolveSettings().\",\"sources\":[\"https://code.claude.com/docs/e…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "research:permissions",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a1112b5ae861c54fd",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378598660,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378746598,
+      "tokens": 68629,
+      "toolCalls": 16,
+      "durationMs": 147938,
+      "resultPreview": "{\"items\":[{\"topic\":\"canUseTool callback: exact option name and signature\",\"answer\":\"TypeScript option name: `canUseTool`. Callback signature: `async (toolName: string, input: unknown, options: { signal: AbortSignal; suggestions?: PermissionUpdate[] }) => Promise<ToolApprovalResponse>`. The `options` parameter includes an `AbortSignal` for cancellation and optional `suggestions` array with pre-made…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "research:events",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a8b712f8621410a92",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378598660,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378752998,
+      "tokens": 66057,
+      "toolCalls": 16,
+      "durationMs": 154338,
+      "resultPreview": "{\"items\":[{\"topic\":\"SDKMessage Union - Full Type Coverage\",\"answer\":\"The SDKMessage async generator yields these exact type values: 'system', 'assistant', 'user', 'text', 'thinking', 'tool_use', 'tool_result', 'result', 'control_request', 'control_response', 'task_progress', 'hook_started', 'hook_progress', 'hook_response', 'commands_changed', 'stream_event', 'partial'. Additional system subtypes …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "research:binary-env",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a4a0c6ac04000e010",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378598661,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378673215,
+      "tokens": 72679,
+      "toolCalls": 10,
+      "durationMs": 74554,
+      "resultPreview": "{\"items\":[{\"topic\":\"SDK bundled executable\",\"answer\":\"The TypeScript SDK (@anthropic-ai/claude-agent-sdk) bundles native Claude Code binaries as optional dependencies for macOS (ARM64, x64), Linux (glibc x64, musl x64), and Windows (x64). Installation includes the binary by default. However, some installations receive no binary: (1) `npm ci --omit=optional` skips optional dependencies; (2) custom …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "research:billing",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a4c05b9cf425b80f0",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378598661,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378702044,
+      "tokens": 69206,
+      "toolCalls": 19,
+      "durationMs": 103383,
+      "resultPreview": "{\"items\":[{\"topic\":\"Agent SDK Usage Billing Status (Current as of 2026-08-11)\",\"answer\":\"As of August 2026, Anthropic PAUSED the June 15, 2026 billing change. Agent SDK usage (`query()` calls), `claude -p`, and third-party apps using Agent SDK authentication still consume the user's subscription's usage limits (for Pro/Max/Team/Enterprise plans) and do NOT draw from a separate monthly credit. This…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "research:safestorage",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "a2e66a24fffa19433",
+      "agentType": "general-purpose",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786378598662,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378888838,
+      "tokens": 52264,
+      "toolCalls": 20,
+      "durationMs": 290176,
+      "resultPreview": "{\"items\":[{\"topic\":\"safeStorage backends per OS and exact API surface\",\"answer\":\"Module: `safeStorage` (main process only). Backends: macOS = Keychain (Keychain Access); Windows = DPAPI; Linux = a secret store that varies by desktop environment — supported options are exactly `kwallet`, `kwallet5`, `kwallet6`, `gnome-libsecret`, with a `basic_text` fallback (hardcoded plaintext password) when no s…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "research:build-stack",
+      "phaseIndex": 1,
+      "phaseTitle": "Research",
+      "agentId": "ac11b30e28771ad67",
+      "agentType": "general-purpose",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786378598662,
+      "queuedAt": 1786378598650,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are verifying technical facts for \"Nimbus\", a desktop app (Electron main process, TypeScript, Node 22) that embeds the Claude Agent SDK to drive Claude Code sessions programmatically.\n\nToday is 2026-08-11. Your training data may be STALE — you MUST verify every claim by fetching the official documentation with WebFetch (use WebSearch when a page has moved or for recent announcements). Never an…",
+      "lastProgressAt": 1786378915431,
+      "tokens": 60881,
+      "toolCalls": 41,
+      "durationMs": 316768,
+      "resultPreview": "{\"items\":[{\"topic\":\"1. Scaffolding: electron-vite vs create-electron-vite vs Electron Forge Vite plugin\",\"answer\":\"Recommended: electron-vite. Versions/dates (npm registry, authoritative): electron-vite latest 5.0.0 (published 2025-12-07; dist-tag beta = 6.0.0-beta.1, 2026-04-12), and its scaffolder @quick-start/create-electron 1.0.30 (2025-12-07) — actively maintained. create-electron-vite latest…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "verify:billing",
+      "phaseIndex": 2,
+      "phaseTitle": "Cross-check",
+      "agentId": "a2c8ae1ff40d6dbf3",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378702063,
+      "queuedAt": 1786378702051,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are an adversarial fact-checker. Another agent researched a topic for the Nimbus desktop app. Independently RE-VERIFY the load-bearing claims below by fetching the cited URLs yourself (WebFetch) and searching for anything more recent (WebSearch). Today is 2026-08-11. Do NOT trust the claims; trust only what you fetch. For each major claim return: confirmed / contradicted / unverifiable. If con…",
+      "lastProgressAt": 1786378778838,
+      "tokens": 61108,
+      "toolCalls": 14,
+      "durationMs": 76775,
+      "resultPreview": "{\"verdicts\":[{\"topic\":\"Agent SDK Usage Billing Status (Current as of 2026-08-11)\",\"verdict\":\"confirmed\",\"note\":\"Verified via support.claude.com: 'We're pausing the changes to Claude Agent SDK usage described below. For now, nothing has changed: Claude Agent SDK, claude -p, and third-party app usage still draw from your subscription's usage limits.' The June 15, 2026 change is paused and billing st…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "verify:permissions",
+      "phaseIndex": 2,
+      "phaseTitle": "Cross-check",
+      "agentId": "a0363f3c272758890",
+      "agentType": "claude-code-guide",
+      "model": "claude-haiku-4-5-20251001",
+      "state": "done",
+      "startedAt": 1786378746605,
+      "queuedAt": 1786378746604,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are an adversarial fact-checker. Another agent researched a topic for the Nimbus desktop app. Independently RE-VERIFY the load-bearing claims below by fetching the cited URLs yourself (WebFetch) and searching for anything more recent (WebSearch). Today is 2026-08-11. Do NOT trust the claims; trust only what you fetch. For each major claim return: confirmed / contradicted / unverifiable. If con…",
+      "lastProgressAt": 1786378880034,
+      "tokens": 73893,
+      "toolCalls": 21,
+      "durationMs": 133428,
+      "resultPreview": "{\"verdicts\":[{\"topic\":\"canUseTool callback: exact option name and signature\",\"verdict\":\"contradicted\",\"note\":\"The options parameter includes additional fields not mentioned in the claim. Per https://github.com/anthropics/claude-agent-sdk-typescript, the full signature is: (toolName: string, input: Record<string, unknown>, options: { signal: AbortSignal; suggestions?: PermissionUpdate[]; blockedPat…"
+    }
+  ],
+  "totalTokens": 589259,
+  "totalToolCalls": 170
+}
