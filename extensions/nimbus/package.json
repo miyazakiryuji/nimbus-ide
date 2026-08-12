@@ -15,6 +15,9 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "enabledApiProposals": [
+    "testObserver"
+  ],
   "capabilities": {
     "virtualWorkspaces": false,
     "untrustedWorkspaces": {
@@ -110,6 +113,11 @@
       {
         "command": "nimbus.sendLastTerminalFailure",
         "title": "直近に失敗したコマンドをセッションに投入",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.sendLastTestFailure",
+        "title": "直近に失敗したテストをセッションに投入",
         "category": "Nimbus"
       },
       {
@@ -216,6 +224,12 @@
         "title": "MCP サーバーの有効／無効を切り替える",
         "category": "Nimbus",
         "icon": "$(circle-slash)"
+      },
+      {
+        "command": "nimbus.completionReport",
+        "title": "完了報告を作る（証跡つき）",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
       }
     ],
     "menus": {
@@ -399,6 +413,18 @@
           "minimum": 10,
           "maximum": 2000,
           "description": "セッションに投入するターミナル出力の行数の上限（末尾から数えます）。"
+        },
+        "nimbus.tests.captureFailures": {
+          "type": "boolean",
+          "default": true,
+          "description": "テストが失敗したら、落ちたテストの名前・場所・メッセージをセッションに投入できる通知を出します。"
+        },
+        "nimbus.tests.maxFailures": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "セッションに投入する失敗テストの件数の上限。"
         },
         "nimbus.dialogue.confirmVaguePrompt": {
           "type": "boolean",

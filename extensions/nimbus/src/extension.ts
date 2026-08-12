@@ -32,9 +32,11 @@ import { McpViewProvider } from './mcpView';
 import { canReconnect, type McpServer } from './core/mcp';
 import { buildCheckpoints, checkpointLabel, describeRewind } from './core/checkpoints';
 import { searchTranscripts } from './transcriptSearch';
+import { openCompletionReport } from './completionReport';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { TerminalWatcher } from './terminalWatcher';
+import { TestWatcher } from './testWatcher';
 import { ApprovalsViewProvider } from './approvalsView';
 import type { ApprovalDecision, PendingApproval } from './permissions';
 
@@ -806,6 +808,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		log
 	});
 
+	// 落ちたテストを Test Explorer の結果から直接拾う（T-039）。
+	// ターミナルの出力を読み解かせるより、名前・場所・メッセージが構造のまま渡る
+	const testRuns = new TestWatcher({
+		send: (text) => {
+			cockpit.reveal();
+			void send(text);
+		},
+		log
+	});
+
 	context.subscriptions.push(
 		output,
 		status,
@@ -851,6 +863,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
 		// 過去セッションの横断検索（T-034）。読むのは Claude Code 本体の記録で、Nimbus は書かない
 		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
+		// 証跡つき完了報告（T-081）。「できました」だけの報告を無くす
+		vscode.commands.registerCommand('nimbus.completionReport', () => openCompletionReport(retained)),
 		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
 		vscode.commands.registerCommand('nimbus.refreshMcp', () => refreshMcp()),
 		vscode.commands.registerCommand('nimbus.reconnectMcp', (node?: { server?: McpServer }) =>
@@ -914,10 +928,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
 		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
-		// 通知を閉じてしまっても、あとから同じものを投入できる（T-169）
+		// 通知を閉じてしまっても、あとから同じものを投入できる（T-169 / T-039）
 		vscode.commands.registerCommand('nimbus.sendLastTerminalFailure', () => {
 			if (!terminals.sendLastFailure()) {
 				void vscode.window.showInformationMessage('Nimbus: 直近に失敗したコマンドはありません。');
+			}
+		}),
+		testRuns,
+		vscode.commands.registerCommand('nimbus.sendLastTestFailure', () => {
+			if (!testRuns.sendLastFailure()) {
+				void vscode.window.showInformationMessage('Nimbus: 直近に失敗したテストはありません。');
 			}
 		}),
 		new vscode.Disposable(() => sessions.closeAll())

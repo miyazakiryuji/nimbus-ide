@@ -163,8 +163,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 
 ### ⑥ IDE との統合（フォークにした旨味が出る場所）
 
-- [ ] T-039 **テストランナー / CI 連携** — テストが落ちたら、失敗ログをワンクリックでセッションに投入する。
-      VS Code の Test Explorer に相乗りできるので、フォークをベースにした旨味が一番出る [P1]
 - [ ] T-044 ターミナルで **Shift+Enter を改行**にする（出荷時から）— Claude Code の `/terminal-setup` に
       相当する設定を最初から入れておき、利用者にやらせない（キーバインドで Esc+Enter を送るのが定石）[P2]
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
@@ -495,6 +493,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-039 テストランナー連携（Test Explorer の結果から落ちたテストの名前・場所・メッセージを
+      1 クリックでセッションへ。CI 連携は T-131）— 2026-08-13 / 仕様 [test-runner](nimbus/docs/specs/test-runner.md)
 
 - [x] T-113 hunk 単位の部分採用（変更を選んで採用・外したものは元のまま残る・Write / Edit / MultiEdit）
       — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
