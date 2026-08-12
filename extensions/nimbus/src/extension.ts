@@ -27,6 +27,8 @@ import { SkillsViewProvider } from './skillsView';
 import { addClaudeMdSection, ClaudeMdViewProvider, promoteInstruction } from './claudeMdView';
 import { editProtectedPaths } from './protectedPaths';
 import { openDigest } from './digest';
+import { explainLockDiff } from './lockDiff';
+import { openFromStackTrace } from './stackTrace';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -37,6 +39,8 @@ import { searchTranscripts } from './transcriptSearch';
 import { openCompletionReport } from './completionReport';
 import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from './core/attachments';
 import { captureAfterReload, readHotReloadConfig } from './hotReload';
+import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile } from './core/pinned';
+import { thresholdLevel } from './core/usage';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
@@ -72,6 +76,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	let contextPercent: number | undefined;
 	/** ホットリロードで自動投入した回数（T-072）。指示のたびに 0 に戻す */
 	let reloadRounds = 0;
+	/** 文脈の予算の警告を出した段階（T-153）。同じ段階で何度も出さない */
+	let budgetAlerted: 'warn' | 'over' | undefined;
 	/** コスト警告を出したセッション。同じ段階で何度も出さない（T-059） */
 	const costAlerted = new Map<string, 'warn' | 'over'>();
 
@@ -102,7 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const sessions = new SessionManager(
 		undefined,
-		async () => buildOptions(),
+		async () => buildOptions(await readPinnedFiles()),
 		(sessionId) => broker.canUseToolFor(sessionId)
 	);
 
@@ -320,6 +326,63 @@ export function activate(context: vscode.ExtensionContext): void {
 		sessions.sendMessage(sessionId, outcome.prompt, [outcome.attachment]);
 	}
 
+	/**
+	 * ピン留めしたファイルを読む（tasks.md T-152）。
+	 * 読めなかったものは黙って飛ばさず、名前を出す（設定に残ったままのパスに気づけるように）。
+	 */
+	async function readPinnedFiles(): Promise<PinnedFile[]> {
+		const paths = vscode.workspace.getConfiguration('nimbus').get<string[]>('context.pinnedFiles') ?? [];
+		const files: PinnedFile[] = [];
+		for (const path of paths) {
+			const uri = path.startsWith('/')
+				? vscode.Uri.file(path)
+				: vscode.Uri.joinPath(vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'), path);
+			try {
+				const bytes = await vscode.workspace.fs.readFile(uri);
+				files.push({ path, content: Buffer.from(bytes).toString('utf8') });
+			} catch {
+				log(`[pinned] 読めませんでした: ${path}`);
+			}
+		}
+		return files;
+	}
+
+	/** ピン留めの追加・削除。設定を直接書かせない（パスの綴り間違いが一番多い） */
+	async function managePinnedFiles(): Promise<void> {
+		const config = vscode.workspace.getConfiguration('nimbus');
+		const current = config.get<string[]>('context.pinnedFiles') ?? [];
+		const ADD = '$(add) ファイルを足す';
+		const items: vscode.QuickPickItem[] = [
+			{ label: ADD },
+			...current.map((path) => ({ label: path, description: '選ぶと外します' }))
+		];
+		const chosen = await vscode.window.showQuickPick(items, {
+			title: `Nimbus: 常に含めるファイル（${describePinned(selectWithinBudget(await readPinnedFiles()))}）`
+		});
+		if (!chosen) {
+			return;
+		}
+		if (chosen.label === ADD) {
+			const picked = await vscode.window.showOpenDialog({ canSelectMany: true, title: '常に含めるファイルを選ぶ' });
+			if (!picked || picked.length === 0) {
+				return;
+			}
+			const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+			const added = picked.map((uri) =>
+				root && uri.fsPath.startsWith(`${root}/`) ? uri.fsPath.slice(root.length + 1) : uri.fsPath
+			);
+			await config.update('context.pinnedFiles', [...current, ...added], vscode.ConfigurationTarget.Workspace);
+			log(`[pinned] 追加: ${added.join(', ')}`);
+			return;
+		}
+		await config.update(
+			'context.pinnedFiles',
+			current.filter((path) => path !== chosen.label),
+			vscode.ConfigurationTarget.Workspace
+		);
+		log(`[pinned] 削除: ${chosen.label}`);
+	}
+
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
 	async function refreshUsage(sessionId: string): Promise<void> {
 		if (sessionId !== activeSessionId) {
@@ -327,8 +390,42 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		const [usage, context] = await Promise.all([sessions.getUsage(sessionId), sessions.getContextUsage(sessionId)]);
 		contextPercent = context && context.maxTokens > 0 ? (context.totalTokens / context.maxTokens) * 100 : undefined;
-		usageView.update(usage, context);
+		const budget = vscode.workspace.getConfiguration('nimbus').get<number>('context.budgetTokens') ?? 0;
+		usageView.update(usage, context, retained, budget);
+		if (context) {
+			checkContextBudget(context.totalTokens, budget);
+		}
 		updateStatus(sessions.get(sessionId));
+	}
+
+	/**
+	 * 文脈の予算（tasks.md T-153）。
+	 * 上限で止めるのではなく、**近づいていることを言う**。圧縮という手が残っているので、
+	 * 止めるより「いま圧縮しますか」と聞くほうが役に立つ。
+	 */
+	function checkContextBudget(usedTokens: number, budgetTokens: number): void {
+		const level = thresholdLevel(usedTokens, budgetTokens);
+		if (level === 'none') {
+			budgetAlerted = undefined;
+			return;
+		}
+		if (budgetAlerted === level) {
+			return;
+		}
+		budgetAlerted = level;
+		const COMPACT = '圧縮する';
+		void vscode.window
+			.showWarningMessage(
+				level === 'over'
+					? `Nimbus: 文脈が予算 ${budgetTokens.toLocaleString('en-US')} トークンを超えました。`
+					: `Nimbus: 文脈が予算の 8 割に達しました（${usedTokens.toLocaleString('en-US')} / ${budgetTokens.toLocaleString('en-US')}）。`,
+				COMPACT
+			)
+			.then((choice) => {
+				if (choice === COMPACT) {
+					void vscode.commands.executeCommand('nimbus.compact');
+				}
+			});
 	}
 
 	/**
@@ -940,6 +1037,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
 		// 過去セッションの横断検索（T-034）。読むのは Claude Code 本体の記録で、Nimbus は書かない
 		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
+		vscode.commands.registerCommand('nimbus.pinnedFiles', () => managePinnedFiles()),
 		// 証跡つき完了報告（T-081）。「できました」だけの報告を無くす
 		vscode.commands.registerCommand('nimbus.completionReport', () => openCompletionReport(retained)),
 		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
@@ -980,6 +1078,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
 		vscode.commands.registerCommand('nimbus.editProtectedPaths', () => editProtectedPaths()),
 		vscode.commands.registerCommand('nimbus.openDigest', () => openDigest()),
+		vscode.commands.registerCommand('nimbus.explainLockDiff', () => explainLockDiff()),
+		vscode.commands.registerCommand('nimbus.openFromStackTrace', () => openFromStackTrace()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1064,8 +1164,23 @@ function workspaceCwd(): string | undefined {
  * `settingSources: []` を明示して、利用者の ~/.claude 設定を暗黙に読み込ませない
  * （何が文脈に入るかを Nimbus 側で説明できる状態に保つため）。
  */
-function buildOptions(): Partial<Options> {
+function buildOptions(pinned: readonly PinnedFile[] = []): Partial<Options> {
 	const options: Partial<Options> = { settingSources: [] };
+	// 常に含めるファイル（T-152）。preset に **足す** ので Claude Code の振る舞いは残る。
+	// 上限を超えたぶんは黙って切らず、外したことを利用者へ伝える
+	const selection = selectWithinBudget(pinned);
+	if (selection.included.length > 0) {
+		options.systemPrompt = {
+			type: 'preset',
+			preset: 'claude_code',
+			append: buildPinnedPrompt(selection.included)
+		};
+	}
+	if (selection.dropped.length > 0) {
+		void vscode.window.showWarningMessage(
+			`Nimbus: ピン留めが大きすぎるため ${selection.dropped.length} 件を外しました（${selection.dropped.join(', ')}）。`
+		);
+	}
 	const executable = resolveClaudeExecutable();
 	if (executable) {
 		options.pathToClaudeCodeExecutable = executable;

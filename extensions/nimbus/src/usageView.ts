@@ -10,7 +10,9 @@
  */
 import * as vscode from 'vscode';
 import type { SDKControlGetContextUsageResponse, SDKControlGetUsageResponse } from '@anthropic-ai/claude-agent-sdk';
-import { contextGauge, formatCost, formatTokens, toGauges, type Gauge } from './core/usage';
+import { budgetGauge, contextGauge, formatCost, formatTokens, toGauges, type Gauge } from './core/usage';
+import { contextEfficiency, describeEfficiency } from './core/efficiency';
+import type { NimbusEvent } from './events';
 
 type Node = { label: string; description?: string; tooltip?: string; children?: Node[]; icon?: string };
 
@@ -27,12 +29,23 @@ export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
 	private usage?: SDKControlGetUsageResponse;
 	private context?: SDKControlGetContextUsageResponse;
 	private updatedAt?: number;
+	/** 効率スコア（T-156）のもと。読み込みの重複はイベント列からしか分からない */
+	private events: readonly NimbusEvent[] = [];
+	/** 文脈の予算（T-153）。0 なら予算なし */
+	private budgetTokens = 0;
 	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
 	readonly onDidChangeTreeData = this.emitter.event;
 
-	update(usage: SDKControlGetUsageResponse | undefined, context: SDKControlGetContextUsageResponse | undefined): void {
+	update(
+		usage: SDKControlGetUsageResponse | undefined,
+		context: SDKControlGetContextUsageResponse | undefined,
+		events: readonly NimbusEvent[] = [],
+		budgetTokens = 0
+	): void {
 		this.usage = usage;
 		this.context = context;
+		this.events = events;
+		this.budgetTokens = budgetTokens;
 		this.updatedAt = Date.now();
 		this.emitter.fire(undefined);
 	}
@@ -69,6 +82,11 @@ export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
 
 		if (this.context) {
 			nodes.push(gaugeNode(contextGauge(this.context.totalTokens, this.context.maxTokens), 'symbol-ruler'));
+			// 予算は「上限」ではなく「そこへ近づいていること」を伝えるためのもの（T-153）
+			const budget = budgetGauge(this.context.totalTokens, this.budgetTokens);
+			if (budget) {
+				nodes.push(gaugeNode(budget, 'law'));
+			}
 			// 何が文脈を食っているかが分かると、削る先が決まる
 			const categories = [...this.context.categories]
 				.filter((category) => category.tokens > 0)
@@ -126,6 +144,25 @@ export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
 				label: '変更行数',
 				description: `+${session.total_lines_added} / -${session.total_lines_removed}`,
 				icon: 'diff'
+			});
+		}
+
+		// 読み直しの重複は「無駄」と言い切れる唯一の指標（T-156）
+		const efficiency = contextEfficiency(this.events);
+		if (efficiency.totalReads > 0) {
+			nodes.push({
+				label: '読み込みの効率',
+				description: describeEfficiency(efficiency),
+				icon: 'symbol-ruler',
+				tooltip: `${efficiency.uniqueFiles} ファイルを ${efficiency.totalReads} 回読みました`,
+				children:
+					efficiency.worst.length > 0
+						? efficiency.worst.map((file) => ({
+							label: file.path.split('/').pop() ?? file.path,
+							description: `${file.reads} 回`,
+							tooltip: file.path
+						}))
+						: undefined
 			});
 		}
 

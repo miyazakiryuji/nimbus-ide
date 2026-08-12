@@ -43,9 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-152 **コンテキストのピン留め** — 常に含めるファイルを指定する。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-153 コンテキスト予算の割り当て — 何トークンまでかを決める。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-156 コンテキスト効率のスコア表示 — 無駄な読み込みの検出。実装前に claim @session-a 2026-08-13 [P3]
 
 
 - [ ] T-004 `nimbus/docs/testing/f3-f6.md` §6 の画面確認 6 項目 — 手作業で 1 回見るのではなく
@@ -521,6 +518,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-152 コンテキストのピン留め（常に含めるファイル・上限つき・preset に append）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
+- [x] T-153 コンテキスト予算の割り当て（8 割で警告・超過で圧縮を促す・止めない）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
+- [x] T-156 コンテキスト効率のスコア表示（読み直しの重複だけを数える）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-040 画像・スクショのドロップ投入（貼り付け／ドロップ・中身で種類を判定）— 2026-08-13 / 仕様 [images-and-hot-reload](nimbus/docs/specs/images-and-hot-reload.md)
 - [x] T-072 ホットリロード連携（直す→リロード→スクショ→自分で見る。上限つき・既定オフ）— 2026-08-13 / 仕様 [images-and-hot-reload](nimbus/docs/specs/images-and-hot-reload.md)
 - [x] T-081 証跡つき完了報告（テスト実行の有無と成否を機械で拾い、報告に添える）— 2026-08-13 / 仕様 [completion-evidence](nimbus/docs/specs/completion-evidence.md)

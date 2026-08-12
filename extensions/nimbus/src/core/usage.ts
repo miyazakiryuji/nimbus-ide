@@ -140,15 +140,39 @@ export function contextGauge(totalTokens: number, maxTokens: number): Gauge {
 export type CostAlert = 'none' | 'warn' | 'over';
 
 /**
- * コスト上限の判定（T-059）。
- * `limitUsd` が 0 以下なら上限なしとして扱う（既定を「止めない」にしておく）。
+ * 上限に対する段階の判定。
+ * `limit` が 0 以下なら**上限なし**として扱う（既定を「止めない」にしておく）。
+ * 費用（T-059）と文脈の予算（T-153）で同じ規則を使う。
  */
-export function costAlertLevel(costUsd: number, limitUsd: number, warnAtPercent: number = 80): CostAlert {
-	if (!(limitUsd > 0)) {
+export function thresholdLevel(used: number, limit: number, warnAtPercent: number = 80): CostAlert {
+	if (!(limit > 0)) {
 		return 'none';
 	}
-	if (costUsd >= limitUsd) {
+	if (used >= limit) {
 		return 'over';
 	}
-	return costUsd >= limitUsd * (warnAtPercent / 100) ? 'warn' : 'none';
+	return used >= limit * (warnAtPercent / 100) ? 'warn' : 'none';
+}
+
+/** コスト上限の判定（T-059） */
+export function costAlertLevel(costUsd: number, limitUsd: number, warnAtPercent: number = 80): CostAlert {
+	return thresholdLevel(costUsd, limitUsd, warnAtPercent);
+}
+
+/**
+ * 文脈の予算（T-153）。「このセッションは何トークンまで」を決められるようにする。
+ * 上限そのものではなく**そこへ近づいていること**を伝えるのが目的なので、
+ * 判定は費用と同じ 3 段階にそろえる。
+ */
+export function budgetGauge(usedTokens: number, budgetTokens: number): Gauge | undefined {
+	if (!(budgetTokens > 0)) {
+		return undefined;
+	}
+	const percent = (usedTokens / budgetTokens) * 100;
+	return {
+		label: '予算',
+		percent,
+		bar: bar(percent),
+		detail: `${formatTokens(usedTokens)} / ${formatTokens(budgetTokens)} · ${Math.round(percent)}%`
+	};
 }
