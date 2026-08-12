@@ -6,6 +6,7 @@
  * 「何を配られたのか」が分かるため。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
 import {
 	buildBundle,
 	BUNDLED_DIRECTORIES,
@@ -17,9 +18,13 @@ import {
 	type BundleFile
 } from './core/bundle';
 
-function claudeDir(): vscode.Uri | undefined {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-	return root ? vscode.Uri.joinPath(root, '.claude') : undefined;
+/**
+ * どのルートの `.claude/` かは**呼ぶ側が決める**（T-173）。
+ * ここで先頭のルートを選ぶと、複数フォルダのときに
+ * 「別のフォルダの設定を配ってしまった」が起きる。
+ */
+function claudeDir(root: vscode.Uri): vscode.Uri {
+	return vscode.Uri.joinPath(root, '.claude');
 }
 
 /** `.claude/` を歩いて、配れるファイルだけを集める */
@@ -58,11 +63,11 @@ export async function exportBundle(
 	detectSecrets: (text: string) => { label: string }[],
 	log: (message: string) => void
 ): Promise<void> {
-	const dir = claudeDir();
-	if (!dir) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const dir = claudeDir(folder.uri);
 	const files: BundleFile[] = [];
 	for (const top of [...BUNDLED_DIRECTORIES, ...BUNDLED_FILES]) {
 		files.push(...(await collectFiles(dir, top)));
@@ -107,11 +112,11 @@ export async function exportBundle(
 
 /** 配られたものを読み込む（T-043）。**既存と違うものは黙って上書きしない** */
 export async function importBundle(log: (message: string) => void): Promise<void> {
-	const dir = claudeDir();
-	if (!dir) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const dir = claudeDir(folder.uri);
 	const picked = await vscode.window.showOpenDialog({
 		title: '読み込む配布物',
 		canSelectMany: false,
@@ -178,11 +183,13 @@ export async function importBundle(log: (message: string) => void): Promise<void
  * 誰がいつ何を変えたかは Git が持っている（Nimbus が履歴を持つ必要がない）。
  */
 export async function syncTeamBundle(log: (message: string) => void, quiet: boolean): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-	const dir = claudeDir();
-	if (!root || !dir) {
+	// 起動時にも走るので、黙って走るときは聞かない（起動のたびに問われては困る）
+	const folder = quiet ? resolveWorkspaceRoot() : await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri;
+	const dir = claudeDir(root);
 	const relative =
 		vscode.workspace.getConfiguration('nimbus').get<string>('team.bundlePath') || '.claude/team-bundle.json';
 	const bundleUri = vscode.Uri.joinPath(root, relative);

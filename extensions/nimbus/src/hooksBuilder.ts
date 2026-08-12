@@ -6,6 +6,7 @@
  */
 import { spawn } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import {
 	addHook,
 	ALL_HOOK_EVENTS,
@@ -23,9 +24,13 @@ import {
 /** ドライランの待ち上限。返らないフックで画面を止めない */
 const DRY_RUN_TIMEOUT_MS = 30_000;
 
-function settingsUri(): vscode.Uri | undefined {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-	return root ? vscode.Uri.joinPath(root, '.claude', 'settings.json') : undefined;
+/**
+ * どのルートの `settings.json` かは**呼ぶ側が決める**（T-173）。
+ * 先頭のルートに決め打つと、複数フォルダのときに
+ * 別のフォルダのフックを書き換えてしまう。
+ */
+function settingsUri(root: vscode.Uri): vscode.Uri {
+	return vscode.Uri.joinPath(root, '.claude', 'settings.json');
 }
 
 async function readSettings(uri: vscode.Uri): Promise<Record<string, unknown>> {
@@ -64,11 +69,11 @@ async function pickEvent(): Promise<HookEventName | undefined> {
 
 /** フックの一覧と、追加・削除（T-026） */
 export async function manageHooks(log: (message: string) => void): Promise<void> {
-	const uri = settingsUri();
-	if (!uri) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const uri = settingsUri(folder.uri);
 	const settings = await readSettings(uri);
 	const config = (settings['hooks'] as HooksConfig | undefined) ?? {};
 	const rows = flattenHooks(config);
@@ -149,12 +154,13 @@ async function writeHooks(uri: vscode.Uri, settings: Record<string, unknown>, ho
  * **本番と同じ形の JSON** を標準入力へ渡して、通すか止めるかを先に確かめる。
  */
 export async function dryRunHook(log: (message: string) => void): Promise<void> {
-	const uri = settingsUri();
-	const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!uri || !cwd) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const uri = settingsUri(folder.uri);
+	// フックは選んだルートで走らせる。別のルートで走らせると結果が変わる
+	const cwd = folder.uri.fsPath;
 	const config = ((await readSettings(uri))['hooks'] as HooksConfig | undefined) ?? {};
 	const rows = flattenHooks(config);
 	if (rows.length === 0) {
