@@ -50,6 +50,7 @@ import { createSandbox } from './sandbox';
 import { scheduleRun, showSchedule, watchSchedule } from './schedule';
 import { openPromptStats } from './promptStats';
 import { openLicenses } from './licenses';
+import { openHighlights } from './highlights';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -89,12 +90,23 @@ import { draftSkill, renderSkillFile } from './core/sessionToSkill';
 import { describeOutbox, isTransientFailure, Outbox } from './core/outbox';
 import { collectTags } from './core/tasks';
 import { dryRunHook, manageHooks } from './hooksBuilder';
-import { exportBundle, importBundle } from './bundleCommands';
+import { exportBundle, importBundle, syncTeamBundle } from './bundleCommands';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
 import { toAuditRecord, toJsonLine } from './core/audit';
 import { describeEstimate, estimate } from './core/estimate';
 import { COMPARE_OPTIONS_PROMPT, disagreementPrompt } from './core/dialogue';
+import {
+	advance,
+	BUILTIN_WORKFLOWS,
+	describeProgress,
+	EXPLAIN_MODE_PROMPT,
+	fillStep,
+	isFinished,
+	nextStep,
+	type Workflow,
+	type WorkflowState
+} from './core/workflow';
 import { runningTool } from './core/activity';
 import {
 	BUILTIN_PROFILES,
@@ -122,6 +134,7 @@ import { showConventions } from './conventions';
 import { planBulkChange } from './bulkChange';
 import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
+import { writeAdr } from './decisions';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -620,6 +633,68 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/** 進行中のワークフロー（T-149）。1 本だけ持つ（同時に 2 本走らせても追えない） */
+	let workflow: { definition: Workflow; state: WorkflowState } | undefined;
+
+	/** ワークフローを始める（tasks.md T-149） */
+	async function startWorkflow(): Promise<void> {
+		const chosen = await vscode.window.showQuickPick(
+			BUILTIN_WORKFLOWS.map((definition) => ({
+				label: definition.name,
+				description: `${definition.steps.length} 段`,
+				detail: definition.description,
+				definition
+			})),
+			{ title: 'Nimbus: どの流れで進めますか', matchOnDetail: true }
+		);
+		if (!chosen) {
+			return;
+		}
+		const input = await vscode.window.showInputBox({
+			title: `Nimbus: ${chosen.definition.name}`,
+			prompt: '最初の段に渡すこと',
+			placeHolder: '例: ログイン画面のバリデーションが効いていない'
+		});
+		if (!input) {
+			return;
+		}
+		workflow = { definition: chosen.definition, state: { workflowName: chosen.definition.name, stepIndex: 0, input } };
+		await runNextWorkflowStep();
+	}
+
+	/**
+	 * 次の段へ進む（T-149）。
+	 * **自動では進めない。** 段の切れ目で人が確認できることが、この機能の値打ちなので。
+	 */
+	async function runNextWorkflowStep(): Promise<void> {
+		if (!workflow) {
+			void vscode.window.showInformationMessage('Nimbus: 進行中の流れがありません。');
+			return;
+		}
+		if (isFinished(workflow.definition, workflow.state)) {
+			void vscode.window.showInformationMessage(`Nimbus: ${describeProgress(workflow.definition, workflow.state)}`);
+			workflow = undefined;
+			return;
+		}
+		const step = nextStep(workflow.definition, workflow.state);
+		if (!step) {
+			return;
+		}
+		log(`[workflow] ${describeProgress(workflow.definition, workflow.state)}`);
+		cockpit.reveal();
+		await send(fillStep(step, workflow.state.input));
+		workflow = { ...workflow, state: advance(workflow.state) };
+		const progress = describeProgress(workflow.definition, workflow.state);
+		if (step.confirm && !isFinished(workflow.definition, workflow.state)) {
+			const NEXT = '次の段へ';
+			void vscode.window.showInformationMessage(`Nimbus: ${progress}`, NEXT).then((choice) => {
+				if (choice === NEXT) {
+					void runNextWorkflowStep();
+				}
+			});
+		}
 	}
 
 	/**
@@ -1966,6 +2041,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.showAuditLog', () => showAuditLog()),
 		// 見積もり（T-187）と、決めたことの記録（T-060 / T-188 / T-189）
 		vscode.commands.registerCommand('nimbus.estimate', () => showEstimate()),
+		// ワークフロー（T-149）・解説モード（T-045）・チーム設定の同期（T-049）
+		vscode.commands.registerCommand('nimbus.runWorkflow', () => startWorkflow()),
+		vscode.commands.registerCommand('nimbus.nextWorkflowStep', () => runNextWorkflowStep()),
+		vscode.commands.registerCommand('nimbus.explainMode', () => void send(EXPLAIN_MODE_PROMPT)),
+		vscode.commands.registerCommand('nimbus.syncTeam', () => syncTeamBundle(log, false)),
 		vscode.commands.registerCommand('nimbus.compareOptions', () => void send(COMPARE_OPTIONS_PROMPT)),
 		vscode.commands.registerCommand('nimbus.recordDisagreement', () => recordDisagreement()),
 		// 設定のパッケージ配布（T-043）
@@ -2075,6 +2155,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.showSchedule', () => showSchedule(context)),
 		vscode.commands.registerCommand('nimbus.openPromptStats', () => openPromptStats()),
 		vscode.commands.registerCommand('nimbus.openLicenses', () => openLicenses()),
+		vscode.commands.registerCommand('nimbus.openHighlights', () => openHighlights()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2216,6 +2297,22 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 会話で決まったことを ADR として残す（T-060）
+		vscode.commands.registerCommand('nimbus.writeAdr', () =>
+			writeAdr({
+				transcript: () =>
+					retained
+						.filter((event) => event.kind === 'assistant-text' || event.kind === 'user-text')
+						.map((event) => (event as { text: string }).text),
+				instructions: () =>
+					retained.filter((event) => event.kind === 'user-text').map((event) => (event as { text: string }).text),
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 一度うまく書けた形はエディタ側に置く（T-177）
 		vscode.commands.registerCommand('nimbus.saveSnippet', () => saveSelectionAsSnippet({ log })),
 		// テストが本当に守っているかを、わざと壊して確かめる（T-182）

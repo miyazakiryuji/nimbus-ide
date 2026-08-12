@@ -217,7 +217,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📄 コード以外の成果物
 
-- [ ] T-060 設計書・ADR の自動生成 — 会話の中で決まった判断を記録として残す（`nimbus/docs/specs/` と繋げる）[P2]
 - [ ] T-061 Mermaid 図のライブプレビュー — エージェントが描いた構成図をその場で確認する [P3]
 - [ ] T-208 社内 Wiki / Notion 連携 [P3]
 - [ ] T-209 API ドキュメントの追従更新 [P2]
@@ -365,6 +364,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-060 決めたことを残す（ADR）（会話から候補を拾い、`nimbus/docs/decisions/NNNN-*.md` を採番して作る。
+      採番は wx で確保して並行実行でも衝突しない）— 2026-08-13 / 仕様 [decisions](nimbus/docs/specs/decisions.md)
 
 - [x] T-177 スニペット化（選択範囲を `.vscode/*.code-snippets` に保存。エスケープと字下げ落としつき）
       — 2026-08-13 / 仕様 [snippets](nimbus/docs/specs/snippets.md)

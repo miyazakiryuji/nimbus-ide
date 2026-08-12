@@ -718,6 +718,30 @@
         "title": "やり取りを切り出す（教材用）",
         "category": "Nimbus",
         "icon": "$(book)"
+      },
+      {
+        "command": "nimbus.runWorkflow",
+        "title": "流れに沿って進める（調査→実装→テスト→レビュー）",
+        "category": "Nimbus",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "nimbus.nextWorkflowStep",
+        "title": "流れの次の段へ進む",
+        "category": "Nimbus",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "nimbus.explainMode",
+        "title": "解説モードにする（判断の理由を添えさせる）",
+        "category": "Nimbus",
+        "icon": "$(mortar-board)"
+      },
+      {
+        "command": "nimbus.syncTeam",
+        "title": "チーム設定を取り込む",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
@@ -1128,6 +1152,11 @@
           "type": "boolean",
           "default": true,
           "description": "誰がどのエージェントに何をさせたかを、日付ごとの JSONL に残します。資格情報はマスクしてから書き出します。"
+        },
+        "nimbus.team.bundlePath": {
+          "type": "string",
+          "default": ".claude/team-bundle.json",
+          "description": "チームで共有する設定（配布物）の置き場所。リポジトリにコミットしておくと、更新があったときに取り込めます。"
         }
       }
     },
