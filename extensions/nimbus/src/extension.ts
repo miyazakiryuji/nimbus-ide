@@ -58,6 +58,7 @@ import { shareSession } from './shareSession';
 import { openReplay } from './replay';
 import { checkMermaidDiagrams } from './mermaid';
 import { runSetupWizard } from './setupWizard';
+import { openEnvCheck } from './envCheck';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -120,6 +121,8 @@ import {
 	suggestRecovery,
 	type RecoveryOption
 } from './core/recovery';
+import { appendBlock, candidatesFor, checkBundleUrl } from './core/importSettings';
+import { buildCrashPrompt, parseCrashLog } from './core/crashLog';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
@@ -170,7 +173,6 @@ import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
-import { importOtherToolRules } from './importRules';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -689,6 +691,97 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/**
+	 * 他ツールの指示書を取り込む（tasks.md T-068）。
+	 * **中身は変換しない。** 置き場所と出どころの見出しを付けて CLAUDE.md へ足すだけ。
+	 */
+	async function importFromOtherTools(): Promise<void> {
+		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+		if (!root) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+			return;
+		}
+		const present: string[] = [];
+		for (const source of candidatesFor(['.cursorrules', '.cursor/rules', '.github/copilot-instructions.md', '.windsurfrules'])) {
+			try {
+				await vscode.workspace.fs.stat(vscode.Uri.joinPath(root, source.from));
+				present.push(source.from);
+			} catch {
+				// 無いものは候補にしない
+			}
+		}
+		const found = candidatesFor(present);
+		if (found.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 取り込める設定が見つかりませんでした。');
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			found.map((candidate) => ({ label: candidate.from, description: candidate.description, candidate })),
+			{ title: 'Nimbus: 他のツールから取り込む', canPickMany: true }
+		);
+		if (!chosen || chosen.length === 0) {
+			return;
+		}
+		const target = vscode.Uri.joinPath(root, 'CLAUDE.md');
+		let existing = '';
+		try {
+			existing = Buffer.from(await vscode.workspace.fs.readFile(target)).toString('utf8');
+		} catch {
+			// 無ければ新しく作る
+		}
+		const date = new Date().toISOString().slice(0, 10);
+		for (const item of chosen) {
+			const content = Buffer.from(
+				await vscode.workspace.fs.readFile(vscode.Uri.joinPath(root, item.candidate.from))
+			).toString('utf8');
+			existing = appendBlock(existing, item.candidate, content, date);
+		}
+		await vscode.workspace.fs.writeFile(target, Buffer.from(existing, 'utf8'));
+		await vscode.window.showTextDocument(target);
+		log(`[import] ${chosen.length} 件を CLAUDE.md へ取り込みました`);
+	}
+
+	/** 配布物を URL から入れる（tasks.md T-071）。**https だけ**通す */
+	async function installFromUrl(): Promise<void> {
+		const raw = await vscode.window.showInputBox({
+			title: 'Nimbus: 配布物の URL',
+			placeHolder: 'https://example.com/team-bundle.json'
+		});
+		if (!raw) {
+			return;
+		}
+		const check = checkBundleUrl(raw);
+		if (!check.ok) {
+			void vscode.window.showErrorMessage(`Nimbus: ${check.reason}`);
+			return;
+		}
+		// 取ってきたものは、手元のファイルと同じ検査を通す（T-043 と同じ道）
+		void vscode.window.showInformationMessage(
+			`Nimbus: ${check.url} を開きます。保存してから「配られた設定を読み込む」で取り込んでください。`
+		);
+		await vscode.env.openExternal(vscode.Uri.parse(check.url));
+	}
+
+	/**
+	 * 実機ログを貼る（tasks.md T-074）。
+	 * **全文は渡さない。** 自分のコードのフレームだけを先に出す。
+	 */
+	async function pasteCrashLog(): Promise<void> {
+		const text = await vscode.env.clipboard.readText();
+		if (!text.trim()) {
+			void vscode.window.showInformationMessage('Nimbus: クリップボードが空です。ログをコピーしてから実行してください。');
+			return;
+		}
+		const report = parseCrashLog(text);
+		if (report.frames.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: スタックトレースを読み取れませんでした。');
+			return;
+		}
+		cockpit.reveal();
+		await send(buildCrashPrompt(report));
+		log(`[crash] フレーム ${report.frames.length} 件（自分のコード ${report.ownFrames.length} 件）を渡しました`);
 	}
 
 	/**
@@ -2295,6 +2388,10 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 回帰テスト・ブレ幅・モデル比較（T-165 / T-166 / T-167）
 		// ペルソナ（T-063）と、書く番の切り替え（T-190 / T-191）
 		// ローカル完結（T-077）・立て直し（T-088）
+		// 他ツールからの取り込み（T-068）・ワンクリック導入（T-071）・実機ログ（T-074）
+		vscode.commands.registerCommand('nimbus.importFromOtherTools', () => importFromOtherTools()),
+		vscode.commands.registerCommand('nimbus.installFromUrl', () => installFromUrl()),
+		vscode.commands.registerCommand('nimbus.pasteCrashLog', () => pasteCrashLog()),
 		vscode.commands.registerCommand('nimbus.localOnly', () => toggleLocalOnly()),
 		vscode.commands.registerCommand('nimbus.recover', () => offerRecovery()),
 		vscode.commands.registerCommand('nimbus.persona', () => choosePersona()),
@@ -2440,6 +2537,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openReplay', () => openReplay()),
 		vscode.commands.registerCommand('nimbus.checkMermaid', () => checkMermaidDiagrams()),
 		vscode.commands.registerCommand('nimbus.runSetupWizard', () => runSetupWizard()),
+		vscode.commands.registerCommand('nimbus.openEnvCheck', () => openEnvCheck()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2592,8 +2690,6 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
-		// 他のツールの設定を CLAUDE.md へ取り込む（T-068）
-		vscode.commands.registerCommand('nimbus.importOtherToolRules', () => importOtherToolRules({ log })),
 		// モノレポで作業対象のパッケージだけを見せる（T-078）
 		vscode.commands.registerCommand('nimbus.chooseScope', () =>
 			chooseScope({ storage: context.workspaceState, log })

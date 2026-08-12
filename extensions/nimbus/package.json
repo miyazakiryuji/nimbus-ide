@@ -868,6 +868,24 @@
         "title": "環境の食い違いを見る",
         "category": "Nimbus",
         "icon": "$(server-environment)"
+      },
+      {
+        "command": "nimbus.importFromOtherTools",
+        "title": "他のツールから設定を取り込む",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "nimbus.installFromUrl",
+        "title": "URL から配布物を入れる",
+        "category": "Nimbus",
+        "icon": "$(link)"
+      },
+      {
+        "command": "nimbus.pasteCrashLog",
+        "title": "クリップボードのクラッシュログを調べてもらう",
+        "category": "Nimbus",
+        "icon": "$(bug)"
       }
     ],
     "menus": {

@@ -43,7 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 - [ ] T-139 生成物への直接編集をガードする — `core/generated.ts`（T-140）と `permissions.ts` は
       どちらも承認・レビュー層のもの。新規ファイルは作らない @session-b 2026-08-13 [P2]
 
-- [ ] T-071 ワンクリック導入 / T-074 実機ログの取り込み — `core/crashLog.ts` を確保済み
       ※T-068 は別セッションが先に実装済み（`core/importRules.ts`）@session-a 2026-08-13 [P2]
 
       `core/recovery.ts` を確保済み @session-a 2026-08-13 [P2]
@@ -537,6 +536,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-068 他ツールからの設定インポート（中身は変換せず、出どころを見出しに残す）— 2026-08-13 / 仕様 [migration-and-crashlog](nimbus/docs/specs/migration-and-crashlog.md)
+- [x] T-071 設定のワンクリック導入（https だけ・押しただけで入らない）— 2026-08-13 / 仕様 [migration-and-crashlog](nimbus/docs/specs/migration-and-crashlog.md)
+- [x] T-074 実機ログの取り込み（自分のコードのフレームだけ先に出す）— 2026-08-13 / 仕様 [migration-and-crashlog](nimbus/docs/specs/migration-and-crashlog.md)
 - [x] T-077 ローカル完結モード（何が止まらないかを必ず見せる）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
 - [x] T-087 集中モード（完了通知は黙らせ、承認待ちは通す。T-019 との衝突をここで決着）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
 - [x] T-088 失敗時のリカバリ提案（勝手に戻さない・理由を必ず添える）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)

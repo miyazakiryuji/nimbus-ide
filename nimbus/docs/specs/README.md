@@ -72,6 +72,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`authoring.md`](authoring.md) — スキル・サブエージェント・コマンドを書く支援
 - [`persona-and-turns.md`](persona-and-turns.md) — 話しかた・状態の色・書く番
 - [`local-and-recovery.md`](local-and-recovery.md) — ローカル完結・集中モード・立て直し
+- [`migration-and-crashlog.md`](migration-and-crashlog.md) — 他ツールからの移行・ワンクリック導入・実機ログ
 
 IDE 基礎機能:
 
