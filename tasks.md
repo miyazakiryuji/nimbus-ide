@@ -42,7 +42,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
       聞き間違える前提で、危ないことは音声で実行しない。`core/voiceCommands.ts` `src/voiceCommands.ts` を確保
-      **@yua と @session-c が二重着手。どちらが進めるか決めてください** 2026-08-13 [P3]
+      @yua が進めています（`core/voiceInput.ts` で録音＋書き起こしまで）。
+      @session-c は重複を取り下げ、`core/voiceCommands.ts` を削除しました 2026-08-13 [P3]
 - [ ] T-084 リモート開発 — **調査完了**（[調査記録](nimbus/docs/history/remote-dev-investigation.md)）。
       **①リモート時の実行ファイル案内の出し分けは実装済み**（`core/remoteGuidance.ts`・@session-a）。
       残るのは②実機の SSH 先での接続確認と、③README の節。**②は環境が要る** @yua 2026-08-13 [P2]
@@ -305,10 +306,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
-
-- [x] T-055 音声で指示（声は聞き間違える前提。そのまま実行するのは取り返しのつくものだけ。
-      承認は音声で受けない。認識は OS に任せ、Nimbus は癖を吸収する）
-      — 2026-08-13 / 仕様 [voice](nimbus/docs/specs/voice.md)
 
 - [x] T-085 マシンをまたいでセッションを続ける（運んで困るのは会話ではなく前提のほう。
       別リポジトリなら止め、ずれは全部挙げて、続ける前に読み直させる。運ぶ経路は決めない）
