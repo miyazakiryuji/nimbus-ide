@@ -275,6 +275,9 @@ import './contrib/runAnything/browser/runAnything.contribution.js';
 // Command completion
 import './contrib/commandCompletion/browser/commandCompletion.contribution.js';
 
+// Productivity Guide
+import './contrib/productivityGuide/browser/productivityGuide.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
