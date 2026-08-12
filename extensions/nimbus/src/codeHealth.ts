@@ -8,6 +8,7 @@ import { findDuplicateBlocks, findNamingIssues, renderCodeHealth } from './core/
 import { findDeadExports, renderDeadExports } from './core/deadCode';
 import { findLayerViolations, rankComplexity, renderStructure } from './core/structure';
 import { findDeadReferences, findParamMismatches, renderCommentFindings } from './core/commentCheck';
+import { isExampleFile, renderVulnFindings, scanSource } from './core/vulnScan';
 
 /** 一度に読むファイル数の上限（大きなリポジトリで固まらせない） */
 const MAX_FILES = 400;
@@ -67,7 +68,12 @@ export async function openCodeHealth(): Promise<void> {
 		...findParamMismatches(file.path, file.content),
 		...findDeadReferences(file.path, file.content, paths)
 	]);
+	// 危ない書き方はいちばん上に出す（T-202）。読みにくさより先に見たい
+	const vulns = files
+		.filter((file) => !isExampleFile(file.path))
+		.flatMap((file) => scanSource(file.path, file.content));
 	const markdown = [
+		renderVulnFindings(vulns),
 		renderStructure(rankComplexity(files), findLayerViolations(files)),
 		renderCommentFindings(comments),
 		renderCodeHealth(findNamingIssues(names), findDuplicateBlocks(files)),

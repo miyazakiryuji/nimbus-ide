@@ -254,7 +254,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🔐 コンプラ・機密
 
 - [ ] T-077 ローカル完結モード — ログを外に出さない設定（企業導入の必須条件になりがち）[P2]
-- [ ] T-202 生成コードの脆弱性スキャン [P2]
 
 ### 🏚 巨大・レガシーリポ
 
@@ -478,6 +477,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-202 危ない書き方の検出（断定しない・当てられても困らない用途は拾わない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-076 依存のライセンス（迷ったら分からないに倒す・合法判定はしない）— 2026-08-13 / 仕様 [licenses](nimbus/docs/specs/licenses.md)
 - [x] T-066 詰まりやすい場所（件数で足切り・理由は推測しない）— 2026-08-13 / 仕様 [prompt-stats](nimbus/docs/specs/prompt-stats.md)
 - [x] T-065 / T-067 指示の出しかた（言い直しの傾向・数が少ないうちは出さない）— 2026-08-13 / 仕様 [prompt-stats](nimbus/docs/specs/prompt-stats.md)
