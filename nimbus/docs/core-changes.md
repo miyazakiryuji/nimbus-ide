@@ -36,6 +36,7 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 15 | `build/gulpfile.extensions.ts` | `compilations` に `extensions/nimbus/tsconfig.json` を追加 | この一覧は手書きで、載せないと拡張がコンパイルされない（実測） | 同上 |
 | 16 | `build/lib/extensions.ts` | `packagedDependenciesByExtension` に `nimbus: ['@anthropic-ai/claude-agent-sdk']` | SDK は自パッケージ内の実行ファイルを子プロセスで起動するため、バンドルせず node_modules ごと同梱する | 同上 |
 | 17 | `src/vs/platform/extensionManagement/node/extensionManagementService.ts` | 署名検証のフォールバックを `true` → `false` | 設定の既定値だけでは CLI 経路で undefined になり true に戻る。Open VSX の拡張が入らない（実測） | 同上 |
+| 18 | `src/vs/sessions/sessions.common.main.ts` | スクラッチファイルの contribution を 1 行 import | 機能自体は `src/vs/sessions/contrib/scratchFiles/`（新規追加）にあり、登録だけがここに要る（T-033） | 手作業（追従時は import 行の位置だけ確認する） |
 
 ## リポジトリ運用（push できない問題とその回避）
 
