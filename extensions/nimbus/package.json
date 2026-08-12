@@ -682,6 +682,12 @@
         "title": "今日の監査ログを開く",
         "category": "Nimbus",
         "icon": "$(law)"
+      },
+      {
+        "command": "nimbus.openLicenses",
+        "title": "依存のライセンスを見る",
+        "category": "Nimbus",
+        "icon": "$(law)"
       }
     ],
     "menus": {
