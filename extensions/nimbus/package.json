@@ -802,6 +802,12 @@
         "title": "PR のレビュー指摘を取り込む",
         "category": "Nimbus",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "nimbus.shareSession",
+        "title": "やり取りを人に見せる形にする",
+        "category": "Nimbus",
+        "icon": "$(share)"
       }
     ],
     "menus": {
@@ -1033,6 +1039,11 @@
           "type": "boolean",
           "default": true,
           "description": "関数・クラスの上に「Nimbus に頼む」を表示します。"
+        },
+        "nimbus.lsp.groundLibraryVersions": {
+          "type": "boolean",
+          "default": true,
+          "description": "指示の中で名前が出たライブラリについて、実際に使っているバージョンを添えます（記憶で書かせないため）。"
         },
         "nimbus.lsp.attachSignatures": {
           "type": "boolean",

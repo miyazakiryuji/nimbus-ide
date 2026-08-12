@@ -41,6 +41,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス
 - [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
 - [`explain.md`](explain.md) — 何をしたかを並べ直す（解説モード）
+- [`share-session.md`](share-session.md) — やり取りを人に見せる
 - [`highlights.md`](highlights.md) — やり取りの切り出し（教材用）
 - [`prompt-stats.md`](prompt-stats.md) — 指示の出しかた（言い直しの傾向）
 - [`digest.md`](digest.md) — ふりかえり（週次ダイジェスト・成長ログ）
