@@ -45,6 +45,7 @@ import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
+import { buildSignatureNote } from './signatureAttachment';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -610,10 +611,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	async function send(rawText: string, images?: { name: string; dataUrl: string }[]): Promise<void> {
 		try {
-			const text = await checkBeforeSending(rawText);
+			let text = await checkBeforeSending(rawText);
 			if (text === undefined) {
 				return;
 			}
+			// 名指しされた API の実物のシグネチャを添える（T-175）。推測で書かせないための前段
+			const signatures = await buildSignatureNote(text);
+			text = signatures ? `${text}\n\n${signatures}` : text;
 			// 利用者が新しい指示を出したら、自動リロードの周回数を戻す
 			reloadRounds = 0;
 			const attachments = toAttachments(images);

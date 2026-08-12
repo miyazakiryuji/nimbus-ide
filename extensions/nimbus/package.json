@@ -452,6 +452,18 @@
           "default": true,
           "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
         },
+        "nimbus.lsp.attachSignatures": {
+          "type": "boolean",
+          "default": true,
+          "description": "指示の中で名指しした関数・クラスの実際のシグネチャを、送る前に添えます（推測で書かせないため）。"
+        },
+        "nimbus.lsp.maxAttachedSignatures": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "1 回の指示に添えるシグネチャの数の上限。"
+        },
         "nimbus.debug.exposeState": {
           "type": "boolean",
           "default": true,
