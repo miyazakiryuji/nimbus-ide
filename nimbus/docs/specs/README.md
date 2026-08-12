@@ -76,6 +76,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`persona-and-turns.md`](persona-and-turns.md) — 話しかた・状態の色・書く番
 - [`local-and-recovery.md`](local-and-recovery.md) — ローカル完結・集中モード・立て直し
 - [`migration-and-crashlog.md`](migration-and-crashlog.md) — ワンクリック導入・実機ログ
+- [`japanese-and-history.md`](japanese-and-history.md) — 日本語の指示の補助・設定の世代・週のふりかえり
 
 IDE 基礎機能:
 
