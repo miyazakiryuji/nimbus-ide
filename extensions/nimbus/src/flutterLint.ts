@@ -4,15 +4,15 @@
  * 対象はワークスペースの `.dart`（生成物と `build/` は除く）。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { lintFlutterSource, renderFlutterLint, type SourceFinding } from './core/flutterLint';
 
 /** 一度に読むファイル数の上限 */
 const MAX_FILES = 400;
 
 export async function openFlutterLint(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

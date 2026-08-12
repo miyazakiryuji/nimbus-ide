@@ -5,6 +5,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { checkSubmission, diffPermissions, renderMobileChecks } from './core/mobileChecks';
 
 function git(args: string[], cwd: string): Promise<string | undefined> {
@@ -22,9 +23,8 @@ async function readIfExists(uri: vscode.Uri): Promise<string | undefined> {
 }
 
 export async function openMobileChecks(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const root = folder.uri.fsPath;

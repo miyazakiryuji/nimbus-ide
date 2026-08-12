@@ -5,6 +5,7 @@
  * 「気づいたら設定が変わっていた」がいちばん信用を失う。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { guessPreset, PRESETS, renderSetup, setupSteps, type Preset } from './core/presets';
 import { appendSection } from './core/claudeMdDoc';
 import { resolveClaudeExecutable } from './claudeExecutable';
@@ -39,9 +40,8 @@ async function applyPreset(preset: Preset, folder: vscode.WorkspaceFolder): Prom
 }
 
 export async function runSetupWizard(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

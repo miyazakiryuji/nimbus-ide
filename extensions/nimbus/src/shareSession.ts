@@ -6,6 +6,7 @@
  */
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { execFile } from 'child_process';
 import { buildShareDocument, inspectRedactions } from './core/shareSession';
 import { readRecentTranscripts } from './core/transcriptFiles';
@@ -23,11 +24,11 @@ function git(args: string[], cwd: string): Promise<string | undefined> {
 }
 
 export async function shareSession(home: string = homedir()): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const entries = await readRecentTranscripts(root, home, { limit: MAX_TRANSCRIPTS, maxBytes: MAX_BYTES });
 	if (entries.length === 0) {

@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { classifyAll, renderComments, toPrompt, toWorkList, type ReviewComment } from './core/reviewComments';
 
 function gh(args: string[], cwd: string): Promise<string | undefined> {
@@ -36,11 +37,11 @@ function parse(json: string): ReviewComment[] {
 }
 
 export async function importReviewComments(send: (text: string) => void): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const json = await gh(['pr', 'view', '--json', 'comments,reviews'], root);
 	if (json === undefined) {

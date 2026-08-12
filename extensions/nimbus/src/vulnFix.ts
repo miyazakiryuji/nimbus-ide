@@ -5,6 +5,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { parseAudit, planFixes, renderFixPlan } from './core/vulnFix';
 
 function npmAudit(cwd: string): Promise<string | undefined> {
@@ -20,11 +21,11 @@ function npmAudit(cwd: string): Promise<string | undefined> {
 }
 
 export async function openVulnFixPlan(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const json = await vscode.window.withProgress(
 		{ location: vscode.ProgressLocation.Window, title: 'Nimbus: npm audit を実行しています' },

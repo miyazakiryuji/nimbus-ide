@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { addedLinesFromDiff, findLeftovers, renderPreflight, runPreflight, type PreflightInput } from './core/preflight';
 
 function git(args: string[], cwd: string): Promise<string | undefined> {
@@ -46,11 +47,11 @@ async function versionBumped(root: string): Promise<boolean | undefined> {
 }
 
 export async function openPreflight(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const choice = await vscode.window.showQuickPick(
 		[

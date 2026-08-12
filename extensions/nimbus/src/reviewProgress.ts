@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import {
 	markReviewed,
 	prune,
@@ -36,11 +37,11 @@ async function changedFiles(root: string): Promise<{ path: string; content: stri
 }
 
 export async function openReviewProgress(context: vscode.ExtensionContext): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const files = await changedFiles(root);
 	let state = context.workspaceState.get<ReviewState>(STATE_KEY) ?? { marks: [] };

@@ -6,6 +6,7 @@
  */
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { pickHighlights, renderHighlights } from './core/highlights';
 import { readRecentTranscripts } from './core/transcriptFiles';
 
@@ -13,11 +14,11 @@ const MAX_TRANSCRIPTS = 30;
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export async function openHighlights(home: string = homedir()): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const entries = await vscode.window.withProgress(
 		{ location: vscode.ProgressLocation.Window, title: 'Nimbus: 記録を読んでいます' },

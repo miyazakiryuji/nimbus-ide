@@ -6,6 +6,7 @@
  */
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { buildReplay, renderReplay } from './core/replay';
 import { readRecentTranscripts } from './core/transcriptFiles';
 
@@ -13,11 +14,11 @@ const MAX_TRANSCRIPTS = 1;
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export async function openReplay(home: string = homedir()): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const entries = await readRecentTranscripts(root, home, { limit: MAX_TRANSCRIPTS, maxBytes: MAX_BYTES });
 	const steps = buildReplay(entries);

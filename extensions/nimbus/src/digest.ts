@@ -8,6 +8,7 @@
  */
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { buildDigest, renderDigest } from './core/digest';
 import { readRecentTranscripts } from './core/transcriptFiles';
 
@@ -26,11 +27,11 @@ const RANGES: { label: string; days: number; detail: string }[] = [
 ];
 
 export async function openDigest(home: string = homedir()): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const range = await vscode.window.showQuickPick(RANGES, { title: 'Nimbus: ふりかえり' });
 	if (!range) {

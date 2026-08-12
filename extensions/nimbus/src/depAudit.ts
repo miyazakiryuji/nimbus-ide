@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { audit, findSimilar, renderAudit, type PackageFacts } from './core/depAudit';
 
 function npmView(name: string, cwd: string): Promise<Record<string, unknown> | undefined> {
@@ -43,9 +44,8 @@ async function installedNames(folder: vscode.WorkspaceFolder): Promise<string[]>
 }
 
 export async function auditDependency(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

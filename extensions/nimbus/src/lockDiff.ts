@@ -7,6 +7,7 @@
 import { execFile } from 'child_process';
 import { basename, relative } from 'path';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { diffLocks, parseLock, renderLockDiff } from './core/lockDiff';
 
 const SUPPORTED = ['pubspec.lock', 'package-lock.json'];
@@ -27,11 +28,11 @@ function gitShow(repoRoot: string, revisionPath: string): Promise<string | undef
  * 対象が開かれていないときは、ワークスペースから探して選ばせる。
  */
 export async function explainLockDiff(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	let target = vscode.window.activeTextEditor?.document.uri;
 	if (!target || !SUPPORTED.some((name) => target?.fsPath.endsWith(name))) {

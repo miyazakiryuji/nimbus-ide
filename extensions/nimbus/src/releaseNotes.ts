@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { groupCommits, parseCommitLog, renderReleaseNotes } from './core/releaseNotes';
 
 function git(args: string[], cwd: string): Promise<string | undefined> {
@@ -17,11 +18,11 @@ function git(args: string[], cwd: string): Promise<string | undefined> {
 }
 
 export async function draftReleaseNotes(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const lastTag = await git(['describe', '--tags', '--abbrev=0'], root);
 	const from = await vscode.window.showInputBox({

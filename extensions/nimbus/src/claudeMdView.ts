@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
 import { findClaudeMdFiles } from './core/claudeMd';
 import { findRepeatedInstructions, type RepeatedInstruction } from './core/repeatedInstructions';
 import { readRecentTranscripts } from './core/transcriptFiles';
@@ -76,8 +77,12 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 		this.emitter.fire(undefined);
 	}
 
+	/**
+	 * ツリーの組み立ては同期なので、ここでは**聞かない**（T-173）。
+	 * 開いているファイルのあるルートが当たる。
+	 */
 	private workspaceRoot(): string | undefined {
-		return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+		return resolveWorkspaceRoot()?.uri.fsPath;
 	}
 
 	/** 効いている CLAUDE.md を階層つきで集める */
@@ -228,10 +233,10 @@ const REPEATED_HEADING = '毎回の指示';
  */
 export async function promoteInstruction(view: ClaudeMdViewProvider, text: string): Promise<void> {
 	const target = view.files().find((f) => f.origin === 'project');
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+	// 既にあるものを使うときは聞かない。**新しく作るときだけ**どのルートかを聞く（T-173）
+	const root = target ? undefined : (await pickWorkspaceRoot())?.uri.fsPath;
 	const path = target?.path ?? (root ? vscode.Uri.joinPath(vscode.Uri.file(root), 'CLAUDE.md').fsPath : undefined);
 	if (!path) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 
@@ -269,7 +274,8 @@ export async function promoteInstruction(view: ClaudeMdViewProvider, text: strin
  */
 export async function addClaudeMdSection(view: ClaudeMdViewProvider): Promise<void> {
 	const files = view.files();
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+	// 追加先が既にあるなら聞かない（T-173）
+	const root = files.length > 0 ? undefined : (await pickWorkspaceRoot())?.uri.fsPath;
 	const targets = files.length > 0
 		? files.map((f) => ({ label: f.label, description: ORIGIN_LABEL[f.origin], path: f.path }))
 		: root

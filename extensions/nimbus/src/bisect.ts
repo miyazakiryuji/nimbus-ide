@@ -7,6 +7,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { culprit, narrow, nextIndex, renderBisect, type BisectState } from './core/bisect';
 
 const STATE_KEY = 'nimbus.bisect';
@@ -28,11 +29,11 @@ async function show(state: BisectState): Promise<void> {
 }
 
 export async function bisect(context: vscode.ExtensionContext): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const saved = context.workspaceState.get<BisectState>(STATE_KEY);
 	if (saved && nextIndex(saved) !== undefined) {

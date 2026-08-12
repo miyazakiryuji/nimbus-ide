@@ -6,6 +6,7 @@
  * （分からないものを推測して指摘しない）。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { checkConsistency, renderConsistency } from './core/depConsistency';
 import { parsePubspecLock } from './core/lockDiff';
 
@@ -31,9 +32,8 @@ function pluginNames(json: string | undefined): string[] {
 }
 
 export async function openDepConsistency(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

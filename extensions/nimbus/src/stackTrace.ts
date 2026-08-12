@@ -7,6 +7,7 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { describeFrame, firstOwnFrame, parseStackTrace, resolvePackageUri, type StackFrame } from './core/stackTrace';
 
 /** `package:` 表記を実ファイルに寄せる。開けるものだけ返す */
@@ -42,11 +43,11 @@ async function open(path: string, frame: StackFrame): Promise<void> {
 }
 
 export async function openFromStackTrace(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const editor = vscode.window.activeTextEditor;
 	const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : '';

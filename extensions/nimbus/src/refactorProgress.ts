@@ -10,7 +10,7 @@
 import { execFile } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { pickWorkspaceRoot } from './workspaceRoots';
+import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
 import {
 	buildRefactorPrompt,
 	parseGrepCounts,
@@ -56,7 +56,8 @@ export async function addRefactorTrack(
 	pattern: string,
 	label: string
 ): Promise<number> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	// ここは「聞かずに」始める入口なので、選ばせない（T-110 の一括変更から呼ばれる）
+	const folder = resolveWorkspaceRoot();
 	if (!folder) {
 		return 0;
 	}

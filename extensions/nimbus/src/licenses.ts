@@ -6,15 +6,15 @@
  * **ライセンス本文は読まない**（同じ物を何百回も読むことになるうえ、判定はどのみち人の仕事）。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { classifyAll, renderLicenses, summarizeLicenses } from './core/licenses';
 
 /** 見るパッケージ数の上限。大きなリポジトリで固まらせない */
 const MAX_PACKAGES = 1500;
 
 export async function openLicenses(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

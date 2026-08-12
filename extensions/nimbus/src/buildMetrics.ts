@@ -8,6 +8,7 @@ import { execFile } from 'child_process';
 import { statSync } from 'fs';
 import { join } from 'path';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { compare, renderComparison, trimHistory, type BuildRecord } from './core/buildMetrics';
 
 const HISTORY_KEY = 'nimbus.buildHistory';
@@ -36,11 +37,11 @@ function sizeOf(root: string, relative: string | undefined): number | undefined 
 }
 
 export async function measureBuild(context: vscode.ExtensionContext): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const config = vscode.workspace.getConfiguration('nimbus');
 	const command = config.get<string>('build.command');

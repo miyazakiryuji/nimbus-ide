@@ -4,6 +4,7 @@
  * 見るのはワークスペースのソース。**直すのは人**なので、ここは一覧を出すところまで。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { findDuplicateBlocks, findNamingIssues, renderCodeHealth } from './core/codeHealth';
 import { findDeadExports, renderDeadExports } from './core/deadCode';
 import { findLayerViolations, rankComplexity, renderStructure } from './core/structure';
@@ -17,11 +18,11 @@ const MAX_FILES = 400;
 const DECLARATION = /\b(?:function|const|let|var|class|def|fn|func)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
 
 export async function openCodeHealth(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0];
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder;
 
 	const uris = await vscode.workspace.findFiles(
 		new vscode.RelativePattern(root, '**/*.{ts,tsx,js,jsx,dart,go,py,java,kt,swift}'),

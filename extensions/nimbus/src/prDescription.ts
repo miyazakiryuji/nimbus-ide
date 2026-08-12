@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { groupCommits, parseCommitLog } from './core/releaseNotes';
 import { parseNumstat, summarize } from './core/changeStats';
 import { renderPrDescription } from './core/prDescription';
@@ -19,11 +20,11 @@ function git(args: string[], cwd: string): Promise<string | undefined> {
 }
 
 export async function draftPrDescription(): Promise<void> {
-	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (!root) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
 		return;
 	}
+	const root = folder.uri.fsPath;
 
 	const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], root)) ?? '';
 	const configured = vscode.workspace.getConfiguration('nimbus').get<string>('git.baseBranch');

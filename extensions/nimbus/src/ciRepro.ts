@@ -5,6 +5,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { parseWorkflow, renderCiRepro } from './core/ciRepro';
 
 /** 版を聞くコマンド（環境の突き合わせに使う） */
@@ -25,9 +26,8 @@ function ask(command: string[], cwd: string): Promise<string | undefined> {
 }
 
 export async function openCiRepro(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

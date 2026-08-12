@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { collectRequirements, compareEnvironment, renderEnvironment } from './core/envCheck';
 
 /** 道具ごとの、版を聞くコマンド */
@@ -34,9 +35,8 @@ function ask(command: string[], cwd: string): Promise<string | undefined> {
 }
 
 export async function openEnvCheck(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

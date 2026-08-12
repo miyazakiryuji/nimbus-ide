@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
-import { pickWorkspaceRoot } from './workspaceRoots';
+import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { NimbusEvent, SessionInitEvent, SessionSummary } from './events';
 import { SessionManager } from './session/SessionManager';
@@ -190,6 +190,7 @@ import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
+import { restackAfterMerge, showPrStack } from './prStack';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -543,7 +544,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		for (const path of paths) {
 			const uri = path.startsWith('/')
 				? vscode.Uri.file(path)
-				: vscode.Uri.joinPath(vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'), path);
+				// 文脈を組み立てるたびに走るので聞かない（T-173）
+				: vscode.Uri.joinPath(resolveWorkspaceRoot()?.uri ?? vscode.Uri.file('.'), path);
 			try {
 				const bytes = await vscode.workspace.fs.readFile(uri);
 				files.push({ path, content: Buffer.from(bytes).toString('utf8') });
@@ -574,7 +576,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!picked || picked.length === 0) {
 				return;
 			}
-			const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+			// 選ばれたファイル自身が手がかりなので、聞かずに決まる（T-173）
+			const root = resolveWorkspaceRoot(picked[0])?.uri.fsPath;
 			const added = picked.map((uri) =>
 				root && uri.fsPath.startsWith(`${root}/`) ? uri.fsPath.slice(root.length + 1) : uri.fsPath
 			);
@@ -1451,7 +1454,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	function tasksFileUri(): vscode.Uri | undefined {
-		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+		// 同期の入口なので聞かない。開いているファイルのあるルートが当たる（T-173）
+		const root = resolveWorkspaceRoot()?.uri;
 		return root ? vscode.Uri.joinPath(root, 'tasks.md') : undefined;
 	}
 
