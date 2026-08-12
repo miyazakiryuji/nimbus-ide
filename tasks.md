@@ -230,7 +230,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🔐 コンプラ・機密
 
-- [ ] T-077 ローカル完結モード — ログを外に出さない設定（企業導入の必須条件になりがち）[P2]
 
 ### 🏚 巨大・レガシーリポ
 
@@ -533,6 +532,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-077 ローカル完結モード（何が止まらないかを必ず見せる）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
+- [x] T-087 集中モード（完了通知は黙らせ、承認待ちは通す。T-019 との衝突をここで決着）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
+- [x] T-088 失敗時のリカバリ提案（勝手に戻さない・理由を必ず添える）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
 - [x] T-063 ペルソナ設定（既定は「そのまま」・ゆあでも正確さは崩さない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
 - [x] T-064 テーマ連動（止まっている状態だけ色を変える・新しい配色は足さない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
 - [x] T-190 交代モード（私が書く番では提案もさせない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
