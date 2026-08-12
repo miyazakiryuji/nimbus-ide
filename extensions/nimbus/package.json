@@ -47,6 +47,12 @@
         {
           "id": "nimbus.context",
           "name": "文脈"
+        },
+        {
+          "id": "nimbus.help",
+          "name": "ヘルプ（ゆあ）",
+          "type": "webview",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -69,6 +75,16 @@
       {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.findSkill",
+        "title": "スキルを探す",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.askYua",
+        "title": "使い方を聞く（ゆあ）",
         "category": "Nimbus"
       }
     ],

@@ -39,6 +39,18 @@ function nonce(): string {
 	return text;
 }
 
+/** 会話ビューの見た目まわり。コックピットとヘルプ（ゆあ）で同じ実装を使い回す */
+export interface CockpitOptions {
+	/** 発言者のラベル */
+	assistantLabel: string;
+	placeholder: string;
+}
+
+const DEFAULT_OPTIONS: CockpitOptions = {
+	assistantLabel: 'Claude',
+	placeholder: 'Claude に指示を書く（Enter で送信 / Shift+Enter で改行）'
+};
+
 export class CockpitViewProvider implements vscode.WebviewViewProvider {
 	public static readonly viewType = 'nimbus.cockpit';
 
@@ -46,7 +58,8 @@ export class CockpitViewProvider implements vscode.WebviewViewProvider {
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
-		private readonly handlers: CockpitHandlers
+		private readonly handlers: CockpitHandlers,
+		private readonly options: CockpitOptions = DEFAULT_OPTIONS
 	) { }
 
 	resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -108,14 +121,14 @@ export class CockpitViewProvider implements vscode.WebviewViewProvider {
 	<link href="${media('cockpit.css')}" rel="stylesheet">
 	<title>Nimbus</title>
 </head>
-<body>
+<body data-assistant="${this.options.assistantLabel}">
 	<header id="status" class="status">
 		<span id="statusText">セッション未開始</span>
 		<span id="statusMeta" class="meta"></span>
 	</header>
 	<main id="log" class="log" aria-live="polite"></main>
 	<footer class="composer">
-		<textarea id="input" rows="3" placeholder="Claude に指示を書く（Enter で送信 / Shift+Enter で改行）"></textarea>
+		<textarea id="input" rows="3" placeholder="${this.options.placeholder}"></textarea>
 		<div class="actions">
 			<button id="interrupt" class="secondary" disabled>中断</button>
 			<button id="send">送信</button>

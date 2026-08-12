@@ -19,6 +19,8 @@ import { billingModeLabel } from './billing';
 import { WorktreeManager } from './core/worktree';
 import { TaskService } from './tasks/TaskService';
 import { BoardViewProvider } from './tasks/BoardViewProvider';
+import { buildYuaSystemPrompt } from './help/yua';
+import { discoverSkills, searchSkills, type Skill } from './core/skills';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -84,6 +86,11 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 
 	sessions.on('event', (event: NimbusEvent) => {
+		if (event.sessionId === helpSessionId) {
+			helpEvents.push(event);
+			help.post({ type: 'event', event });
+			return;
+		}
 		if (event.sessionId !== activeSessionId) {
 			return;
 		}
@@ -195,6 +202,65 @@ export function activate(context: vscode.ExtensionContext): void {
 		cockpit.reveal();
 	}
 
+	// ヘルプ（ゆあ）。コックピットとは別セッションで、ツールを一切渡さない
+	let helpSessionId: string | undefined;
+	const helpEvents: NimbusEvent[] = [];
+	const help = new CockpitViewProvider(
+		context.extensionUri,
+		{
+			onSend: (text) => void askYua(text),
+			onInterrupt: async () => {
+				if (helpSessionId && sessions.isActive(helpSessionId)) {
+					await sessions.interrupt(helpSessionId);
+				}
+			},
+			onNewSession: async () => {
+				if (helpSessionId && sessions.isActive(helpSessionId)) {
+					sessions.close(helpSessionId);
+				}
+				helpSessionId = undefined;
+				helpEvents.length = 0;
+				help.post({ type: 'history', events: [], session: undefined });
+			},
+			snapshot: () => ({ events: helpEvents, session: undefined }),
+			log
+		},
+		{ assistantLabel: 'ゆあ', placeholder: 'Nimbus の使い方を聞く（Enter で送信）' }
+	);
+
+	async function askYua(text: string): Promise<void> {
+		try {
+			if (helpSessionId && sessions.isActive(helpSessionId)) {
+				sessions.sendMessage(helpSessionId, text);
+				return;
+			}
+			if (!resolveClaudeExecutable()) {
+				await reportMissingExecutable();
+				return;
+			}
+			const sessionId = randomUUID();
+			helpSessionId = sessionId;
+			helpEvents.length = 0;
+			await sessions.createSession({
+				cwd: workspaceCwd() ?? context.extensionUri.fsPath,
+				firstMessage: text,
+				reuseSessionId: sessionId,
+				extraOptions: {
+					// preset を使わず独自のシステムプロンプトにする（コーディング用の振る舞いを外す）
+					systemPrompt: buildYuaSystemPrompt(),
+					// ゆあにはツールを渡さない。使い方に答える以上のことをさせない
+					allowedTools: [],
+					settingSources: []
+				}
+			});
+			log('[help] ゆあのセッションを開始しました');
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			log(`[help] 送信に失敗: ${message}`);
+			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+		}
+	}
+
 	const board = new BoardViewProvider(context.extensionUri, {
 		onNewTask: () => newTask(),
 		onStart: async (taskId) => {
@@ -276,6 +342,66 @@ export function activate(context: vscode.ExtensionContext): void {
 		});
 	}
 
+	/**
+	 * 「こんなことをしてくれるスキル、ないかな？」に答える。
+	 * 曖昧な言葉で聞けることが大事なので、名前だけでなく説明文にも当てる。
+	 */
+	async function findSkill(): Promise<void> {
+		const roots = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+		const skills = discoverSkills(roots);
+		if (skills.length === 0) {
+			void vscode.window.showInformationMessage(
+				'Nimbus: スキルが見つかりませんでした（.claude/skills または ~/.claude/skills に置きます）。'
+			);
+			return;
+		}
+
+		const toItem = (skill: Skill): vscode.QuickPickItem & { skill: Skill } => ({
+			label: skill.name,
+			description: skill.origin,
+			detail: skill.description,
+			skill
+		});
+
+		const picker = vscode.window.createQuickPick<vscode.QuickPickItem & { skill: Skill }>();
+		picker.title = 'Nimbus: スキルを探す';
+		picker.placeholder = 'したいことを書く（例: PDF、スクリーンショット、レビュー）';
+		picker.matchOnDescription = true;
+		picker.matchOnDetail = true;
+		picker.items = skills.map(toItem);
+		// 入力のたびに自前の採点で並べ替える（説明文への部分一致を効かせるため）
+		picker.onDidChangeValue((value) => {
+			picker.items = searchSkills(skills, value).map(toItem);
+		});
+
+		const chosen = await new Promise<Skill | undefined>((resolvePick) => {
+			picker.onDidAccept(() => {
+				resolvePick(picker.selectedItems[0]?.skill);
+				picker.hide();
+			});
+			picker.onDidHide(() => resolvePick(undefined));
+			picker.show();
+		});
+		picker.dispose();
+		if (!chosen) {
+			return;
+		}
+
+		const USE = 'コックピットで使う';
+		const OPEN = 'SKILL.md を開く';
+		const action = await vscode.window.showInformationMessage(
+			`${chosen.name} — ${chosen.description || '（説明なし）'}`,
+			USE,
+			OPEN
+		);
+		if (action === OPEN) {
+			await vscode.window.showTextDocument(vscode.Uri.file(chosen.path));
+		} else if (action === USE) {
+			cockpit.reveal();
+			await send(`/${chosen.name}`);
+		}
+	}
+
 	context.subscriptions.push(
 		output,
 		status,
@@ -284,7 +410,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerWebviewViewProvider(BoardViewProvider.viewType, board, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),
+		vscode.window.registerWebviewViewProvider('nimbus.help', help, {
+			webviewOptions: { retainContextWhenHidden: true }
+		}),
 		vscode.commands.registerCommand('nimbus.newTask', () => newTask()),
+		vscode.commands.registerCommand('nimbus.findSkill', () => findSkill()),
+		vscode.commands.registerCommand('nimbus.askYua', async () => {
+			await vscode.commands.executeCommand('nimbus.help.focus');
+		}),
 		vscode.window.registerWebviewViewProvider(CockpitViewProvider.viewType, cockpit, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),

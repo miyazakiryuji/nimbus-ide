@@ -15,6 +15,8 @@
 
 	/** ツール実行中の表示を後から結果で上書きするため、tool_use_id → 要素を覚えておく */
 	const toolEntries = new Map();
+	/** コックピットは Claude、ヘルプはゆあ。表示名だけを差し替える */
+	const ASSISTANT = document.body.dataset.assistant || 'Claude';
 	let running = false;
 
 	const STATUS_LABEL = {
@@ -77,7 +79,7 @@
 				append('user', 'あなた', event.text);
 				break;
 			case 'assistant-text':
-				append('assistant', 'Claude', event.text);
+				append('assistant', ASSISTANT, event.text);
 				break;
 			case 'assistant-thinking':
 				append('thinking', '思考', event.text);
