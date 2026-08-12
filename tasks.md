@@ -201,7 +201,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [ ] T-048 セッションの共有リンク — 会話＋差分をそのまま人に見せる。レビュー依頼や質問が楽になる。
       ※会話と差分には秘匿情報が混じるので、サニタイザ通過と公開範囲の設計が前提 [P2]
 - [ ] T-049 チーム設定の同期 — CLAUDE.md やスキルをリポジトリ経由で配って全員の足並みを揃える（T-043 と対）[P2]
-- [ ] T-211 レビュー依頼の導線（T-048 の共有リンクと対）[P2]
 - [ ] T-212 権限管理（企業導入向け）[P3]
 
 ### ⏰ 時間軸
@@ -475,6 +474,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-211 レビューを頼む文（読む順はテストから・テスト無しは自分から言う）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-214 やり取りの切り出し（切り出す時点で伏せる・保存しない）— 2026-08-13 / 仕様 [highlights](nimbus/docs/specs/highlights.md)
 - [x] T-202 危ない書き方の検出（断定しない・当てられても困らない用途は拾わない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-076 依存のライセンス（迷ったら分からないに倒す・合法判定はしない）— 2026-08-13 / 仕様 [licenses](nimbus/docs/specs/licenses.md)

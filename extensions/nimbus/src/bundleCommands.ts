@@ -166,3 +166,74 @@ export async function importBundle(log: (message: string) => void): Promise<void
 	log(`[bundle] ${targets.length} 件を展開しました（${check.bundle.name}）`);
 	void vscode.window.showInformationMessage(`Nimbus: ${targets.length} 件を入れました。`);
 }
+
+
+/**
+ * チーム設定の同期（tasks.md T-049）。
+ *
+ * T-043 は「書き出して手で配る」。こちらは**リポジトリに置いたものを取り込む**形で、
+ * 配る側が更新したら、次に開いた人が気づける。
+ *
+ * 置き場所は既定で `.claude/team-bundle.json`。**リポジトリにコミットされている前提**なので、
+ * 誰がいつ何を変えたかは Git が持っている（Nimbus が履歴を持つ必要がない）。
+ */
+export async function syncTeamBundle(log: (message: string) => void, quiet: boolean): Promise<void> {
+	const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+	const dir = claudeDir();
+	if (!root || !dir) {
+		return;
+	}
+	const relative =
+		vscode.workspace.getConfiguration('nimbus').get<string>('team.bundlePath') || '.claude/team-bundle.json';
+	const bundleUri = vscode.Uri.joinPath(root, relative);
+	let text: string;
+	try {
+		text = Buffer.from(await vscode.workspace.fs.readFile(bundleUri)).toString('utf8');
+	} catch {
+		if (!quiet) {
+			void vscode.window.showInformationMessage(`Nimbus: ${relative} がありません（チーム設定は配られていません）。`);
+		}
+		return;
+	}
+	const check = parseBundle(text);
+	if (!check.ok) {
+		// 起動時の確認では黙らない。壊れた配布物に気づけないほうが困る
+		void vscode.window.showWarningMessage(`Nimbus: ${relative} を読めません — ${check.reason}`);
+		return;
+	}
+
+	const existing = new Map<string, string>();
+	for (const file of check.bundle.files) {
+		try {
+			existing.set(
+				file.path,
+				Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(dir, file.path))).toString('utf8')
+			);
+		} catch {
+			// 無いものは追加になる
+		}
+	}
+	const plan = planApply(check.bundle, existing);
+	if (plan.added.length === 0 && plan.conflicting.length === 0) {
+		if (!quiet) {
+			void vscode.window.showInformationMessage('Nimbus: チーム設定は最新です。');
+		}
+		return;
+	}
+
+	const APPLY = plan.conflicting.length > 0 ? '取り込む（上書きあり）' : '取り込む';
+	const answer = await vscode.window.showInformationMessage(
+		`Nimbus: チーム設定「${check.bundle.name}」に差分があります（${describePlan(plan)}）。`,
+		APPLY
+	);
+	if (answer !== APPLY) {
+		return;
+	}
+	for (const file of [...plan.added, ...plan.conflicting]) {
+		const uri = vscode.Uri.joinPath(dir, file.path);
+		await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
+		await vscode.workspace.fs.writeFile(uri, Buffer.from(file.content, 'utf8'));
+	}
+	log(`[team] ${plan.added.length + plan.conflicting.length} 件を取り込みました（${check.bundle.name}）`);
+	void vscode.window.showInformationMessage('Nimbus: チーム設定を取り込みました。');
+}

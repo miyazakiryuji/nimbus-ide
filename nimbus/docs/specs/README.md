@@ -60,6 +60,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`settings-and-bundle.md`](settings-and-bundle.md) — 設定タブと設定のパッケージ配布
 - [`audit-and-timeline.md`](audit-and-timeline.md) — 監査ログ・時系列ビューア・アンビエント表示
 - [`dialogue.md`](dialogue.md) — 見積もりと、頼みかたの型
+- [`workflow-and-team.md`](workflow-and-team.md) — 流れに沿って進める・解説モード・チーム設定の同期
 
 IDE 基礎機能:
 

@@ -51,6 +51,7 @@ import { scheduleRun, showSchedule, watchSchedule } from './schedule';
 import { openPromptStats } from './promptStats';
 import { openLicenses } from './licenses';
 import { openHighlights } from './highlights';
+import { draftReviewRequest } from './reviewRequest';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -2156,6 +2157,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openPromptStats', () => openPromptStats()),
 		vscode.commands.registerCommand('nimbus.openLicenses', () => openLicenses()),
 		vscode.commands.registerCommand('nimbus.openHighlights', () => openHighlights()),
+		vscode.commands.registerCommand('nimbus.draftReviewRequest', () => draftReviewRequest()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {

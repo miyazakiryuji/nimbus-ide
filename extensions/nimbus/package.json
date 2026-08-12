@@ -742,6 +742,12 @@
         "title": "チーム設定を取り込む",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "nimbus.draftReviewRequest",
+        "title": "レビューを頼む文を作る",
+        "category": "Nimbus",
+        "icon": "$(comment-discussion)"
       }
     ],
     "menus": {
