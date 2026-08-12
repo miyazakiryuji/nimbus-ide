@@ -189,9 +189,11 @@ import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
 import { importCpuProfile } from './cpuProfile';
+import { splitTerminals } from './terminalLayout';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
 import { restackAfterMerge, showPrStack } from './prStack';
+import { measureStartup, trackMemory } from './perfWatch';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2785,6 +2787,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
+		// ターミナルを好きな数に並べる（T-014）
+		vscode.commands.registerCommand('nimbus.splitTerminals', () => splitTerminals({ log })),
 		// 計測結果を渡して、重いところを見つけさせる（T-128）
 		vscode.commands.registerCommand('nimbus.importCpuProfile', () =>
 			importCpuProfile({
@@ -2793,6 +2797,27 @@ export function activate(context: vscode.ExtensionContext): void {
 					void send(text);
 				},
 				log
+			})
+		),
+		// メモリの増え方と起動時間。前と比べて初めて言えること（T-222）
+		vscode.commands.registerCommand('nimbus.trackMemory', () =>
+			trackMemory({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log,
+				state: context.workspaceState
+			})
+		),
+		vscode.commands.registerCommand('nimbus.measureStartup', () =>
+			measureStartup({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log,
+				state: context.workspaceState
 			})
 		),
 		// 積み上げた PR の順と、下が入った後の付け替え（T-135）

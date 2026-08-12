@@ -43,8 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 - [ ] T-014 ターミナルを好きな数に分割する — 実装中 @yua 2026-08-13
 
-- [ ] T-222 メモリリークの調査支援と起動時間の計測 — `core/memoryTrend.ts` `core/startupTiming.ts`
-      `src/perfWatch.ts` を確保（ の `core/cpuProfile.ts` とは別モジュール）@session-c 2026-08-13 [P2]
 
 
 
@@ -314,6 +312,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-222 メモリの増え方と起動時間（1 枚では分からないので並びを見る。3 点未満では何も言わない。
+      起動は 2 割かつ 100ms 以上でだけ「遅くなった」と言う。原因は決めつけず数字だけ渡す）
+      — 2026-08-13 / 仕様 [memory-and-startup](nimbus/docs/specs/memory-and-startup.md)
 
 - [x] T-135 積み上げた PR の管理（入れる順は下から。下が入った後の付け替えを出す。輪になっていたら
       積まず迷子として出す。base の書き換えは走らせず、コマンドを出すまで）
