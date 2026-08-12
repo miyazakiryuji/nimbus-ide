@@ -29,7 +29,8 @@
 
 - `extensions/nimbus/src/core/digest.ts` — 集計と Markdown 化（VS Code 非依存）
 - `extensions/nimbus/src/digest.ts` — 記録の読み込みとコマンド
-- `extensions/nimbus/src/core/transcripts.ts` — 記録の解析（[claude-md](claude-md.md) の提案機能と共用）
+- `extensions/nimbus/src/core/transcripts.ts` — 記録の解析
+- `extensions/nimbus/src/core/transcriptFiles.ts` — 記録の読み込み（[claude-md](claude-md.md) の提案機能と共用）
 
 ## 受け入れ条件
 

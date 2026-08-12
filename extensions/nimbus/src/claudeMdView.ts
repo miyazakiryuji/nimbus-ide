@@ -8,13 +8,12 @@
  * 文脈ビュー（`contextView.ts`）が「いま何が渡っているか」を**見せる**場所なのに対し、
  * ここは**直す**場所。編集そのものは標準のエディタに任せる（自前のエディタは作らない）。
  */
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
-import { join } from 'path';
 import * as vscode from 'vscode';
 import { findClaudeMdFiles } from './core/claudeMd';
 import { findRepeatedInstructions, type RepeatedInstruction } from './core/repeatedInstructions';
-import { parseTranscript, projectDirName } from './core/transcripts';
+import { readRecentTranscripts } from './core/transcriptFiles';
 import {
 	appendBullet,
 	appendSection,
@@ -103,34 +102,11 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 		if (!root) {
 			return [];
 		}
-		const dir = join(this.home, '.claude', 'projects', projectDirName(root));
-		let files: { path: string; mtime: number }[];
-		try {
-			files = readdirSync(dir)
-				.filter((name) => name.endsWith('.jsonl'))
-				.map((name) => {
-					const path = join(dir, name);
-					return { path, mtime: statSync(path).mtimeMs };
-				});
-		} catch {
-			return [];
-		}
-		const messages: string[] = [];
-		for (const file of files.sort((a, b) => b.mtime - a.mtime).slice(0, RECENT_TRANSCRIPTS)) {
-			try {
-				// 大きすぎる記録は飛ばす（ツリーを開くだけで固まらせない）
-				if (statSync(file.path).size > MAX_TRANSCRIPT_BYTES) {
-					continue;
-				}
-				for (const entry of parseTranscript(readFileSync(file.path, 'utf8'))) {
-					if (entry.role === 'user') {
-						messages.push(entry.text);
-					}
-				}
-			} catch {
-				continue;
-			}
-		}
+		const entries = readRecentTranscripts(root, this.home, {
+			limit: RECENT_TRANSCRIPTS,
+			maxBytes: MAX_TRANSCRIPT_BYTES
+		});
+		const messages = entries.filter((entry) => entry.role === 'user').map((entry) => entry.text);
 		return findRepeatedInstructions(messages).slice(0, MAX_SUGGESTIONS);
 	}
 

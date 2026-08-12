@@ -89,6 +89,7 @@ CLAUDE.md は毎ターン読まれるので、放っておくと「効いてい�
   （VS Code 非依存）
 - `extensions/nimbus/src/claudeMdView.ts` — ツリーと「節を足す」
 - `extensions/nimbus/src/core/claudeMd.ts` — 探索（既存・[context-view](context-view.md) と共用）
+- `extensions/nimbus/src/core/transcriptFiles.ts` — 記録の読み込み（[digest](digest.md) と共用）
 
 **編集そのものは標準のエディタに任せる。** 自前のエディタは作らない（差分・元に戻す・
 拡張機能がそのまま効くため）。

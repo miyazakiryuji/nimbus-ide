@@ -6,12 +6,10 @@
  *
  * **Nimbus は記録に書き込まない。**読むだけ。
  */
-import { readdirSync, readFileSync, statSync } from 'fs';
 import { homedir } from 'os';
-import { join } from 'path';
 import * as vscode from 'vscode';
 import { buildDigest, renderDigest } from './core/digest';
-import { parseTranscript, projectDirName, type TranscriptEntry } from './core/transcripts';
+import { readRecentTranscripts } from './core/transcriptFiles';
 
 /** 1 ファイルの読み込み上限（大きな記録で固まらせない） */
 const MAX_TRANSCRIPT_BYTES = 8 * 1024 * 1024;
@@ -24,33 +22,6 @@ const RANGES: { label: string; days: number; detail: string }[] = [
 	{ label: '直近 30 日', days: 30, detail: '月のふりかえり' },
 	{ label: '今日', days: 1, detail: '今日やったこと' }
 ];
-
-function readEntries(root: string, home: string): TranscriptEntry[] {
-	const dir = join(home, '.claude', 'projects', projectDirName(root));
-	let files: { path: string; mtime: number }[];
-	try {
-		files = readdirSync(dir)
-			.filter((name) => name.endsWith('.jsonl'))
-			.map((name) => {
-				const path = join(dir, name);
-				return { path, mtime: statSync(path).mtimeMs };
-			});
-	} catch {
-		return [];
-	}
-	const entries: TranscriptEntry[] = [];
-	for (const file of files.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_TRANSCRIPTS)) {
-		try {
-			if (statSync(file.path).size > MAX_TRANSCRIPT_BYTES) {
-				continue;
-			}
-			entries.push(...parseTranscript(readFileSync(file.path, 'utf8')));
-		} catch {
-			continue;
-		}
-	}
-	return entries;
-}
 
 export async function openDigest(home: string = homedir()): Promise<void> {
 	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -66,7 +37,7 @@ export async function openDigest(home: string = homedir()): Promise<void> {
 
 	const entries = await vscode.window.withProgress(
 		{ location: vscode.ProgressLocation.Window, title: 'Nimbus: 記録を読んでいます' },
-		async () => readEntries(root, home)
+		async () => readRecentTranscripts(root, home, { limit: MAX_TRANSCRIPTS, maxBytes: MAX_TRANSCRIPT_BYTES })
 	);
 
 	// 「いま」を基準に遡る。記録の側の時刻は使わない（読んだ人が見ている日付と合わせる）
