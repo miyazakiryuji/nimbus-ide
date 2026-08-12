@@ -170,6 +170,7 @@ import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
+import { importOtherToolRules } from './importRules';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -2591,6 +2592,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 他のツールの設定を CLAUDE.md へ取り込む（T-068）
+		vscode.commands.registerCommand('nimbus.importOtherToolRules', () => importOtherToolRules({ log })),
 		// モノレポで作業対象のパッケージだけを見せる（T-078）
 		vscode.commands.registerCommand('nimbus.chooseScope', () =>
 			chooseScope({ storage: context.workspaceState, log })

@@ -225,6 +225,12 @@
         "icon": "$(package)"
       },
       {
+        "command": "nimbus.importOtherToolRules",
+        "title": "他のツールの設定を取り込む",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
