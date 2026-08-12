@@ -22,6 +22,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EXT = resolve(HERE, '../../extensions/nimbus');
 const PACKAGE = resolve(EXT, 'package.json');
 const NLS = resolve(EXT, 'package.nls.json');
+/** 訳の置き場所（拡張の外。理由は localeFiles を見よ） */
+const I18N = resolve(HERE, '../i18n');
 
 const APPLY = process.argv.includes('--apply');
 const CHECK = process.argv.includes('--check');
@@ -36,12 +38,24 @@ const needsExtraction = (value) =>
 /** 設定キーからキー名を作る（`nimbus.` は共通なので落とす） */
 const shortKey = (id) => id.replace(/^nimbus\./, '');
 
-/** `package.nls.<言語>.json` を集める（既定の `package.nls.json` は含めない） */
+/**
+ * 訳の置き場所。
+ *
+ * **拡張の中には置かない。** `package.nls.<言語>.json` を拡張の隣に置くと、
+ * VS Code の既定ロケールが `en` なので**出荷物が既定で英語になる**。
+ * Nimbus は日本語で使う道具なので、それは狙いと逆になる（実際に一度そうなった）。
+ *
+ * ここに置いたものは VS Code に読まれない。訳を配ると決めたときに、
+ * 拡張の隣へ移すだけで効くようにしてある。
+ */
 function localeFiles() {
-	return readdirSync(EXT)
+	if (!existsSync(I18N)) {
+		return [];
+	}
+	return readdirSync(I18N)
 		.map((name) => /^package\.nls\.([\w-]+)\.json$/.exec(name))
 		.filter((match) => match !== null)
-		.map((match) => ({ tag: match[1], path: resolve(EXT, match[0]) }));
+		.map((match) => ({ tag: match[1], path: resolve(I18N, match[0]) }));
 }
 
 export function collect(pkg) {
