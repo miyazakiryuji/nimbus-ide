@@ -12,6 +12,7 @@ import { SessionManager } from './session/SessionManager';
 import { createCanUseTool } from './permissions';
 import { CockpitViewProvider } from './cockpit/CockpitViewProvider';
 import { createSanitizer } from './sanitizer';
+import { reportMissingExecutable, resolveClaudeExecutable } from './claudeExecutable';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -25,7 +26,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const sessionAllowAll = new Set<string>();
 	const sessions = new SessionManager(
 		undefined,
-		async () => buildOptions(context),
+		async () => buildOptions(),
 		(sessionId) => createCanUseTool(sessionId, { sessionAllowAll, log })
 	);
 
@@ -103,6 +104,12 @@ export function activate(context: vscode.ExtensionContext): void {
 			const cwd = workspaceCwd();
 			if (!cwd) {
 				void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
+				return;
+			}
+			if (!resolveClaudeExecutable()) {
+				// SDK 内部の英語メッセージで詰まらせず、次の一手を示す
+				log('[session] Claude Code の実行ファイルが見つかりません');
+				await reportMissingExecutable();
 				return;
 			}
 			// セッション ID を先に決めて active にしておく。createSession の実行中に出る
@@ -187,12 +194,11 @@ function workspaceCwd(): string | undefined {
  * `settingSources: []` を明示して、利用者の ~/.claude 設定を暗黙に読み込ませない
  * （何が文脈に入るかを Nimbus 側で説明できる状態に保つため）。
  */
-function buildOptions(context: vscode.ExtensionContext): Partial<Options> {
-	const configured = vscode.workspace.getConfiguration('nimbus').get<string>('claudeCodeExecutable');
+function buildOptions(): Partial<Options> {
 	const options: Partial<Options> = { settingSources: [] };
-	if (configured && configured.trim().length > 0) {
-		options.pathToClaudeCodeExecutable = configured.trim();
+	const executable = resolveClaudeExecutable();
+	if (executable) {
+		options.pathToClaudeCodeExecutable = executable;
 	}
-	void context;
 	return options;
 }
