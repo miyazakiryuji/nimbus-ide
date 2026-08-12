@@ -20,6 +20,16 @@ export type KanbanState =
 	/** 完了（worktree 破棄済み） */
 	| 'done';
 
+/**
+ * 待機列での優先度（tasks.md T-233）。
+ * 数字が小さいほど先。既定は `normal`。
+ */
+export type TaskPriority = 'high' | 'normal' | 'low';
+
+export const PRIORITY_ORDER: Record<TaskPriority, number> = { high: 0, normal: 1, low: 2 };
+
+export const PRIORITY_LABEL: Record<TaskPriority, string> = { high: '高', normal: '中', low: '低' };
+
 export interface KanbanTask {
 	taskId: string;
 	title: string;
@@ -29,8 +39,12 @@ export interface KanbanTask {
 	prompt: string;
 	sessionId?: string;
 	state: KanbanState;
+	/** 省略時は `normal`（既存の保存データにも無いので、読むときに補う） */
+	priority?: TaskPriority;
 	createdAt: number;
 	updatedAt: number;
+	/** 元になった tasks.md の行の ID（T-013）。あれば完了時に tasks.md へ戻せる */
+	sourceTaskId?: string;
 }
 
 export const KANBAN_COLUMNS: { state: KanbanState; label: string }[] = [
@@ -80,5 +94,12 @@ export function nextStartable(
 	if (used >= maxConcurrent) {
 		return undefined;
 	}
-	return [...tasks].filter((t) => t.state === 'pending').sort((a, b) => a.createdAt - b.createdAt)[0];
+	// 優先度が先、同じなら作った順（先に入れたものを追い越さない）
+	return [...tasks]
+		.filter((t) => t.state === 'pending')
+		.sort(
+			(a, b) =>
+				PRIORITY_ORDER[a.priority ?? 'normal'] - PRIORITY_ORDER[b.priority ?? 'normal'] ||
+				a.createdAt - b.createdAt
+		)[0];
 }

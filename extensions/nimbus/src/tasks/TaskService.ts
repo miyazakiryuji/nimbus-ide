@@ -16,7 +16,8 @@ import {
 	occupiesSlot,
 	restoreState,
 	type KanbanState,
-	type KanbanTask
+	type KanbanTask,
+	type TaskPriority
 } from '../core/tasks';
 
 const STORAGE_KEY = 'nimbus.tasks';
@@ -26,6 +27,10 @@ export interface CreateTaskInput {
 	prompt: string;
 	repoCwd: string;
 	autoStart: boolean;
+	/** 待機列での優先度（T-233）。省略時は normal */
+	priority?: TaskPriority;
+	/** 元になった tasks.md の行（T-013） */
+	sourceTaskId?: string;
 }
 
 export class TaskService extends EventEmitter {
@@ -84,6 +89,8 @@ export class TaskService extends EventEmitter {
 			branch: worktree.branch,
 			prompt: input.prompt,
 			state: 'pending',
+			priority: input.priority ?? 'normal',
+			sourceTaskId: input.sourceTaskId,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		};
@@ -100,6 +107,17 @@ export class TaskService extends EventEmitter {
 			}
 		}
 		return task;
+	}
+
+	/** 待機中タスクの優先度を変える（T-233）。走り出したあとに変えても意味がないので待機中だけ */
+	setPriority(taskId: string, priority: TaskPriority): void {
+		const task = this.mustGet(taskId);
+		if (task.state !== 'pending' || task.priority === priority) {
+			return;
+		}
+		task.priority = priority;
+		task.updatedAt = Date.now();
+		this.persistAndEmit();
 	}
 
 	/** 待機タスクの自動開始を止める。緊急停止から呼ぶ */

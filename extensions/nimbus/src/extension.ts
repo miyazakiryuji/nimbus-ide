@@ -46,6 +46,8 @@ import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile 
 import { thresholdLevel } from './core/usage';
 import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
 import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
+import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
+import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
@@ -435,6 +437,136 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	function tasksFileUri(): vscode.Uri | undefined {
+		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+		return root ? vscode.Uri.joinPath(root, 'tasks.md') : undefined;
+	}
+
+	/**
+	 * `tasks.md` の項目から板のタスクを作る（tasks.md T-013）。
+	 * **完了済みと claim 済みは候補に出さない**（二重作業の元になる）。
+	 */
+	async function taskFromTasksFile(): Promise<void> {
+		const uri = tasksFileUri();
+		const cwd = workspaceCwd();
+		if (!uri || !cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+			return;
+		}
+		let content: string;
+		try {
+			content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+		} catch {
+			void vscode.window.showInformationMessage('Nimbus: tasks.md が見つかりませんでした。');
+			return;
+		}
+		const candidates = startableEntries(parseTasksFile(content));
+		if (candidates.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 着手できる項目がありません（完了済みか、誰かが claim 済みです）。');
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			candidates.map((entry) => ({
+				label: `${entry.id} ${entry.title}`,
+				description: [entry.priority, entry.section].filter(Boolean).join(' · '),
+				entry
+			})),
+			{ title: 'Nimbus: tasks.md から着手する', matchOnDescription: true }
+		);
+		if (!chosen) {
+			return;
+		}
+		const prompt = await vscode.window.showInputBox({
+			title: `Nimbus: ${chosen.entry.id}`,
+			prompt: 'Claude への指示',
+			value: chosen.entry.title
+		});
+		if (!prompt) {
+			return;
+		}
+		try {
+			await tasks.createTask({
+				title: `${chosen.entry.id} ${chosen.entry.title}`,
+				prompt,
+				repoCwd: cwd,
+				autoStart: true,
+				// tasks.md の優先度を待機列の優先度へそのまま持ち込む
+				priority: chosen.entry.priority === 'P1' ? 'high' : chosen.entry.priority === 'P3' ? 'low' : 'normal',
+				sourceTaskId: chosen.entry.id
+			});
+			log(`[tasks.md] ${chosen.entry.id} を板へ移しました`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+		}
+	}
+
+	/** 完了したタスクの元になった tasks.md の行を、完了セクションへ移す（T-013） */
+	async function offerMoveToDone(sourceTaskId: string, title: string): Promise<void> {
+		const uri = tasksFileUri();
+		if (!uri) {
+			return;
+		}
+		const MOVE = 'tasks.md も完了にする';
+		const choice = await vscode.window.showInformationMessage(
+			`Nimbus: ${sourceTaskId} を tasks.md の 完了 へ移しますか。`,
+			MOVE
+		);
+		if (choice !== MOVE) {
+			return;
+		}
+		try {
+			const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+			// 行ごと動かす（書き換えると、並行して編集している他のセッションとマージできなくなる）
+			const updated = moveToDone(content, sourceTaskId, `${new Date().toISOString().slice(0, 10)} / ${title}`);
+			if (!updated) {
+				void vscode.window.showWarningMessage(`Nimbus: ${sourceTaskId} が tasks.md に見つかりませんでした。`);
+				return;
+			}
+			await vscode.workspace.fs.writeFile(uri, Buffer.from(updated, 'utf8'));
+			log(`[tasks.md] ${sourceTaskId} を 完了 へ移しました`);
+		} catch (error) {
+			log(`[tasks.md] 更新に失敗: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/** 待機中タスクの優先度を変える（T-233） */
+	async function setTaskPriority(taskId: string | undefined): Promise<void> {
+		const pending = tasks.list().filter((task) => task.state === 'pending');
+		if (pending.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 待機中のタスクがありません。');
+			return;
+		}
+		const target =
+			(taskId && pending.find((task) => task.taskId === taskId)) ??
+			(
+				await vscode.window.showQuickPick(
+					pending.map((task) => ({
+						label: task.title,
+						description: PRIORITY_LABEL[task.priority ?? 'normal'],
+						task
+					})),
+					{ title: 'Nimbus: どのタスクの優先度を変えますか' }
+				)
+			)?.task;
+		if (!target) {
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			(['high', 'normal', 'low'] as TaskPriority[]).map((priority) => ({
+				label: PRIORITY_LABEL[priority],
+				description: priority === 'high' ? '待機列の先頭へ' : priority === 'low' ? '後回し' : '既定',
+				priority
+			})),
+			{ title: `Nimbus: ${target.title} の優先度` }
+		);
+		if (!chosen) {
+			return;
+		}
+		tasks.setPriority(target.taskId, chosen.priority);
+		log(`[task] 優先度を ${PRIORITY_LABEL[chosen.priority]} にしました: ${target.title}`);
 	}
 
 	/** テンプレートから始める（tasks.md T-148） */
@@ -1032,7 +1164,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		if (choice !== CONFIRM) {
 			return;
 		}
+		const sourceTaskId = task.sourceTaskId;
 		const { wipCommit } = await tasks.completeTask(taskId);
+		if (sourceTaskId) {
+			void offerMoveToDone(sourceTaskId, task.title);
+		}
 		void vscode.window.showInformationMessage(
 			wipCommit
 				? `Nimbus: 完了しました。未コミットの成果は ${task.branch} の ${wipCommit.slice(0, 8)} に保存しました。`
@@ -1185,6 +1321,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
 		vscode.commands.registerCommand('nimbus.pinnedFiles', () => managePinnedFiles()),
 		// テンプレートから始める（T-148）
+		// tasks.md から板へ（T-013）
+		vscode.commands.registerCommand('nimbus.taskFromFile', () => taskFromTasksFile()),
+		// 待機列の優先度（T-233）
+		vscode.commands.registerCommand('nimbus.setTaskPriority', (node?: { taskId?: string }) =>
+			setTaskPriority(node?.taskId)
+		),
 		vscode.commands.registerCommand('nimbus.startFromPreset', () => startFromPreset()),
 		vscode.commands.registerCommand('nimbus.managePresets', () => managePresets(context.globalState)),
 		// 同じ地点から A 案・B 案（T-036）

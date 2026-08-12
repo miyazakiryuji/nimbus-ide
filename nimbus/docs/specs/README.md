@@ -33,6 +33,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`context-control.md`](context-control.md) — 文脈の制御（ピン留め・予算・効率）
 - [`parallel-awareness.md`](parallel-awareness.md) — 並列セッションの見える化（誰が何を触っているか）
 - [`session-lifecycle.md`](session-lifecycle.md) — セッションの始め方・分けかた・戻しかた
+- [`tasks-board-link.md`](tasks-board-link.md) — tasks.md とタスク板の対応づけ・待機列の優先度
 
 IDE 基礎機能:
 

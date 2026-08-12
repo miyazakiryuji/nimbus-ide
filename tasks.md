@@ -46,8 +46,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 - [ ] T-193 **Widget テスト / ゴールデンテストの生成** — 開いている Dart から widget を読み取り、
       規約どおりの場所にテストの雛形を作る。実装前に claim @session-b 2026-08-13 [P1]
 
-- [ ] T-013 `tasks.md` とタスク板を対応づける。実装前に claim @session-a 2026-08-13 [P3]
-- [ ] T-233 タスクキューに優先度を持たせる。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -516,6 +514,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-013 tasks.md とタスク板の対応づけ（定義行から着手・完了で行ごと移す）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)
+- [x] T-233 タスクキューの優先度（高／中／低・同じなら作った順）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)
 - [x] T-036 セッションの分岐（同じ地点から A 案・B 案をタスクとして並列に）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)
 - [x] T-148 セッションテンプレート（調査／実装／レビューを同梱・{input} 展開）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)
 - [x] T-150 セッションの復元（Claude Code の記録から再開。自前バックアップは持たない）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)

@@ -319,6 +319,18 @@
         "title": "命名と重複を見る",
         "category": "Nimbus",
         "icon": "$(symbol-keyword)"
+      },
+      {
+        "command": "nimbus.taskFromFile",
+        "title": "tasks.md から着手する",
+        "category": "Nimbus",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "nimbus.setTaskPriority",
+        "title": "待機中タスクの優先度を変える",
+        "category": "Nimbus",
+        "icon": "$(arrow-up)"
       }
     ],
     "menus": {
@@ -543,6 +555,19 @@
           ],
           "default": "ask",
           "description": "Claude がファイルを書き換えたあと、そのターンで増えた型エラーだけを確かめます。"
+        },
+        "nimbus.lsp.verifyIncludes": {
+          "type": "string",
+          "enum": [
+            "errors",
+            "warnings"
+          ],
+          "enumDescriptions": [
+            "型エラーだけを差し戻します。",
+            "lint / analyzer の警告も差し戻します（自動ループ向け）。"
+          ],
+          "default": "errors",
+          "description": "編集後の確認で、どこまでを差し戻すか。"
         },
         "nimbus.lsp.maxAutoFixes": {
           "type": "number",
