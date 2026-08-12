@@ -172,6 +172,12 @@
         "icon": "$(symbol-ruler)"
       },
       {
+        "command": "nimbus.planBulkChange",
+        "title": "一括変更の段取りを作る",
+        "category": "Nimbus",
+        "icon": "$(list-ordered)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
@@ -635,6 +641,18 @@
         "title": "練習用のフォルダを作る",
         "category": "Nimbus",
         "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.scheduleRun",
+        "title": "寝る前に仕込む",
+        "category": "Nimbus",
+        "icon": "$(clock)"
+      },
+      {
+        "command": "nimbus.showSchedule",
+        "title": "仕込んであるものを見る",
+        "category": "Nimbus",
+        "icon": "$(calendar)"
       }
     ],
     "menus": {

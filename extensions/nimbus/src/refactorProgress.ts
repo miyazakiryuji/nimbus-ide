@@ -47,6 +47,29 @@ function tracks(storage: vscode.Memento): RefactorTrack[] {
 }
 
 /**
+ * 聞かずに追跡を始める（T-110 の一括変更から呼ぶ）。
+ * いまの件数が 0 なら何もしない（分母が無いものは追いかけられない）。
+ */
+export async function addRefactorTrack(
+	storage: vscode.Memento,
+	pattern: string,
+	label: string
+): Promise<number> {
+	const folder = vscode.workspace.workspaceFolders?.[0];
+	if (!folder) {
+		return 0;
+	}
+	const counts = await gitGrepCounts(folder.uri.fsPath, pattern).catch(() => new Map<string, number>());
+	const initial = totalOf(counts);
+	if (initial === 0) {
+		return 0;
+	}
+	const track: RefactorTrack = { id: randomUUID(), label, pattern, initial, createdAt: Date.now() };
+	await storage.update(STORAGE_KEY, [...tracks(storage), track]);
+	return initial;
+}
+
+/**
  * 置き換えを追いかけ始める。
  * いまの件数を分母として控える — 途中から数え始めても「残り」は正しく出る。
  */

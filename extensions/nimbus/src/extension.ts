@@ -46,6 +46,8 @@ import { openRhythm } from './rhythm';
 import { openPlatformChannels } from './platformChannel';
 import { generateFromSchema } from './openapi';
 import { checkApiResponse, generateMockResponse } from './apiCheck';
+import { createSandbox } from './sandbox';
+import { scheduleRun, showSchedule, watchSchedule } from './schedule';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -105,11 +107,12 @@ import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
-import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
+import { addRefactorTrack, showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { showRepoSummary } from './repoSummary';
 import { reviewSnapshots } from './snapshotReview';
 import { captureBehavior, verifyEquivalence } from './equivalence';
 import { showConventions } from './conventions';
+import { planBulkChange } from './bulkChange';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1961,6 +1964,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
 		vscode.commands.registerCommand('nimbus.openPlatformChannels', () => openPlatformChannels()),
 		vscode.commands.registerCommand('nimbus.generateFromSchema', () => generateFromSchema()),
+		vscode.commands.registerCommand('nimbus.createSandbox', () => createSandbox()),
+		vscode.commands.registerCommand('nimbus.scheduleRun', () => scheduleRun(context)),
+		vscode.commands.registerCommand('nimbus.showSchedule', () => showSchedule(context)),
+		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
+		watchSchedule(context, (prompt, autoApprove) => {
+			if (autoApprove) {
+				sessionAllowAll.add('scheduled');
+			}
+			void newSession(prompt);
+		}),
 		vscode.commands.registerCommand('nimbus.checkApiResponse', () => checkApiResponse()),
 		vscode.commands.registerCommand('nimbus.generateMockResponse', () => generateMockResponse()),
 		vscode.commands.registerCommand('nimbus.openRhythm', () =>
@@ -2091,6 +2104,24 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 破壊的変更への追従は、まとまりに分けて間にテストを挟ませる（T-110）
+		vscode.commands.registerCommand('nimbus.planBulkChange', () =>
+			planBulkChange({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log,
+				track: async (pattern, label) => {
+					const initial = await addRefactorTrack(context.workspaceState, pattern, label);
+					if (initial > 0) {
+						void vscode.window.showInformationMessage(
+							`Nimbus: 「${label}」を追いかけます（いま ${initial} 箇所）。`
+						);
+					}
+				}
+			})
+		),
 		// 既存のファイルを数えて、このリポジトリの書き方を渡す（T-103）
 		vscode.commands.registerCommand('nimbus.projectConventions', () =>
 			showConventions({
