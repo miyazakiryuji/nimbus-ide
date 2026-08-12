@@ -40,8 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-030 フロントマター補完つきエディタ。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-031 プレビュー実行。実装前に claim @session-a 2026-08-13 [P2]
 
       実装前に claim @session-b 2026-08-13 [P2]
 
@@ -522,6 +520,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-030 フロントマター補完つきエディタ（既に書いたキーは出さない・足りないものを名指し）— 2026-08-13 / 仕様 [authoring](nimbus/docs/specs/authoring.md)
+- [x] T-031 プレビュー実行（plan モードの使い捨てセッション・読み込まれない状態では走らせない）— 2026-08-13 / 仕様 [authoring](nimbus/docs/specs/authoring.md)
 - [x] T-165 自作スキルの回帰テスト（部分点を付けない）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
 - [x] T-166 ブレ幅の測定（合格率だけでなく応答の振れも見る）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
 - [x] T-167 モデル切り替えの比較（通っていないモデルを安いと勧めない）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)

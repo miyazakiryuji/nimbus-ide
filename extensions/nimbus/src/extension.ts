@@ -53,6 +53,7 @@ import { openLicenses } from './licenses';
 import { openHighlights } from './highlights';
 import { draftReviewRequest } from './reviewRequest';
 import { openExplanation } from './explain';
+import { importReviewComments } from './reviewComments';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -95,6 +96,7 @@ import { collectTags } from './core/tasks';
 import { dryRunHook, manageHooks } from './hooksBuilder';
 import { exportBundle, importBundle, syncTeamBundle } from './bundleCommands';
 import { runEvaluation } from './evaluationRunner';
+import { createCompletionProvider, previewRun, validateDocument } from './authoring';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
@@ -141,6 +143,7 @@ import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
+import { exploreHistory } from './archaeology';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -171,6 +174,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const settingsView = new SettingsViewProvider();
 	// 生イベントの時系列（T-015 / T-184）
 	const timelineView = new TimelineViewProvider();
+	// 書式ミスをその場で見せる（T-030）
+	const authoringDiagnostics = vscode.languages.createDiagnosticCollection('nimbus');
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
@@ -2118,6 +2123,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		// ワークフロー（T-149）・解説モード（T-045）・チーム設定の同期（T-049）
 		// 回帰テスト・ブレ幅・モデル比較（T-165 / T-166 / T-167）
 		vscode.commands.registerCommand('nimbus.evaluate', () => evaluate()),
+		// スキル・サブエージェント・コマンドを書く支援（T-030 / T-031）
+		vscode.languages.registerCompletionItemProvider({ language: 'markdown' }, createCompletionProvider(), ':', '\n'),
+		authoringDiagnostics,
+		vscode.workspace.onDidSaveTextDocument((document) => validateDocument(document, authoringDiagnostics)),
+		vscode.workspace.onDidOpenTextDocument((document) => validateDocument(document, authoringDiagnostics)),
+		vscode.commands.registerCommand('nimbus.previewSkill', async () => {
+			const editor = vscode.window.activeTextEditor;
+			const cwd = requireCwd();
+			if (!editor || !cwd) {
+				return;
+			}
+			await previewRun(sessions, cwd, editor.document, log);
+		}),
 		vscode.commands.registerCommand('nimbus.runWorkflow', () => startWorkflow()),
 		vscode.commands.registerCommand('nimbus.nextWorkflowStep', () => runNextWorkflowStep()),
 		vscode.commands.registerCommand('nimbus.explainMode', () => void send(EXPLAIN_MODE_PROMPT)),
@@ -2234,6 +2252,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openHighlights', () => openHighlights()),
 		vscode.commands.registerCommand('nimbus.draftReviewRequest', () => draftReviewRequest()),
 		vscode.commands.registerCommand('nimbus.openExplanation', () => openExplanation()),
+		vscode.commands.registerCommand('nimbus.importReviewComments', () => importReviewComments((text) => void send(text))),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2377,6 +2396,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// このコードがなぜこうなっているのかを辿る（T-079）
+		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
+			exploreHistory({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 変えた名前に触れている古い文書を挙げる（T-209）
 		vscode.commands.registerCommand('nimbus.checkApiDocs', () =>
 			checkApiDocs({

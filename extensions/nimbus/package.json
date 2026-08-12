@@ -207,6 +207,12 @@
         "icon": "$(book)"
       },
       {
+        "command": "nimbus.exploreHistory",
+        "title": "なぜこうなっているのかを辿る",
+        "category": "Nimbus",
+        "icon": "$(history)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
@@ -772,6 +778,18 @@
         "title": "確認せずに許可するルールを編集する",
         "category": "Nimbus",
         "icon": "$(shield)"
+      },
+      {
+        "command": "nimbus.importReviewComments",
+        "title": "レビューコメントを取り込む",
+        "category": "Nimbus",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "nimbus.previewSkill",
+        "title": "いま開いているスキル／サブエージェントを試す",
+        "category": "Nimbus",
+        "icon": "$(play-circle)"
       }
     ],
     "menus": {
@@ -790,6 +808,11 @@
           "command": "nimbus.saveSnippet",
           "when": "editorHasSelection",
           "group": "nimbus@2"
+        },
+        {
+          "command": "nimbus.previewSkill",
+          "when": "resourceExtname == .md && resourcePath =~ /\\\\.claude/",
+          "group": "nimbus@1"
         }
       ],
       "commandPalette": [
