@@ -493,6 +493,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-160 レビューの進み（見たあとに変わったら見ていない扱いに戻す）— 2026-08-13 / 仕様 [review-progress](nimbus/docs/specs/review-progress.md)
 - [x] T-198 依存の食い違い（pubspec と Podfile.lock の突き合わせ）— 2026-08-13 / 仕様 [dep-consistency](nimbus/docs/specs/dep-consistency.md)
 - [x] T-199 Xcode プロジェクトの衝突を解く（両方残す・1 つでも怪しければ触らない）— 2026-08-13 / 仕様 [xcode-conflict](nimbus/docs/specs/xcode-conflict.md)
 - [x] T-217 / T-129 ビルド時間と成果物の大きさを前回と比べる — 2026-08-13 / 仕様 [build-metrics](nimbus/docs/specs/build-metrics.md)

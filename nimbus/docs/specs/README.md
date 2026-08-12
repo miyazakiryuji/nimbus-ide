@@ -21,6 +21,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`pr-description.md`](pr-description.md) — PR の説明文の下書き
 - [`branch-health.md`](branch-health.md) — ブランチの離れ具合と衝突の予告
 - [`code-health.md`](code-health.md) — 命名のゆれとそっくりな実装
+- [`review-progress.md`](review-progress.md) — レビューの進み（どこまで見たか）
 - [`change-stats.md`](change-stats.md) — 変更のようす（統計とテスト有無）
 - [`release-notes.md`](release-notes.md) — リリースノートの下書き
 - [`build-metrics.md`](build-metrics.md) — ビルド時間と成果物の大きさの変化

@@ -492,6 +492,36 @@
         "title": "依存の食い違いを見る",
         "category": "Nimbus",
         "icon": "$(references)"
+      },
+      {
+        "command": "nimbus.flushOutbox",
+        "title": "預かっている入力を送り直す",
+        "category": "Nimbus",
+        "icon": "$(mail)"
+      },
+      {
+        "command": "nimbus.sessionToSkill",
+        "title": "このセッションをスキルにする",
+        "category": "Nimbus",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "nimbus.pinTask",
+        "title": "タスクをピン留めする",
+        "category": "Nimbus",
+        "icon": "$(pinned)"
+      },
+      {
+        "command": "nimbus.tagTask",
+        "title": "タスクにタグを付ける",
+        "category": "Nimbus",
+        "icon": "$(tag)"
+      },
+      {
+        "command": "nimbus.openReviewProgress",
+        "title": "レビューの進みを見る",
+        "category": "Nimbus",
+        "icon": "$(checklist)"
       }
     ],
     "menus": {
