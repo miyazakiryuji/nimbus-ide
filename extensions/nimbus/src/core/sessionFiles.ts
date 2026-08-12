@@ -9,11 +9,7 @@
  * VS Code に依存しないので単体で検証できる。
  */
 import type { NimbusEvent } from '../events';
-
-/** ファイルを読むツール */
-const READ_TOOLS = new Set(['Read', 'NotebookRead']);
-/** ファイルを書くツール。衝突の判定はこちらだけを見る */
-const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+import { filePathOf, READ_TOOLS, WRITE_TOOLS } from './toolInput';
 
 export interface SessionTouch {
 	sessionId: string;
@@ -40,15 +36,6 @@ export interface SessionSnapshot {
 	lastAt: number;
 }
 
-function pathOf(input: unknown): string | undefined {
-	if (!input || typeof input !== 'object') {
-		return undefined;
-	}
-	const record = input as Record<string, unknown>;
-	const path = record['file_path'] ?? record['notebook_path'] ?? record['path'];
-	return typeof path === 'string' && path ? path : undefined;
-}
-
 /**
  * 全セッションのイベントから、誰がどのファイルを触ったかを覚えておく係。
  *
@@ -68,7 +55,7 @@ export class SessionFilesTracker {
 		if (!isRead && !isWrite) {
 			return;
 		}
-		const path = pathOf(event.input);
+		const path = filePathOf(event.input);
 		if (!path) {
 			return;
 		}
@@ -121,7 +108,7 @@ export class SessionFilesTracker {
 }
 
 /** 衝突を 1 行で伝える。相手が書いているかどうかで言い方を変える */
-export function describeConflict(conflict: Conflict, nameOf: (sessionId: string) => string): string {
+export function describeSessionConflict(conflict: Conflict, nameOf: (sessionId: string) => string): string {
 	const others = conflict.otherSessionIds.map(nameOf).join(' / ');
 	const file = conflict.path.split('/').pop() ?? conflict.path;
 	return conflict.otherWrote

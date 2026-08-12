@@ -6,13 +6,13 @@
  * ここは init メッセージ（session-init）から得られる事実だけを並べる。
  */
 import { homedir } from 'os';
-import * as vscode from 'vscode';
 import type { SessionInitEvent } from './events';
 import { billingModeLabel } from './billing';
 import { findClaudeMdFiles } from './core/claudeMd';
 import { classifyOrigin, displayLabel } from './core/claudeMdDoc';
+import { NimbusTreeView, type TreeNode } from './views/treeView';
 
-type Node = { label: string; description?: string; tooltip?: string; children?: Node[]; icon?: string };
+type Node = TreeNode;
 
 /** CLAUDE.md の出どころ。直す場所を間違えると他のプロジェクトまで巻き込むので、必ず添える */
 const ORIGIN_LABEL = {
@@ -32,33 +32,15 @@ function listNode(label: string, items: string[], icon: string): Node {
 	};
 }
 
-export class ContextViewProvider implements vscode.TreeDataProvider<Node> {
+export class ContextViewProvider extends NimbusTreeView {
 	private init?: SessionInitEvent;
-	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
-	readonly onDidChangeTreeData = this.emitter.event;
 
 	update(init: SessionInitEvent | undefined): void {
 		this.init = init;
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
-	getTreeItem(node: Node): vscode.TreeItem {
-		const item = new vscode.TreeItem(
-			node.label,
-			node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
-		);
-		item.description = node.description;
-		item.tooltip = node.tooltip ?? node.label;
-		if (node.icon) {
-			item.iconPath = new vscode.ThemeIcon(node.icon);
-		}
-		return item;
-	}
-
-	getChildren(node?: Node): Node[] {
-		if (node) {
-			return node.children ?? [];
-		}
+	protected nodes(): Node[] {
 		const init = this.init;
 		if (!init) {
 			return [{ label: 'セッションを開始すると、ここに文脈が表示されます', icon: 'info' }];

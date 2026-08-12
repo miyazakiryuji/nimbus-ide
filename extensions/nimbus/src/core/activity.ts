@@ -9,6 +9,7 @@
  * VS Code に依存しないので単体で検証できる。
  */
 import type { CompactionEvent, NimbusEvent } from '../events';
+import { commandOf, filePathOf, READ_TOOLS, WRITE_TOOLS } from './toolInput';
 
 export interface SubagentRun {
 	taskId: string;
@@ -54,20 +55,6 @@ export interface Activity {
 	files: TouchedFile[];
 	/** 発生が新しい順 */
 	compactions: CompactionEvent[];
-}
-
-/** ファイルを読むツール（T-023 の「読み込まれたファイル一覧」の対象） */
-const READ_TOOLS = new Set(['Read', 'NotebookRead']);
-/** ファイルを書くツール。読んだものと分けて数える */
-const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-
-function filePathOf(input: unknown): string | undefined {
-	if (!input || typeof input !== 'object') {
-		return undefined;
-	}
-	const record = input as Record<string, unknown>;
-	const path = record['file_path'] ?? record['notebook_path'] ?? record['path'];
-	return typeof path === 'string' && path ? path : undefined;
 }
 
 /**
@@ -262,15 +249,6 @@ export function runningTool(events: readonly NimbusEvent[]): RunningTool | undef
 		}
 	}
 	return undefined;
-}
-
-/** Bash など、パスではなくコマンドで「何をしているか」が分かるもの */
-function commandOf(input: unknown): string | undefined {
-	if (!input || typeof input !== 'object') {
-		return undefined;
-	}
-	const command = (input as Record<string, unknown>)['command'];
-	return typeof command === 'string' && command ? command.replace(/\s+/g, ' ').trim() : undefined;
 }
 
 /** サブエージェントの状態を 1 文字の記号にする（一覧で状態を先頭に置くため） */

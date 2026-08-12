@@ -5,58 +5,29 @@
  * ここは**手を打てる場所** — 繋ぎ直す・切る・提供ツールを見る。
  * 困っているサーバー（失敗・認証待ち）を上に置く。
  */
-import * as vscode from 'vscode';
 import { describeServer, sortServers, statusIcon, toolBadge, type McpServer } from './core/mcp';
+import { NimbusTreeView, type TreeNode } from './views/treeView';
 
-type Node = {
-	label: string;
-	description?: string;
-	tooltip?: string;
-	children?: Node[];
-	icon?: string;
-	/** メニュー（繋ぎ直し・有効／無効）の出し分けに使う */
-	contextValue?: string;
-	server?: McpServer;
-};
+/** 繋ぎ直し・有効／無効のコマンドが受け取れるよう、対象を持たせる */
+type Node = TreeNode & { server?: McpServer };
 
-export class McpViewProvider implements vscode.TreeDataProvider<Node> {
+export class McpViewProvider extends NimbusTreeView {
 	private servers: McpServer[] = [];
 	private started = false;
-	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
-	readonly onDidChangeTreeData = this.emitter.event;
 
 	update(servers: McpServer[]): void {
 		this.servers = servers;
 		this.started = true;
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
 	clear(): void {
 		this.servers = [];
 		this.started = false;
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
-	getTreeItem(node: Node): vscode.TreeItem {
-		const item = new vscode.TreeItem(
-			node.label,
-			node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
-		);
-		item.description = node.description;
-		item.tooltip = node.tooltip ?? node.label;
-		if (node.icon) {
-			item.iconPath = new vscode.ThemeIcon(node.icon);
-		}
-		if (node.contextValue) {
-			item.contextValue = node.contextValue;
-		}
-		return item;
-	}
-
-	getChildren(node?: Node): Node[] {
-		if (node) {
-			return node.children ?? [];
-		}
+	protected nodes(): Node[] {
 		if (!this.started) {
 			return [{ label: 'セッションを開始すると、ここに MCP サーバーが表示されます', icon: 'info' }];
 		}

@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import type { NimbusEvent } from '../events';
-import { describeConflict, SessionFilesTracker } from '../core/sessionFiles';
+import { describeSessionConflict, SessionFilesTracker } from '../core/sessionFiles';
 
 const use = (sessionId: string, timestamp: number, toolName: string, file_path: string): NimbusEvent => ({
 	kind: 'tool-use',
@@ -48,7 +48,7 @@ test('他のセッションが読んだだけなら、言い方を変える', ()
 	const conflict = files.conflictFor('a', '/w/x.ts');
 	assert.strictEqual(conflict?.otherWrote, false);
 	assert.strictEqual(
-		describeConflict(conflict!, (id) => id.toUpperCase()),
+		describeSessionConflict(conflict!, (id) => id.toUpperCase()),
 		'x.ts は B も読んでいます。書き換えると相手の前提が古くなります'
 	);
 });

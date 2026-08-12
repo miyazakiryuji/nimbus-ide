@@ -8,13 +8,13 @@
  * 表示は `contextView` と同じくツリー。ゲージは文字で描く（Webview を足すほどの
  * 情報量ではないうえ、ツリーなら折りたたんで置いておける）。
  */
-import * as vscode from 'vscode';
 import type { SDKControlGetContextUsageResponse, SDKControlGetUsageResponse } from '@anthropic-ai/claude-agent-sdk';
 import { budgetGauge, contextGauge, formatCost, formatTokens, toGauges, type Gauge } from './core/usage';
 import { contextEfficiency, describeEfficiency } from './core/efficiency';
 import type { NimbusEvent } from './events';
+import { NimbusTreeView, type TreeNode } from './views/treeView';
 
-type Node = { label: string; description?: string; tooltip?: string; children?: Node[]; icon?: string };
+type Node = TreeNode;
 
 function gaugeNode(gauge: Gauge, icon: string): Node {
 	return {
@@ -25,7 +25,7 @@ function gaugeNode(gauge: Gauge, icon: string): Node {
 	};
 }
 
-export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
+export class UsageViewProvider extends NimbusTreeView {
 	private usage?: SDKControlGetUsageResponse;
 	private context?: SDKControlGetContextUsageResponse;
 	private updatedAt?: number;
@@ -33,8 +33,6 @@ export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
 	private events: readonly NimbusEvent[] = [];
 	/** 文脈の予算（T-153）。0 なら予算なし */
 	private budgetTokens = 0;
-	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
-	readonly onDidChangeTreeData = this.emitter.event;
 
 	update(
 		usage: SDKControlGetUsageResponse | undefined,
@@ -47,33 +45,17 @@ export class UsageViewProvider implements vscode.TreeDataProvider<Node> {
 		this.events = events;
 		this.budgetTokens = budgetTokens;
 		this.updatedAt = Date.now();
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
 	clear(): void {
 		this.usage = undefined;
 		this.context = undefined;
 		this.updatedAt = undefined;
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
-	getTreeItem(node: Node): vscode.TreeItem {
-		const item = new vscode.TreeItem(
-			node.label,
-			node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
-		);
-		item.description = node.description;
-		item.tooltip = node.tooltip ?? node.label;
-		if (node.icon) {
-			item.iconPath = new vscode.ThemeIcon(node.icon);
-		}
-		return item;
-	}
-
-	getChildren(node?: Node): Node[] {
-		if (node) {
-			return node.children ?? [];
-		}
+	protected nodes(): Node[] {
 		if (!this.usage && !this.context) {
 			return [{ label: 'セッションを開始すると、ここに使用量が表示されます', icon: 'info' }];
 		}

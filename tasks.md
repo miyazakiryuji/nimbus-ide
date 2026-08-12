@@ -37,7 +37,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       複数エージェントの出力を同時に見たい。VS Code は左右分割とタブはあるが、任意のグリッドは組めない
 - [ ] T-015 アクティビティバー（左のタブ）に**デバッグモード**を足す — セッションの生イベント・ツール呼び出し・
       承認の判断・コストを追える場所。※VS Code 標準の Run and Debug とは別物なのか、要確認
-- [ ] T-236 **ツリービューの共通土台** — activityView / contextView / mcpView / usageView で 生成まわりが 4 重複（ドクターの duplication が指摘）。Webview の `src/webview/WebviewViewHost.ts` と同じように土台へ寄せる。**各ビューの担当セッションが自分の番で載せ替える**のが安全 [P2]
 
 ## 進行中
 
@@ -47,8 +46,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       実装前に claim @session-b 2026-08-13 [P2]
 
 
-- [ ] T-236 ツリービューの共通土台 — 自分が持つ 3 ビュー（activity / usage / mcp）を先に載せ替える。
-      contextView は担当の方の番で。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -528,6 +525,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-236 ツリービューの共通土台（4 ビューすべてを載せ替え・ツール入力の取り出しも共通化）— 2026-08-13 / 仕様 [tree-views](nimbus/docs/specs/tree-views.md)
 - [x] T-013 tasks.md とタスク板の対応づけ（定義行から着手・完了で行ごと移す）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)
 - [x] T-233 タスクキューの優先度（高／中／低・同じなら作った順）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)
 - [x] T-036 セッションの分岐（同じ地点から A 案・B 案をタスクとして並列に）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)

@@ -23,16 +23,9 @@ import {
 } from './core/activity';
 import { collectEvidence } from './core/evidence';
 import type { SessionSnapshot } from './core/sessionFiles';
+import { group, NimbusTreeView, type TreeNode } from './views/treeView';
 
-type Node = {
-	label: string;
-	description?: string;
-	tooltip?: string | vscode.MarkdownString;
-	children?: Node[];
-	icon?: string;
-	/** クリックで開くファイル（読み込まれたファイル一覧から飛ぶ・T-023） */
-	resource?: vscode.Uri;
-};
+type Node = TreeNode;
 
 function time(at: number): string {
 	return new Date(at).toLocaleTimeString('ja-JP');
@@ -141,23 +134,12 @@ function attributionNode(attribution: Attribution): Node {
 	};
 }
 
-function group(label: string, icon: string, children: Node[], emptyLabel: string): Node {
-	return {
-		label,
-		description: String(children.length),
-		icon,
-		children: children.length > 0 ? children : [{ label: emptyLabel }]
-	};
-}
-
-export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
+export class ActivityViewProvider extends NimbusTreeView {
 	private events: readonly NimbusEvent[] = [];
 	/** 他のセッションの俯瞰（T-012）。並列で走らせると、ここにしか出ない情報になる */
 	private others: readonly SessionSnapshot[] = [];
 	/** セッション ID を読める名前にする（タスク名など） */
 	private nameOf: (sessionId: string) => string = (id) => id.slice(0, 8);
-	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
-	readonly onDidChangeTreeData = this.emitter.event;
 
 	/** 表示のもとになるイベント列を差し替える（拡張側が保持しているものをそのまま渡す） */
 	update(
@@ -170,31 +152,10 @@ export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 		if (nameOf) {
 			this.nameOf = nameOf;
 		}
-		this.emitter.fire(undefined);
+		this.refresh();
 	}
 
-	getTreeItem(node: Node): vscode.TreeItem {
-		const item = new vscode.TreeItem(
-			node.label,
-			node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
-		);
-		item.description = node.description;
-		item.tooltip = node.tooltip ?? node.label;
-		if (node.icon) {
-			item.iconPath = new vscode.ThemeIcon(node.icon);
-		}
-		if (node.resource) {
-			item.resourceUri = node.resource;
-			// クリックでエディタに飛ぶ。一覧から辿れないと「見えているだけ」で終わる
-			item.command = { command: 'vscode.open', title: '開く', arguments: [node.resource] };
-		}
-		return item;
-	}
-
-	getChildren(node?: Node): Node[] {
-		if (node) {
-			return node.children ?? [];
-		}
+	protected nodes(): Node[] {
 		const activity = buildActivity(this.events);
 		if (
 			activity.subagents.length === 0 &&
