@@ -760,6 +760,18 @@
         "title": "何をしたかを並べ直す（解説）",
         "category": "Nimbus",
         "icon": "$(list-ordered)"
+      },
+      {
+        "command": "nimbus.evaluate",
+        "title": "スキル・プロンプトを評価する（回帰・ブレ幅・モデル比較）",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.editPermissionRules",
+        "title": "確認せずに許可するルールを編集する",
+        "category": "Nimbus",
+        "icon": "$(shield)"
       }
     ],
     "menus": {

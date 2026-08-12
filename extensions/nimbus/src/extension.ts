@@ -52,11 +52,13 @@ import { openPromptStats } from './promptStats';
 import { openLicenses } from './licenses';
 import { openHighlights } from './highlights';
 import { draftReviewRequest } from './reviewRequest';
+import { openExplanation } from './explain';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
 import { showDiffSummary } from './diffSummary';
 import { showImpact } from './impact';
+import { editPermissionRules } from './permissionRules';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -92,6 +94,8 @@ import { describeOutbox, isTransientFailure, Outbox } from './core/outbox';
 import { collectTags } from './core/tasks';
 import { dryRunHook, manageHooks } from './hooksBuilder';
 import { exportBundle, importBundle, syncTeamBundle } from './bundleCommands';
+import { runEvaluation } from './evaluationRunner';
+import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
 import { toAuditRecord, toJsonLine } from './core/audit';
@@ -136,6 +140,7 @@ import { planBulkChange } from './bulkChange';
 import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
+import { checkApiDocs } from './apiDocs';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -634,6 +639,74 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	const EVAL_KEY = 'nimbus.evalCases';
+
+	/**
+	 * 回帰テスト・ブレ幅・モデル比較（tasks.md T-165 / T-166 / T-167）。
+	 * ケースを保存しておき、直したあとに同じものを流し直せるようにする。
+	 */
+	async function evaluate(): Promise<void> {
+		const cwd = requireCwd();
+		if (!cwd) {
+			return;
+		}
+		const saved = context.globalState.get<EvalCase[]>(EVAL_KEY, []);
+		const ADD = '$(add) 新しいケース';
+		const chosen = await vscode.window.showQuickPick(
+			[
+				{ label: ADD, description: '', testCase: undefined as EvalCase | undefined },
+				...saved.map((testCase) => ({
+					label: testCase.name,
+					description: `期待: ${testCase.expect.join(' / ')}`,
+					testCase
+				}))
+			],
+			{ title: 'Nimbus: 評価するケース', matchOnDescription: true }
+		);
+		if (!chosen) {
+			return;
+		}
+		let testCase = chosen.testCase;
+		if (!testCase) {
+			const name = await vscode.window.showInputBox({ title: 'ケース名', placeHolder: '例: レビューが根拠を示す' });
+			if (!name) {
+				return;
+			}
+			const prompt = await vscode.window.showInputBox({ title: '投げる指示' });
+			if (!prompt) {
+				return;
+			}
+			const expect = await vscode.window.showInputBox({
+				title: '応答に含まれていてほしい語',
+				prompt: 'カンマ区切り。**すべて**含まれたときだけ合格にします'
+			});
+			if (!expect) {
+				return;
+			}
+			testCase = { name, prompt, expect: expect.split(',').map((word) => word.trim()).filter(Boolean) };
+			await context.globalState.update(EVAL_KEY, [...saved.filter((c) => c.name !== name), testCase]);
+		}
+
+		const attemptsText = await vscode.window.showQuickPick(['1', '3', '5'], {
+			title: 'Nimbus: 何回まわしますか',
+			placeHolder: '同じ指示で結果が変わるかを見るなら 3 回以上'
+		});
+		if (!attemptsText) {
+			return;
+		}
+		const available = activeSessionId ? await sessions.supportedModels(activeSessionId) : [];
+		const models = await vscode.window.showQuickPick(
+			available.map((entry) => entry.id ?? String(entry)),
+			{ title: 'Nimbus: 比べるモデル（選ばなければ既定のモデルだけ）', canPickMany: true }
+		);
+		await runEvaluation(
+			sessions,
+			cwd,
+			{ testCase, attempts: Number(attemptsText), models: models ?? [] },
+			log
+		);
 	}
 
 	/** 進行中のワークフロー（T-149）。1 本だけ持つ（同時に 2 本走らせても追えない） */
@@ -2043,6 +2116,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 見積もり（T-187）と、決めたことの記録（T-060 / T-188 / T-189）
 		vscode.commands.registerCommand('nimbus.estimate', () => showEstimate()),
 		// ワークフロー（T-149）・解説モード（T-045）・チーム設定の同期（T-049）
+		// 回帰テスト・ブレ幅・モデル比較（T-165 / T-166 / T-167）
+		vscode.commands.registerCommand('nimbus.evaluate', () => evaluate()),
 		vscode.commands.registerCommand('nimbus.runWorkflow', () => startWorkflow()),
 		vscode.commands.registerCommand('nimbus.nextWorkflowStep', () => runNextWorkflowStep()),
 		vscode.commands.registerCommand('nimbus.explainMode', () => void send(EXPLAIN_MODE_PROMPT)),
@@ -2158,6 +2233,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openLicenses', () => openLicenses()),
 		vscode.commands.registerCommand('nimbus.openHighlights', () => openHighlights()),
 		vscode.commands.registerCommand('nimbus.draftReviewRequest', () => draftReviewRequest()),
+		vscode.commands.registerCommand('nimbus.openExplanation', () => openExplanation()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2208,6 +2284,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 溜まった承認ルールを見返して減らす（T-028）
+		vscode.commands.registerCommand('nimbus.editPermissionRules', () => editPermissionRules()),
 		// 消した export の呼び出し元を先に見せる（T-158）
 		vscode.commands.registerCommand('nimbus.showImpact', () => showImpact()),
 		// 差分を読む前の見取り図（T-157）
@@ -2299,6 +2377,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 変えた名前に触れている古い文書を挙げる（T-209）
+		vscode.commands.registerCommand('nimbus.checkApiDocs', () =>
+			checkApiDocs({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 会話で決まったことを ADR として残す（T-060）
 		vscode.commands.registerCommand('nimbus.writeAdr', () =>
 			writeAdr({

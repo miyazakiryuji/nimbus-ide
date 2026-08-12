@@ -62,6 +62,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`audit-and-timeline.md`](audit-and-timeline.md) — 監査ログ・時系列ビューア・アンビエント表示
 - [`dialogue.md`](dialogue.md) — 見積もりと、頼みかたの型
 - [`workflow-and-team.md`](workflow-and-team.md) — 流れに沿って進める・解説モード・チーム設定の同期
+- [`evaluation.md`](evaluation.md) — スキル・プロンプトの評価（回帰・ブレ幅・モデル比較）
 
 IDE 基礎機能:
 

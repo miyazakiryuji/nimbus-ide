@@ -31,7 +31,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
 
-- [ ] T-235 繰り返しの検出をセッション中にも効かせる（今は過去の記録を読む形なので、走っている最中には出ない）
+- [ ] T-237 繰り返しの検出をセッション中にも効かせる（今は過去の記録を読む形。旧 T-235・MCP 単体実行と衝突したため採番し直し）
 
 - [ ] T-014 ターミナルを**好きな数に分割**できるようにする（4 分割に限らず、必要なだけ並べる）—
       複数エージェントの出力を同時に見たい。VS Code は左右分割とタブはあるが、任意のグリッドは組めない
@@ -72,10 +72,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 
 
-- [ ] T-008 / T-009 **CLAUDE.md 専用のタブ** — 実装・単体テスト（10 件全通過）・仕様・確認項目まで完了。
-      残るは配線のコミット（`extension.ts` / `package.json` に他セッションの作業が同居しているため待ち）と
-      画面確認（`nimbus/docs/testing/claude-md.md` §2）→ 仕様 `nimbus/docs/specs/claude-md.md`
-      @yua 2026-08-13 [P2]
 
 
 
@@ -103,9 +99,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 
 ### ② コンテキスト可視化層（文脈とコスト）
 
-- [ ] T-008 **CLAUDE.md 専用の編集タブ** — 階層（プロジェクト／親フォルダ／`~/.claude`）のどれでも開いて
-      その場で直せる。今は `extensions/nimbus/src/contextView.ts` で「どこにあるか」を見せているだけ [P2]
-- [ ] T-009 CLAUDE.md をセクション単位で扱う — 見出しごとに編集し、よく使う節はテンプレートから足せる [P2]
 
 ### ③ レビュー層
 
@@ -138,7 +131,9 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
 - [ ] T-170 エラー文をコピーした瞬間に「調べます？」と提案する（オフにできること）[P3]
-- [ ] T-173 マルチルートワークスペース対応 [P2]
+- [ ] T-173 マルチルートワークスペース対応 — **共通ヘルパは実装済み**（`pickWorkspaceRoot` /
+      `resolveWorkspaceRoot`・仕様 `nimbus/docs/specs/workspace-roots.md`）。残りは各セッションが
+      自分の持ち場（28 ファイル）を自分の番で載せ替える。T-236 と同じ進め方 [P2]
 - [ ] T-174 ノートブック（`.ipynb`）対応 [P3]
 
 ### ⑦ コードの理解と生成の精度（エンジン側）
@@ -364,6 +359,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-209 古くなった API ドキュメントを探す（変えた公開名に触れているのに今回変わっていない文書を挙げる）
+      — 2026-08-13 / 仕様 [api-docs](nimbus/docs/specs/api-docs.md)
+
 - [x] T-060 決めたことを残す（ADR）（会話から候補を拾い、`nimbus/docs/decisions/NNNN-*.md` を採番して作る。
       採番は wx で確保して並行実行でも衝突しない）— 2026-08-13 / 仕様 [decisions](nimbus/docs/specs/decisions.md)
 
@@ -474,6 +472,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
 - [x] T-045 何をしたかを並べ直す（理由は書かれたものだけ・推測で補わない）— 2026-08-13 / 仕様 [explain](nimbus/docs/specs/explain.md)
 - [x] T-211 レビューを頼む文（読む順はテストから・テスト無しは自分から言う）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-214 やり取りの切り出し（切り出す時点で伏せる・保存しない）— 2026-08-13 / 仕様 [highlights](nimbus/docs/specs/highlights.md)
