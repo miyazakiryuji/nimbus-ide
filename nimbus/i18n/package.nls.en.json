@@ -35,6 +35,8 @@
   "command.compareAgentWork": "Compare Work From Another Tool",
   "command.exportToWiki": "Format for Your Internal Wiki",
   "command.toggleRemoteApproval": "Allow Approving from Another Device",
+  "command.exportSession": "Make This Session Portable",
+  "command.importSession": "Continue from Another Machine",
   "command.captureSimulator": "Capture the Simulator Screen",
   "command.writeFlowTest": "Turn a Flow Into a Test",
   "command.importCpuProfile": "Investigate Hot Spots from a Profile",
@@ -235,5 +237,6 @@
   "command.exportGif": "Export the Session as a GIF",
   "config.gif.width": "GIF width in pixels. Height keeps the original ratio.",
   "command.pluginActions": "Use an Instruction Added by an Extension",
-  "config.managedPolicy": "The ceiling your organization sets on permissions. Limits written here cannot be loosened by the user — only narrowed. Intended to be delivered per machine, for example through MDM."
+  "config.managedPolicy": "The ceiling your organization sets on permissions. Limits written here cannot be loosened by the user — only narrowed. Intended to be delivered per machine, for example through MDM.",
+  "command.packageSkills": "Package Your Skills for Sharing"
 }
