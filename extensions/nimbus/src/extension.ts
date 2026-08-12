@@ -63,6 +63,7 @@ import { auditDependency } from './depAudit';
 import { openVulnFixPlan } from './vulnFix';
 import { checkSql } from './sqlSafety';
 import { openCiRepro } from './ciRepro';
+import { openMigrationPlan } from './schemaDiff';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -73,6 +74,7 @@ import { importPrReview } from './prReview';
 import { findFlakyTests } from './flaky';
 import { regenerateNow, watchForRegeneration } from './regenerate';
 import { compareBenchmarks } from './benchmark';
+import { reproduceFromLog } from './reproTest';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -161,6 +163,8 @@ import {
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
+import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-agent-sdk';
+import { runMcpToolOnce } from './mcpToolRunner';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
@@ -181,6 +185,7 @@ import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
+import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2395,6 +2400,10 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
+		// エージェント抜きでツールを 1 回だけ呼ぶ（T-235）
+		vscode.commands.registerCommand('nimbus.runMcpTool', () =>
+			runMcpToolOnce({ log, servers: inProcessMcpServers })
+		),
 		vscode.window.registerTreeDataProvider('nimbus.settings', settingsView),
 		vscode.window.registerTreeDataProvider('nimbus.timeline', timelineView),
 		vscode.commands.registerCommand('nimbus.showAuditLog', () => showAuditLog()),
@@ -2560,6 +2569,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openVulnFixPlan', () => openVulnFixPlan()),
 		vscode.commands.registerCommand('nimbus.checkSql', () => checkSql()),
 		vscode.commands.registerCommand('nimbus.openCiRepro', () => openCiRepro()),
+		vscode.commands.registerCommand('nimbus.openMigrationPlan', () => openMigrationPlan()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2610,6 +2620,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// ログから、まず落ちるテストを起こす（T-143）
+		vscode.commands.registerCommand('nimbus.reproduceFromLog', () =>
+			reproduceFromLog((text) => {
+				cockpit.reveal();
+				void send(text);
+			})
+		),
 		// 改善前後のベンチを比べる（T-130）
 		vscode.commands.registerCommand('nimbus.compareBenchmarks', () => compareBenchmarks()),
 		// 元を直したら生成物も作り直す（T-141）
@@ -2750,6 +2767,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				},
 				log
 			})
+		),
+		// 触ったファイルの持ち主（CODEOWNERS）を出す。投げるのは人（T-221）
+		vscode.commands.registerCommand('nimbus.notifyCodeOwners', () => notifyCodeOwners({ log })),
+		vscode.commands.registerCommand('nimbus.showOwnersOfActiveFile', () =>
+			showOwnersOfActiveFile({ log })
 		),
 		// 変えた型を参照している場所が壊れていないかを確かめさせる（T-123）
 		vscode.commands.registerCommand('nimbus.trackSchemaImpact', () =>
@@ -2996,4 +3018,21 @@ function buildOptions(
 		options.mcpServers = { ...options.mcpServers, [DEBUG_SERVER_NAME]: debugMcpServer() };
 	}
 	return options;
+}
+
+/**
+ * プロセス内で動いている Nimbus 自身の MCP サーバー（T-235 の単体実行用）。
+ * セッションへ渡すものと**同じ実体**を返す — 別に作ると、
+ * 「単体では通るのにセッションでは違う」が起きる。
+ */
+function inProcessMcpServers(): { name: string; config: McpSdkServerConfigWithInstance }[] {
+	const configuration = vscode.workspace.getConfiguration('nimbus');
+	const servers: { name: string; config: McpSdkServerConfigWithInstance }[] = [];
+	if (configuration.get<boolean>('lsp.enabled') !== false) {
+		servers.push({ name: LSP_SERVER_NAME, config: lspMcpServer() });
+	}
+	if (configuration.get<boolean>('debug.exposeState') !== false) {
+		servers.push({ name: DEBUG_SERVER_NAME, config: debugMcpServer() });
+	}
+	return servers;
 }

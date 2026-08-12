@@ -219,6 +219,18 @@
         "icon": "$(github)"
       },
       {
+        "command": "nimbus.notifyCodeOwners",
+        "title": "レビューを頼む相手を出す",
+        "category": "Nimbus",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "nimbus.showOwnersOfActiveFile",
+        "title": "このファイルの持ち主を見る",
+        "category": "Nimbus",
+        "icon": "$(person)"
+      },
+      {
         "command": "nimbus.exploreHistory",
         "title": "なぜこうなっているのかを辿る",
         "category": "Nimbus",
@@ -940,6 +952,23 @@
         "title": "CI を手元で再現する",
         "category": "Nimbus",
         "icon": "$(server-process)"
+      },
+      {
+        "command": "nimbus.openMigrationPlan",
+        "title": "マイグレーションを起こす",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.runMcpTool",
+        "title": "MCP ツールを 1 回だけ試す",
+        "category": "Nimbus",
+        "icon": "$(play)"
+      },
+      {
+        "command": "nimbus.reproduceFromLog",
+        "title": "ログから再現テストを起こす",
+        "category": "Nimbus",
+        "icon": "$(debug-rerun)"
       }
     ],
     "menus": {

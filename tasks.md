@@ -41,8 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 - [ ] T-125 マイグレーション生成とレビュー（スキーマ差分から起こし、壊す操作を先に見せる）— 実装中 @yua 2026-08-13
 
-- [ ] T-143 再現手順の生成 — ログから「まず落ちるテスト」を起こす。`core/stackTrace.ts`（別セッション）を
-      再利用し重複させない。`core/reproTest.ts` を骨格＋テストで確保済み @session-b 2026-08-13 [P2]
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
 
@@ -325,6 +323,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-143 再現手順の生成（ログから「まず落ちるテスト」を起こす。通る形では作らない）
+      — 2026-08-13 / 仕様 [repro-test](nimbus/docs/specs/repro-test.md)
 
 - [x] T-131 落ちた CI を調べる（gh で失敗ログを取り、手元で再現するか CI 固有かを先に切り分けさせる）
       — 2026-08-13 / 仕様 [ci-failure](nimbus/docs/specs/ci-failure.md)
