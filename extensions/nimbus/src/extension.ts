@@ -61,6 +61,7 @@ import { runSetupWizard } from './setupWizard';
 import { openEnvCheck } from './envCheck';
 import { auditDependency } from './depAudit';
 import { openVulnFixPlan } from './vulnFix';
+import { checkSql } from './sqlSafety';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -127,6 +128,8 @@ import {
 import { checkBundleUrl } from './core/importSettings';
 import { importOtherToolRules } from './importRules';
 import { buildCrashPrompt, parseCrashLog } from './core/crashLog';
+import { clarificationMessage, findVagueness } from './core/ambiguity';
+import { buildWeeklyReview, describeWeeklyReview } from './core/weeklyReview';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
@@ -176,6 +179,7 @@ import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { noticeUpgrade } from './versionWatch';
+import { ClipboardHints } from './clipboardHints';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
@@ -726,6 +730,16 @@ export function activate(context: vscode.ExtensionContext): void {
 			`Nimbus: ${check.url} を開きます。保存してから「配られた設定を読み込む」で取り込んでください。`
 		);
 		await vscode.env.openExternal(vscode.Uri.parse(check.url));
+	}
+
+	/**
+	 * 週のふりかえり（tasks.md T-097）。
+	 * **盛らない。** 実際に起きたことしか出さない。
+	 */
+	async function showWeeklyReview(): Promise<void> {
+		const review = buildWeeklyReview([retained]);
+		void vscode.window.showInformationMessage(`Nimbus: ${describeWeeklyReview(review)}`);
+		log(`[weekly] ${describeWeeklyReview(review)}`);
 	}
 
 	/**
@@ -1827,6 +1841,22 @@ export function activate(context: vscode.ExtensionContext): void {
 		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('safety.scanBeforeSend') === false) {
 			return text;
 		}
+		// 日本語の指示は主語と対象が落ちやすい（T-090）。走り出す前に一度だけ聞く
+		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('clarifyVagueJapanese') !== false) {
+			const vague = findVagueness(text);
+			if (vague.length > 0) {
+				const SEND = 'このまま送る';
+				const answer = await vscode.window.showWarningMessage(
+					'Nimbus: 指示が曖昧かもしれません。',
+					{ modal: true, detail: `${clarificationMessage(vague)}\n\n書き足してから送ると、やり直しが減ります。` },
+					SEND
+				);
+				if (answer !== SEND) {
+					// 止めない。書き直したいだけなので、入力はそのまま残る
+					return undefined;
+				}
+			}
+		}
 		const hits = sanitizer.detect(text);
 		if (hits.length === 0) {
 			return text;
@@ -2276,6 +2306,15 @@ export function activate(context: vscode.ExtensionContext): void {
 	// 関数の上に「Nimbus に頼む」を出す（T-172）。右クリックからも同じ入口（T-171）
 	const codeLens = new NimbusCodeLensProvider();
 
+	// コピーしたエラー文に気づいて聞く（T-170・既定は無効）
+	const clipboardHints = new ClipboardHints({
+		send: (text) => {
+			cockpit.reveal();
+			void send(text);
+		},
+		log
+	});
+
 	// ターミナルで落ちたコマンドを拾ってセッションへ渡す（T-169）。
 	// 「出力を選んでコピーして貼る」を通知のボタン 1 つに畳む
 	const terminals = new TerminalWatcher({
@@ -2306,6 +2345,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		stopButton,
 		previewer,
 		terminals,
+		clipboardHints,
 		approvals,
 		approvalsView,
 		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは
@@ -2356,6 +2396,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.importOtherToolRules', () => importOtherToolRules({ log })),
 		vscode.commands.registerCommand('nimbus.installFromUrl', () => installFromUrl()),
 		vscode.commands.registerCommand('nimbus.pasteCrashLog', () => pasteCrashLog()),
+		// 週のふりかえり（T-097）
+		vscode.commands.registerCommand('nimbus.weeklyReview', () => showWeeklyReview()),
 		vscode.commands.registerCommand('nimbus.localOnly', () => toggleLocalOnly()),
 		vscode.commands.registerCommand('nimbus.recover', () => offerRecovery()),
 		vscode.commands.registerCommand('nimbus.persona', () => choosePersona()),
@@ -2504,6 +2546,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openEnvCheck', () => openEnvCheck()),
 		vscode.commands.registerCommand('nimbus.auditDependency', () => auditDependency()),
 		vscode.commands.registerCommand('nimbus.openVulnFixPlan', () => openVulnFixPlan()),
+		vscode.commands.registerCommand('nimbus.checkSql', () => checkSql()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
