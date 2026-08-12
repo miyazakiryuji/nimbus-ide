@@ -44,6 +44,7 @@ import { openDepConsistency } from './depConsistency';
 import { openReviewProgress } from './reviewProgress';
 import { openRhythm } from './rhythm';
 import { openPlatformChannels } from './platformChannel';
+import { generateFromSchema } from './openapi';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -1943,6 +1944,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openDepConsistency', () => openDepConsistency()),
 		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
 		vscode.commands.registerCommand('nimbus.openPlatformChannels', () => openPlatformChannels()),
+		vscode.commands.registerCommand('nimbus.generateFromSchema', () => generateFromSchema()),
 		vscode.commands.registerCommand('nimbus.openRhythm', () =>
 			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals }))
 		),
