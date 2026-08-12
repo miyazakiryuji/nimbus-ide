@@ -107,6 +107,7 @@ Microsoft の Visual Studio Marketplace は、利用規約により Microsoft �
 4. ベースは開発中の `main` ではなく**リリース系のブランチ／タグ**に載せる
 5. やること・やりたいことは [`tasks.md`](tasks.md) に集約する。**このファイルは随時更新する**
 6. **機能を実装したら、同じコミットで仕様書を直す**（下記「実装したら仕様書を直す」）
+7. **機能を実装したら、テストコードと GUI の確認項目も同じコミットで作る**（下記「実装したらテストも作る」）
 
 upstream への追従は [`nimbus/scripts/sync-upstream.sh`](nimbus/scripts/sync-upstream.sh) を参照。
 テストは `node --test "extensions/nimbus/out/test/*.test.js"`。
@@ -135,6 +136,27 @@ upstream への追従は [`nimbus/scripts/sync-upstream.sh`](nimbus/scripts/sync
 5. [`tasks.md`](tasks.md) — 該当タスクを 完了 へ移す。残った宿題は新しい行として Inbox に足す
 
 「あとでまとめて書く」は成立しません（まとめて書くまでの間に、他のセッションが古い前提で動き出す）。
+
+### 実装したらテストも作る
+
+**機能を足したら、テストコードと GUI の確認項目を、実装と同じコミットで用意します。**
+「動いたから完了」は完了ではありません。あとで誰か（別の AI かもしれません）が壊したときに
+気づける形を残して、はじめて完了です。
+
+1. **テストコード** — `extensions/nimbus/src/test/` に足し、
+   `node --test "extensions/nimbus/out/test/*.test.js"` で回る状態にする。
+   VS Code API に依存しないロジックは `extensions/nimbus/src/core/` に切り出せば単体で検証できます
+   （`core/claudeMd.ts` などが既にその形です）
+2. **GUI の確認項目** — 画面を触らないと確かめられないものは、
+   `nimbus/docs/testing/<機能名>.md` にチェックリストとして書く。**実施前でも項目は先に書く**
+   （未実施は `- [ ]` のまま残す。何を確認すべきかが残っていれば、後から誰でも実施できます）
+3. **仕様書の受け入れ条件と 1 対 1 で対応させる** — 受け入れ条件 1 つに、テストか確認項目が 1 つ。
+   対応が付かない受け入れ条件は、そもそも確かめようのない書き方になっています
+4. **パッケージ版でも確かめる** — `.app` にしないと出ない不具合があります
+   （`nimbus/branding/smoke-packaged.sh`）
+
+書けなかったときは、**なぜ書けなかったかを [`tasks.md`](tasks.md) に 1 行残す**（環境が無い、
+API が用意されていない、など）。黙って飛ばすと「テスト済み」と区別が付かなくなります。
 
 ### 複数の AI で並行開発する
 
