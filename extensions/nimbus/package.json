@@ -161,6 +161,18 @@
         "icon": "$(device-camera)"
       },
       {
+        "command": "nimbus.captureBehavior",
+        "title": "移行前の振る舞いを固定する",
+        "category": "Nimbus",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "nimbus.verifyEquivalence",
+        "title": "移行後の等価性を確かめる",
+        "category": "Nimbus",
+        "icon": "$(unlock)"
+      },
+      {
         "command": "nimbus.repoSummary",
         "title": "リポジトリの構造要約を作る",
         "category": "Nimbus",
@@ -576,6 +588,12 @@
         "title": "変更の影響範囲を見る",
         "category": "Nimbus",
         "icon": "$(references)"
+      },
+      {
+        "command": "nimbus.generateFromSchema",
+        "title": "スキーマから型を起こす",
+        "category": "Nimbus",
+        "icon": "$(symbol-interface)"
       }
     ],
     "menus": {
