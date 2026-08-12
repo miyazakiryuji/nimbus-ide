@@ -10,8 +10,16 @@ import * as vscode from 'vscode';
 import type { SessionInitEvent } from './events';
 import { billingModeLabel } from './billing';
 import { findClaudeMdFiles } from './core/claudeMd';
+import { classifyOrigin, displayLabel } from './core/claudeMdDoc';
 
 type Node = { label: string; description?: string; tooltip?: string; children?: Node[]; icon?: string };
+
+/** CLAUDE.md の出どころ。直す場所を間違えると他のプロジェクトまで巻き込むので、必ず添える */
+const ORIGIN_LABEL = {
+	project: 'プロジェクト',
+	ancestor: '親フォルダから継承',
+	user: 'ユーザー設定'
+} as const;
 
 function listNode(label: string, items: string[], icon: string): Node {
 	return {
@@ -94,7 +102,12 @@ export class ContextViewProvider implements vscode.TreeDataProvider<Node> {
 				icon: 'book',
 				tooltip: '作業ディレクトリから上へ辿って見つかったもの＋ユーザー設定',
 				children: claudeMd.length > 0
-					? claudeMd.map((path) => ({ label: path.replace(homedir(), '~'), tooltip: path }))
+					? claudeMd.map((path) => ({
+						label: displayLabel(path, init.cwd, homedir()),
+						// パスの羅列では「どれを直せばいいか」が読み取れない。出どころを添える
+						description: ORIGIN_LABEL[classifyOrigin(path, init.cwd, homedir())],
+						tooltip: path
+					}))
 					: [{ label: '（なし）' }]
 			}
 		];

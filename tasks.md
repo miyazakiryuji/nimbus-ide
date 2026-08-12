@@ -102,8 +102,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 - [ ] T-008 **CLAUDE.md 専用の編集タブ** — 階層（プロジェクト／親フォルダ／`~/.claude`）のどれでも開いて
       その場で直せる。今は `extensions/nimbus/src/contextView.ts` で「どこにあるか」を見せているだけ [P2]
 - [ ] T-009 CLAUDE.md をセクション単位で扱う — 見出しごとに編集し、よく使う節はテンプレートから足せる [P2]
-- [ ] T-021 CLAUDE.md の階層ビューに**出どころの区分**を付ける（プロジェクト／サブディレクトリ／ユーザー）—
-      一覧自体は実装済みだが、今はパスの羅列で「どれがどの層か」が読み取れない [P2]
 - [ ] T-041 **CLAUDE.md のメンテ支援（残り）** — 同じ指示を何度も繰り返していたら「これ CLAUDE.md に
       書きますか？」と提案する。**リンター側（重複・空の節・長さ）は実装済み**（仕様 `nimbus/docs/specs/claude-md.md`）[P2]
 - [ ] T-152 **コンテキストのピン留め** — 常に含めるファイルを指定する [P2]
@@ -505,6 +503,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-021 文脈ビューの CLAUDE.md に出どころを添える（プロジェクト／親フォルダから継承／ユーザー設定）— 2026-08-13 / 仕様 [context-view](nimbus/docs/specs/context-view.md)
+- [x] T-041（リンター部分）CLAUDE.md の重複・空の節・長さの指摘とトークン数表示 — 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
 
 - [x] T-010 承認の横断キュー（全セッションの承認待ちを 1 ビューに集約・危険な順・キューモードで順に処理）
       — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
