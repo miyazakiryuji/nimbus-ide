@@ -122,6 +122,110 @@ export function appendSection(content: string, heading: string, body: string): {
 	return { content: next, line };
 }
 
+/** リンターの指摘。行を持つのは、指摘から直接その場所へ飛ばすため */
+export interface ClaudeMdFinding {
+	kind: 'duplicate-heading' | 'duplicate-line' | 'empty-section' | 'too-long';
+	message: string;
+	line: number;
+}
+
+/**
+ * 1 文字あたりのトークン数のおおよその目安。
+ * 日本語混じりの散文では 1 トークン ≒ 1〜2 文字なので、控えめに 1.5 文字で見積もる。
+ * 正確な値は要らない（「長すぎる」に気づかせるための桁の目安）。
+ */
+const CHARS_PER_TOKEN = 1.5;
+
+/** これを超えたら長すぎると見なす（毎ターン読まれるので、ここが太ると全部に効く） */
+const LONG_TOKEN_ESTIMATE = 2000;
+
+/** おおよそのトークン数 */
+export function estimateTokens(content: string): number {
+	return Math.round(content.length / CHARS_PER_TOKEN);
+}
+
+/**
+ * 太りすぎ・重複を見つける。
+ *
+ * CLAUDE.md は毎セッション必ず読まれるので、放っておくと「効いていない指示」が
+ * 毎ターンの課金と文脈を食う。書くのを止める必要はないが、**気づける**必要がある。
+ *
+ * 指摘するのは、機械的に判断できて直しかたが自明なものだけ。
+ * 「この指示は要らない」のような価値判断はしない（それは人間が決めること）。
+ */
+export function lintClaudeMd(content: string): ClaudeMdFinding[] {
+	const findings: ClaudeMdFinding[] = [];
+	const sections = parseSections(content);
+
+	const seenHeading = new Map<string, number>();
+	for (const section of sections) {
+		if (section.level === 0) {
+			continue;
+		}
+		const key = section.title.trim().toLowerCase();
+		const first = seenHeading.get(key);
+		if (first !== undefined) {
+			findings.push({
+				kind: 'duplicate-heading',
+				message: `「${section.title}」が重複しています（${first + 1} 行目にも）`,
+				line: section.line
+			});
+		} else {
+			seenHeading.set(key, section.line);
+		}
+		// 見出しだけで中身が無い節は、読ませる価値が無いのに文脈を食う
+		const body = section.body.split('\n').slice(1).join('\n').trim();
+		if (body.length === 0) {
+			findings.push({
+				kind: 'empty-section',
+				message: `「${section.title}」に中身がありません`,
+				line: section.line
+			});
+		}
+	}
+
+	// 同じ指示を別々の場所に書いてしまうのはよくある。箇条書き 1 行単位で見る
+	const seenLine = new Map<string, number>();
+	const lines = content.split('\n');
+	let inFence = false;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		if (/^\s*(```|~~~)/.test(line)) {
+			inFence = !inFence;
+			continue;
+		}
+		if (inFence) {
+			continue;
+		}
+		const text = line.trim();
+		// 短い行は偶然一致するので見ない（`---` や `## 見出し` の再掲も避ける）
+		if (text.length < 12 || text.startsWith('#')) {
+			continue;
+		}
+		const first = seenLine.get(text);
+		if (first !== undefined) {
+			findings.push({
+				kind: 'duplicate-line',
+				message: `同じ行が ${first + 1} 行目にもあります`,
+				line: i
+			});
+		} else {
+			seenLine.set(text, i);
+		}
+	}
+
+	const tokens = estimateTokens(content);
+	if (tokens > LONG_TOKEN_ESTIMATE) {
+		findings.push({
+			kind: 'too-long',
+			message: `長すぎます（およそ ${tokens} トークン）。毎ターン読まれるので、効いていない節を減らすと軽くなります`,
+			line: 0
+		});
+	}
+
+	return findings.sort((a, b) => a.line - b.line);
+}
+
 /**
  * よく書く節のひな形。
  *

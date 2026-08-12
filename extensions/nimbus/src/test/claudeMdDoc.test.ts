@@ -11,6 +11,8 @@ import {
 	appendSection,
 	classifyOrigin,
 	displayLabel,
+	estimateTokens,
+	lintClaudeMd,
 	parseSections,
 	SECTION_TEMPLATES
 } from '../core/claudeMdDoc';
@@ -91,6 +93,48 @@ test('同じ見出しがあるときは足さず、その行を返す（重複�
 
 test('空のファイルにも足せる', () => {
 	assert.deepStrictEqual(appendSection('', '概要', '中身'), { content: '## 概要\n\n中身\n', line: 0 });
+});
+
+test('重複した見出しと、中身の無い節を指摘する', () => {
+	const content = ['## 規約', '', 'タブを使う', '', '## メモ', '', '## 規約', '', '二重に書いた'].join('\n');
+	assert.deepStrictEqual(
+		lintClaudeMd(content).map((f) => ({ kind: f.kind, line: f.line })),
+		[
+			{ kind: 'empty-section', line: 4 },
+			{ kind: 'duplicate-heading', line: 6 }
+		]
+	);
+});
+
+test('同じ行の重複を指摘する（短い行とコードブロックは見ない）', () => {
+	const content = [
+		'- テストは必ず書いてください',
+		'- 短い行',
+		'- 短い行',
+		'```',
+		'echo 同じ行のくり返しでも無視される',
+		'echo 同じ行のくり返しでも無視される',
+		'```',
+		'- テストは必ず書いてください'
+	].join('\n');
+	assert.deepStrictEqual(
+		lintClaudeMd(content).map((f) => ({ kind: f.kind, line: f.line })),
+		[{ kind: 'duplicate-line', line: 7 }]
+	);
+});
+
+test('短いファイルは長すぎるとは言わない / 長いファイルは指摘する', () => {
+	assert.deepStrictEqual(
+		[
+			lintClaudeMd('## 節\n\n本文').some((f) => f.kind === 'too-long'),
+			lintClaudeMd('## 節\n\n' + 'あ'.repeat(4000)).some((f) => f.kind === 'too-long')
+		],
+		[false, true]
+	);
+});
+
+test('トークン数はおおよそ文字数の 2/3', () => {
+	assert.strictEqual(estimateTokens('あ'.repeat(300)), 200);
 });
 
 test('ひな形は見出しと説明と本文を持つ', () => {

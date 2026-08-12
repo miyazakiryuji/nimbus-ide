@@ -16,8 +16,11 @@ import {
 	appendSection,
 	classifyOrigin,
 	displayLabel,
+	estimateTokens,
+	lintClaudeMd,
 	parseSections,
 	SECTION_TEMPLATES,
+	type ClaudeMdFinding,
 	type ClaudeMdOrigin,
 	type ClaudeMdSection
 } from './core/claudeMdDoc';
@@ -25,6 +28,8 @@ import {
 type ClaudeMdNode =
 	| { kind: 'file'; path: string; label: string; origin: ClaudeMdOrigin }
 	| { kind: 'section'; path: string; section: ClaudeMdSection }
+	| { kind: 'findings'; path: string; findings: ClaudeMdFinding[] }
+	| { kind: 'finding'; path: string; finding: ClaudeMdFinding }
 	| { kind: 'hint'; label: string };
 
 const ORIGIN_LABEL: Record<ClaudeMdOrigin, string> = {
@@ -77,9 +82,30 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 			item.iconPath = new vscode.ThemeIcon('info');
 			return item;
 		}
+		if (node.kind === 'findings') {
+			const item = new vscode.TreeItem(`${node.findings.length} 件の指摘`, vscode.TreeItemCollapsibleState.Collapsed);
+			item.iconPath = new vscode.ThemeIcon('warning');
+			item.tooltip = '重複・空の節・長さ。毎ターン読まれる場所なので、太ると全部に効きます';
+			return item;
+		}
+		if (node.kind === 'finding') {
+			const item = new vscode.TreeItem(node.finding.message);
+			item.iconPath = new vscode.ThemeIcon(node.finding.kind === 'too-long' ? 'flame' : 'issue-opened');
+			item.command = {
+				command: 'vscode.open',
+				title: '該当箇所を開く',
+				arguments: [
+					vscode.Uri.file(node.path),
+					{ selection: new vscode.Range(node.finding.line, 0, node.finding.line, 0) }
+				]
+			};
+			return item;
+		}
 		if (node.kind === 'file') {
 			const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Expanded);
-			item.description = ORIGIN_LABEL[node.origin];
+			// 「どの階層か」と「どれだけ食っているか」を並べる。どちらも直す判断に要る
+			const tokens = estimateTokens(readText(node.path));
+			item.description = `${ORIGIN_LABEL[node.origin]} · 約 ${tokens} トークン`;
 			item.tooltip = node.path;
 			item.iconPath = new vscode.ThemeIcon(ORIGIN_ICON[node.origin]);
 			item.contextValue = 'nimbusClaudeMdFile';
@@ -107,12 +133,21 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 	}
 
 	getChildren(node?: ClaudeMdNode): ClaudeMdNode[] {
+		if (node?.kind === 'findings') {
+			return node.findings.map((finding) => ({ kind: 'finding', path: node.path, finding }));
+		}
 		if (node?.kind === 'file') {
-			const sections = parseSections(readText(node.path));
+			const content = readText(node.path);
+			const sections = parseSections(content);
 			if (sections.length === 0) {
 				return [{ kind: 'hint', label: '（中身がありません）' }];
 			}
-			return sections.map((section) => ({ kind: 'section', path: node.path, section }));
+			const findings = lintClaudeMd(content);
+			// 指摘は節より先に出す。開いた瞬間に「太っている」と分かるほうが直る
+			const head: ClaudeMdNode[] = findings.length > 0
+				? [{ kind: 'findings', path: node.path, findings }]
+				: [];
+			return [...head, ...sections.map((section): ClaudeMdNode => ({ kind: 'section', path: node.path, section }))];
 		}
 		if (node) {
 			return [];
