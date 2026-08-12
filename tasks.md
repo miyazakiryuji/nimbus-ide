@@ -44,9 +44,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       聞き間違える前提で、危ないことは音声で実行しない。`core/voiceCommands.ts` `src/voiceCommands.ts` を確保
       @yua が進めています（`core/voiceInput.ts` で録音＋書き起こしまで）。
       @session-c は重複を取り下げ、`core/voiceCommands.ts` を削除しました 2026-08-13 [P3]
-- [ ] T-084 リモート開発 — **調査完了**（[調査記録](nimbus/docs/history/remote-dev-investigation.md)）。
-      **①リモート時の実行ファイル案内の出し分けは実装済み**（`core/remoteGuidance.ts`・@session-a）。
-      残るのは②実機の SSH 先での接続確認と、③README の節。**②は環境が要る** @yua 2026-08-13 [P2]
 
 
 
@@ -299,6 +296,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 **理由を 1 行必ず残す。**同じ議論を別のセッションが蒸し返さないために置いてあるセクション。
 
+- リモート開発の**実機での接続確認**（T-084 ②）— SSH 先と devcontainer の実機が要る。経路と案内の実装（①③）は完了しており、確かめられる環境ができたら実施する
 - Claude Code 本体の同梱 — バイナリだけで 280MB あり、利用者はすでに認証済みのものを持っていることが多い（README「ダウンロードと実行」）
 - Microsoft Visual Studio Marketplace の利用 — 利用規約により Microsoft 製品以外での利用が認められていない（README「拡張機能について」）
 - ベースを upstream の `main` に載せる — ビルド基盤の変化が速く追従コストが高い。安定リリースタグに載せる（`nimbus/docs/history/vscode-fork-migration.md` 5-7）
@@ -371,6 +369,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-092 Nimbus 自体のプラグイン API — `activate()` の戻り値を公開面にし、足せるものを
       「読ませるもの」「作らせるもの」の 2 つに限った。権限の判断には触らせない
       — 2026-08-13 / 仕様 [managed-policy-and-plugins](nimbus/docs/specs/managed-policy-and-plugins.md)
+- [x] T-084 リモート開発 — ①リモート時の実行ファイル案内の出し分け（`core/remoteGuidance.ts`）と
+      ③README の「リモートで使う」の節。**②実機の SSH 先での接続確認は保留へ**（環境が要る）。
+      薦めるリモート拡張は書かない（メンテ状況を Nimbus が背負わないため）
+      — 2026-08-13 / 調査 [remote-dev-investigation](nimbus/docs/history/remote-dev-investigation.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
