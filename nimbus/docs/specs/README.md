@@ -18,6 +18,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
 - [`protected-paths.md`](protected-paths.md) — 読ませたくないファイルを画面から指定する
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
+- [`branch-health.md`](branch-health.md) — ブランチの離れ具合と衝突の予告
 - [`code-health.md`](code-health.md) — 命名のゆれとそっくりな実装
 - [`change-stats.md`](change-stats.md) — 変更のようす（統計とテスト有無）
 - [`release-notes.md`](release-notes.md) — リリースノートの下書き
@@ -34,6 +35,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`parallel-awareness.md`](parallel-awareness.md) — 並列セッションの見える化（誰が何を触っているか）
 - [`session-lifecycle.md`](session-lifecycle.md) — セッションの始め方・分けかた・戻しかた
 - [`tasks-board-link.md`](tasks-board-link.md) — tasks.md とタスク板の対応づけ・待機列の優先度
+- [`agent-models.md`](agent-models.md) — サブエージェントごとのモデル指定
 
 IDE 基礎機能:
 
