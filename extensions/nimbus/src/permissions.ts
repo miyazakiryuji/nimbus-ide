@@ -9,6 +9,7 @@
  * VS Code のモーダルに寄せる。判断を求める瞬間に前面へ出るぶん、見落としが起きにくい。
  * さらにファイルを書き換える系のツールは、**承認する前に差分を横に開く**。
  */
+import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import * as vscode from 'vscode';
 import type { CanUseTool, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
@@ -16,6 +17,7 @@ import { buildPreview, ProposedEditPreviewer } from './proposedEdit';
 import { describeTool } from './core/describe';
 import { assessToolRisk, type RiskLevel } from './core/risk';
 import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, isNimbusReadOnlyTool } from './core/secrets';
+import { formatRule, matchesAnyRule, suggestRule } from './core/approvalRules';
 
 /** 読み取りだけで副作用が無いツール。設定で自動許可できる */
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead', 'TodoWrite']);
@@ -24,12 +26,31 @@ const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead', 'TodoWr
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 export interface PendingApproval {
+	/** 横断キュー（T-010）から名指しで答えるための ID */
+	id: string;
 	sessionId: string;
 	toolName: string;
 	summary: string;
 	since: number;
 	/** 承認待ちの一覧で「先に見るべきもの」を並べ替えるために持つ */
 	risk: RiskLevel;
+	/**
+	 * 「今後この種類は常に許可」にしたときのルール（T-038）。
+	 * 作れないとき（シェルの制御文字を含むコマンド）は undefined。
+	 * 押せるのに効かない選択肢を出さないため、UI 側はこの有無でボタンを出し分ける。
+	 */
+	rule?: string;
+}
+
+/**
+ * 承認の答え。`ignored` は「モーダルを Esc で閉じた＝答えなかった」で、拒否として扱うが
+ * ログに残る文言が変わる（利用者の意思表示なのか、放置なのかは後から知りたい）。
+ */
+export type ApprovalDecision = 'allow' | 'allow-session' | 'always-allow' | 'deny' | 'ignored';
+
+/** キューに積む 1 件。`settle` は最初の 1 回だけ効く（モーダルとビューの二重回答を無視する） */
+interface QueueEntry extends PendingApproval {
+	settle: (decision: ApprovalDecision) => void;
 }
 
 /**
@@ -58,16 +79,60 @@ export interface PermissionDeps {
 	previewer: ProposedEditPreviewer;
 	/** 保留中の承認が増減したときに呼ばれる（ステータスバー表示などに使う） */
 	onPendingChanged?: (pending: PendingApproval[]) => void;
+	/**
+	 * キューモード（T-010）。true のあいだはモーダルを出さず、承認キューに積んで待つ。
+	 * 並列セッションではモーダルが 1 つずつしか出ず、「誰が何で止まっているか」が見えないため。
+	 */
+	queueMode?: () => boolean;
+	/** 保存済みの「常に許可」ルール（T-038） */
+	alwaysAllowRules?: () => readonly string[];
+	/** 「今後この種類は常に許可」を押されたときにルールを保存する（T-038） */
+	onAlwaysAllow?: (rule: string) => Promise<void> | void;
 }
 
 export function createPermissionBroker(deps: PermissionDeps): {
 	canUseToolFor: (sessionId: string) => CanUseTool;
 	pending: () => PendingApproval[];
+	/** キューから名指しで答える（T-010）。まだ待っていれば true */
+	decide: (id: string, decision: ApprovalDecision) => boolean;
+	/** 待っているものを全部拒否する。緊急停止（T-057）から呼ぶ。返り値は件数 */
+	denyAll: () => number;
 } {
-	const pending: PendingApproval[] = [];
+	const pending: QueueEntry[] = [];
+
+	/** 外へ渡す形。`settle` は内部の都合なので境界を越えさせない */
+	function toPublic(entry: QueueEntry): PendingApproval {
+		return {
+			id: entry.id,
+			sessionId: entry.sessionId,
+			toolName: entry.toolName,
+			summary: entry.summary,
+			since: entry.since,
+			risk: entry.risk,
+			rule: entry.rule
+		};
+	}
 
 	function notify(): void {
-		deps.onPendingChanged?.([...pending]);
+		deps.onPendingChanged?.(pending.map(toPublic));
+	}
+
+	function decide(id: string, decision: ApprovalDecision): boolean {
+		const entry = pending.find((e) => e.id === id);
+		if (!entry) {
+			return false;
+		}
+		entry.settle(decision);
+		return true;
+	}
+
+	function denyAll(): number {
+		// settle が pending を書き換えるので、複製に対して回す
+		const waiting = [...pending];
+		for (const entry of waiting) {
+			entry.settle('deny');
+		}
+		return waiting.length;
 	}
 
 	function canUseToolFor(sessionId: string): CanUseTool {
@@ -115,6 +180,13 @@ export function createPermissionBroker(deps: PermissionDeps): {
 				deps.log(`[permission] 自動許可（このセッションで許可済み）: ${summary}`);
 				return { behavior: 'allow', updatedInput: input };
 			}
+			// 保存済みの「常に許可」ルール（T-038）。danger には効かせない — セッション内の
+			// 「常に許可」と同じ扱いで、`rm -rf` をルールで素通りさせないため
+			const rules = deps.alwaysAllowRules?.() ?? [];
+			if (risk.level !== 'danger' && matchesAnyRule(rules, toolName, input)) {
+				deps.log(`[permission] 自動許可（保存済みルール）: ${summary}`);
+				return { behavior: 'allow', updatedInput: input };
+			}
 
 			// 書き換え系は、承認を求める前に「何が変わるのか」を差分で見せる
 			let previewDisposable: vscode.Disposable | undefined;
@@ -136,36 +208,57 @@ export function createPermissionBroker(deps: PermissionDeps): {
 				}
 			}
 
-			const entry: PendingApproval = { sessionId, toolName, summary, since: Date.now(), risk: risk.level };
+			// 危険なものは「常に許可」系を一切出さない。一度きりの判断として毎回聞く
+			const rule = risk.level === 'danger' ? undefined : suggestRule(toolName, input);
+
+			const entry: QueueEntry = {
+				id: randomUUID(),
+				sessionId,
+				toolName,
+				summary,
+				since: Date.now(),
+				risk: risk.level,
+				rule: rule ? formatRule(rule) : undefined,
+				settle: () => undefined
+			};
+			// executor は同期で走るので、この行を抜けた時点で settle は差し替わっている
+			const decided = new Promise<ApprovalDecision>((resolve) => {
+				let done = false;
+				entry.settle = (decision) => {
+					if (!done) {
+						done = true;
+						resolve(decision);
+					}
+				};
+			});
 			pending.push(entry);
 			notify();
 
 			try {
-				const ALLOW = '許可';
-				const ALLOW_SESSION = 'このセッションでは常に許可';
-				const DENY = '拒否';
-				// 危険なものは「常に許可」を出さない。一度きりの判断として毎回聞く
-				const choices = risk.level === 'danger' ? [ALLOW, DENY] : [ALLOW, ALLOW_SESSION, DENY];
-				const choice = await vscode.window.showWarningMessage(
-					riskHeading(risk.level, risk.reasons) + summary,
-					{ modal: true, detail: riskDetail(risk.level) },
-					...choices
-				);
+				// キューモードでなければ、今までどおりその場でモーダルを出す。
+				// await しないのは、キューからの回答（decide / denyAll）でも先に進めるようにするため
+				if (!deps.queueMode?.()) {
+					void askInModal(entry, risk).then((decision) => entry.settle(decision));
+				}
+				const decision = await decided;
 
-				if (choice === ALLOW_SESSION) {
+				if (decision === 'allow-session') {
 					deps.sessionAllowAll.add(sessionId);
 				}
-				if (choice === ALLOW || choice === ALLOW_SESSION) {
-					deps.log(`[permission] 許可（${risk.level}）: ${summary}`);
+				if (decision === 'always-allow' && entry.rule) {
+					await deps.onAlwaysAllow?.(entry.rule);
+				}
+				if (decision === 'allow' || decision === 'allow-session' || decision === 'always-allow') {
+					deps.log(`[permission] 許可（${risk.level}・${decision}）: ${summary}`);
 					return { behavior: 'allow', updatedInput: input };
 				}
 
-				// モーダルを Esc で閉じた場合も choice は undefined になる。
-				// 「答えなかった」を許可に倒すのは危険なので拒否として扱う。
-				deps.log(`[permission] 拒否: ${summary}`);
+				// モーダルを Esc で閉じた場合は ignored。
+				// 「答えなかった」を許可に倒すのは危険なので、どちらも拒否として扱う。
+				deps.log(`[permission] 拒否（${decision}）: ${summary}`);
 				return {
 					behavior: 'deny',
-					message: choice === DENY ? '利用者が拒否しました' : '利用者が応答しませんでした'
+					message: decision === 'deny' ? '利用者が拒否しました' : '利用者が応答しませんでした'
 				};
 			} finally {
 				const index = pending.indexOf(entry);
@@ -178,5 +271,32 @@ export function createPermissionBroker(deps: PermissionDeps): {
 		};
 	}
 
-	return { canUseToolFor, pending: () => [...pending] };
+	/**
+	 * その場で聞くモーダル。キューモードでないときの既定の経路で、文言と選択肢は
+	 * 安全機能を入れる前から変えていない（「今後この種類は常に許可」だけを足した）。
+	 */
+	async function askInModal(entry: QueueEntry, risk: { level: RiskLevel; reasons: string[] }): Promise<ApprovalDecision> {
+		const ALLOW = '許可';
+		const ALLOW_SESSION = 'このセッションでは常に許可';
+		const ALWAYS = entry.rule ? `今後「${entry.rule}」は常に許可` : undefined;
+		const DENY = '拒否';
+		const choices = risk.level === 'danger' ? [ALLOW, DENY] : [ALLOW, ALLOW_SESSION, ...(ALWAYS ? [ALWAYS] : []), DENY];
+		const choice = await vscode.window.showWarningMessage(
+			riskHeading(risk.level, risk.reasons) + entry.summary,
+			{ modal: true, detail: riskDetail(risk.level) },
+			...choices
+		);
+		if (choice === ALLOW) {
+			return 'allow';
+		}
+		if (choice === ALLOW_SESSION) {
+			return 'allow-session';
+		}
+		if (ALWAYS && choice === ALWAYS) {
+			return 'always-allow';
+		}
+		return choice === DENY ? 'deny' : 'ignored';
+	}
+
+	return { canUseToolFor, pending: () => pending.map(toPublic), decide, denyAll };
 }
