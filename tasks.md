@@ -296,7 +296,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 保存してから `git worktree remove` する（`core/worktree.ts`）。ここに残るのはその先。
 
 - [ ] T-135 スタックした PR の管理 — 積み上げたブランチの依存関係を整理する [P3]
-- [ ] T-221 コードオーナーへの通知 [P3]
 
 ### 📊 コード品質
 
@@ -320,6 +319,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
+      — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
 - [x] T-143 再現手順の生成（ログから「まず落ちるテスト」を起こす。通る形では作らない）
       — 2026-08-13 / 仕様 [repro-test](nimbus/docs/specs/repro-test.md)
