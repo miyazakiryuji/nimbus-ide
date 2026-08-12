@@ -42,6 +42,9 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-157 差分のセマンティック要約 — 差分を読む前に「何がどう変わったか」を構造で出す。
+      実装前に claim @session-b 2026-08-13 [P2]
+
 - [ ] T-147 セッションのピン留め・タグ付け。実装前に claim @session-a 2026-08-13 [P3]
 - [ ] T-168 セッション → スキル化。実装前に claim @session-a 2026-08-13 [P2]
 
@@ -105,7 +108,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 **承認前に差分エディタで見せる仕組みは F3 で実装済み**（`core/editPreview.ts`）。ここに残るのはその先。
 
 - [ ] T-116 PR レビューの取り込み — レビューコメントを読んで修正し、返信まで下書きする [P2]
-- [ ] T-157 差分のセマンティック要約 — 「何を意図した変更か」を先に読める形にする [P2]
 - [ ] T-158 変更影響範囲の事前プレビュー — この変更が何を壊しうるかを、適用前に見せる [P2]
 
 ### ④ 制御層（Hooks・権限・MCP・設定）
@@ -283,7 +285,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-073 シミュレータ操作 — タップ操作を代行し、UI が実際に動くところまで確認させる [P2]
 - [ ] T-074 実機ログの取り込み — クラッシュログをドロップしたら該当箇所まで一直線 [P2]
-- [ ] T-198 Podfile / SPM / Gradle の依存整合性 [P2]
 - [ ] T-200 Platform Channel（ネイティブ ⇄ Dart）の橋渡し支援 [P2]
 
 ### 🔐 コンプラ・機密
@@ -492,6 +493,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-198 依存の食い違い（pubspec と Podfile.lock の突き合わせ）— 2026-08-13 / 仕様 [dep-consistency](nimbus/docs/specs/dep-consistency.md)
 - [x] T-199 Xcode プロジェクトの衝突を解く（両方残す・1 つでも怪しければ触らない）— 2026-08-13 / 仕様 [xcode-conflict](nimbus/docs/specs/xcode-conflict.md)
 - [x] T-217 / T-129 ビルド時間と成果物の大きさを前回と比べる — 2026-08-13 / 仕様 [build-metrics](nimbus/docs/specs/build-metrics.md)
 - [x] T-194 / T-195 Flutter の確認（直書きの文言・読み上げに渡らない画像・名前の無いボタン）— 2026-08-13 / 仕様 [flutter-lint](nimbus/docs/specs/flutter-lint.md)
