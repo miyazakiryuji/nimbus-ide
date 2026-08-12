@@ -516,6 +516,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
+      テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
+
 - [x] T-017 使用量を常時表示（5 時間・週の枠を SDK から取得。自前積算は不要と判明）— 2026-08-13 / 仕様 [usage](nimbus/docs/specs/usage.md)
 - [x] T-020 トークン消費量のリアルタイムバー（文脈の消費率をステータスバーに常時表示）— 2026-08-13 / 仕様 [usage](nimbus/docs/specs/usage.md)
 - [x] T-037 コスト・使用量ダッシュボード（「使用量」ビュー・週の枠は対話とアプリ経由で分ける）— 2026-08-13 / 仕様 [usage](nimbus/docs/specs/usage.md)
