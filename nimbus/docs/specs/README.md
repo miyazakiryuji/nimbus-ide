@@ -67,6 +67,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`workflow-and-team.md`](workflow-and-team.md) — 流れに沿って進める・解説モード・チーム設定の同期
 - [`evaluation.md`](evaluation.md) — スキル・プロンプトの評価（回帰・ブレ幅・モデル比較）
 - [`authoring.md`](authoring.md) — スキル・サブエージェント・コマンドを書く支援
+- [`persona-and-turns.md`](persona-and-turns.md) — 話しかた・状態の色・書く番
 
 IDE 基礎機能:
 
