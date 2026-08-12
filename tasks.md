@@ -141,10 +141,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 ### ⑥ IDE との統合（フォークにした旨味が出る場所）
 
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
-- [ ] T-173 マルチルートワークスペース対応 — **共通ヘルパは実装済み**（`pickWorkspaceRoot` /
-      `resolveWorkspaceRoot`・仕様 `nimbus/docs/specs/workspace-roots.md`）。残りは各セッションが
-      自分の持ち場を自分の番で載せ替える。**承認・レビュー層の 5 ファイルは載せ替え済み**
-      （commitSplit / conflicts / diffSummary / impact / prReview）[P2]
 
 ### ⑦ コードの理解と生成の精度（エンジン側）
 
@@ -337,6 +333,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       スクリプトは `--run` が無ければ何もしない。急ぐときもテスト・戻し口・既定ブランチへの戻しは省かない）
       — 2026-08-13 / 仕様 [rollback-and-hotfix](nimbus/docs/specs/rollback-and-hotfix.md)
 
+- [x] T-173 マルチルートワークスペース対応 — `workspaceFolders[0]` を直に見ている箇所が 0 になった。
+      対話のコマンドは `pickWorkspaceRoot`（1 フォルダなら聞かない）、聞けない・聞くべきでない 5 箇所は
+      `resolveWorkspaceRoot`。セッションの作業ディレクトリ（`workspaceCwd()`）は範囲外として残す
+      — 2026-08-13 / 仕様 [workspace-roots](nimbus/docs/specs/workspace-roots.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
