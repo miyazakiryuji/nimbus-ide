@@ -257,6 +257,9 @@ import '../workbench/contrib/files/browser/explorerViewlet.js';
 import '../workbench/contrib/files/browser/fileActions.contribution.js';
 import '../workbench/contrib/files/browser/files.contribution.js';
 
+// Scratch Files
+import './contrib/scratchFiles/browser/scratchFiles.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
