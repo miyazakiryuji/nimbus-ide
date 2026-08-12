@@ -136,6 +136,17 @@ export interface SubagentEvent extends EventBase {
 	usage?: { totalTokens: number; toolUses: number; durationMs: number };
 }
 
+/**
+ * 巻き戻し先の候補（tasks.md T-025）。ユーザーの発言 1 つが 1 つのチェックポイント。
+ * SDK が付けたメッセージ UUID はストリーム上でしか手に入らないので、ここで拾って持っておく。
+ */
+export interface CheckpointEvent extends EventBase {
+	kind: 'checkpoint';
+	/** `Query.rewindFiles()` に渡す UUID */
+	messageUuid: string;
+	text: string;
+}
+
 /** コンパクション（要約圧縮）の発生（tasks.md T-022）。黙って起きると履歴が飛んだように見える */
 export interface CompactionEvent extends EventBase {
 	kind: 'compaction';
@@ -162,6 +173,7 @@ export type NimbusEvent =
 	| SessionErrorEvent
 	| HookEvent
 	| SubagentEvent
+	| CheckpointEvent
 	| CompactionEvent;
 
 export type NimbusEventKind = NimbusEvent['kind'];

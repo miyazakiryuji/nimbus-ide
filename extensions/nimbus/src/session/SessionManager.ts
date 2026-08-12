@@ -3,8 +3,11 @@ import { randomUUID } from 'crypto'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import type {
   CanUseTool,
+  McpServerConfig,
+  McpServerStatus,
   Options,
   Query,
+  RewindFilesResult,
   SDKControlGetContextUsageResponse,
   SDKControlGetUsageResponse,
   SDKUserMessage
@@ -238,6 +241,51 @@ export class SessionManager extends EventEmitter {
     } catch {
       return undefined
     }
+  }
+
+  /**
+   * チェックポイントへの巻き戻し（T-025）。
+   * `dryRun` で「何が変わるか」だけを先に取れるので、**見せてから戻す**ことができる。
+   * 戻せない理由（`canRewind: false` + `error`）もそのまま返し、黙って成功にしない。
+   */
+  async rewind(
+    sessionId: string,
+    messageUuid: string,
+    dryRun: boolean
+  ): Promise<RewindFilesResult | undefined> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return undefined
+    try {
+      return await session.handle.rewindFiles(messageUuid, { dryRun })
+    } catch (error) {
+      return { canRewind: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  }
+
+  /** 接続中の MCP サーバーの状態と提供ツール（T-029 / T-042） */
+  async mcpServers(sessionId: string): Promise<McpServerStatus[]> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return []
+    try {
+      return await session.handle.mcpServerStatus()
+    } catch {
+      return []
+    }
+  }
+
+  /** つながらなかったサーバーを繋ぎ直す（T-029）。セッションを作り直さずに済ませる */
+  async reconnectMcpServer(sessionId: string, name: string): Promise<void> {
+    await this.sessions.get(sessionId)?.handle.reconnectMcpServer(name)
+  }
+
+  /** サーバーの有効・無効を切り替える（T-029） */
+  async toggleMcpServer(sessionId: string, name: string, enabled: boolean): Promise<void> {
+    await this.sessions.get(sessionId)?.handle.toggleMcpServer(name, enabled)
+  }
+
+  /** サーバー構成を丸ごと差し替える（T-029 の追加・削除はこれで行う） */
+  async setMcpServers(sessionId: string, servers: Record<string, McpServerConfig>): Promise<void> {
+    await this.sessions.get(sessionId)?.handle.setMcpServers(servers)
   }
 
   list(): SessionSummary[] {

@@ -3,6 +3,23 @@ import type { NimbusEvent } from '../events'
 
 const TOOL_RESULT_PREVIEW_LIMIT = 500
 
+/**
+ * ユーザーの発言を平文で取り出す。
+ * 内容は文字列のこともブロック配列のこともあり、後者にはツール結果が混ざる。
+ */
+function plainUserText(content: unknown): string {
+  if (typeof content === 'string') return content.trim()
+  if (!Array.isArray(content)) return ''
+  return content
+    .filter(
+      (block): block is { type: 'text'; text: string } =>
+        typeof block === 'object' && block !== null && (block as { type?: string }).type === 'text'
+    )
+    .map((block) => block.text)
+    .join('\n')
+    .trim()
+}
+
 function toolResultPreview(content: unknown): string {
   if (typeof content === 'string') return content.slice(0, TOOL_RESULT_PREVIEW_LIMIT)
   try {
@@ -187,9 +204,17 @@ export function normalizeSdkMessage(
       if ('isReplay' in msg && msg.isReplay) return []
       // ツール実行結果は user ロールの tool_result ブロックとして流れてくる
       if (msg.parent_tool_use_id !== null) return []
-      const content = msg.message.content
-      if (!Array.isArray(content)) return []
       const events: NimbusEvent[] = []
+      // 巻き戻し先の候補（T-025）。SDK が付けた uuid はこのストリーム上でしか手に入らない。
+      // 合成メッセージ（isSynthetic）は利用者の発言ではないので候補にしない
+      if (msg.uuid && !msg.isSynthetic) {
+        const text = plainUserText(msg.message.content)
+        if (text) {
+          events.push({ kind: 'checkpoint', sessionId, timestamp, messageUuid: msg.uuid, text })
+        }
+      }
+      const content = msg.message.content
+      if (!Array.isArray(content)) return events
       for (const block of content) {
         if (typeof block === 'object' && block !== null && block.type === 'tool_result') {
           events.push({
