@@ -41,8 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-006 Apple の公証（notarization）— 実装中 @yua 2026-08-13
-
 
 
 
@@ -184,7 +182,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 配布・運用
 
-- [ ] T-006 Apple の公証（notarization）に移行し、初回起動の「右クリック → 開く」を不要にする [P3]
 
 ### upstream 追従・コア
 
@@ -528,6 +525,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-006 公証の手順とスクリプト（既定は ad-hoc のまま・明示時のみ公証）— 2026-08-13 / 仕様 [notarization](nimbus/docs/specs/notarization.md) / **実際の公証は証明書を持つ本人が実行**
 - [x] T-223 作業の様子を GIF にする（枚数を先に見積もる・ffmpeg が無ければ手順を出す）— 2026-08-13 / 仕様 [gif-export](nimbus/docs/specs/gif-export.md)
 - [x] T-032 プラグインを見る（有効／無効の切り替え・入れるのは別導線）— 2026-08-13 / 仕様 [plugins](nimbus/docs/specs/plugins.md)
 - [x] T-014 ターミナルを好きな数に並べる（読める枚数で頭打ち・フォルダごとに 1 枚）— 2026-08-13 / 仕様 [terminal-layout](nimbus/docs/specs/terminal-layout.md)

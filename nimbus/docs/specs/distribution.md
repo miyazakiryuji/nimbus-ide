@@ -65,6 +65,7 @@ bash nimbus/scripts/sync-upstream.sh release/1.133
 
 ## 決めなかったこと・やらないこと
 
-- **Apple の公証（notarization）** — Developer Program が要る。将来やる（`tasks.md` T-006）
+- **Apple の公証（notarization）** — 手順とスクリプトは入れた（[notarization](notarization.md)）。
+  実行には Developer Program の登録と証明書が要るため、**通すのは利用者本人**
 - **Windows / Linux 版** — 今は macOS arm64 のみ
 - **ベースを upstream `main` に載せること** — ビルド基盤の変化が速く、追従コストが高い
