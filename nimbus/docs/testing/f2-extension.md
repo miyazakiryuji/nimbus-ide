@@ -40,8 +40,11 @@
 | #   | 項目                                            | 結果 | 確認方法                       |
 | --- | ------------------------------------------------- | ---- | ------------------------------ |
 | D-1 | `extensions/nimbus` が同梱される                 | OK   | app 内を確認                   |
-| D-2 | Agent SDK が node_modules として同梱される       | 記録参照 | `packagedDependenciesByExtension` |
-| D-3 | パッケージ版で実セッションが動く                  | 記録参照 | `nimbus/branding/smoke-packaged.sh` |
+| D-2 | Agent SDK が node_modules として同梱される       | OK   | `@anthropic-ai/claude-agent-sdk` |
+| D-3 | パッケージ版で拡張が有効化される                  | OK   | 拡張ログ                       |
+| D-4 | **パッケージ版で実セッションが動く**              | OK   | ターン成功・コスト計上（$0.0678） |
+| D-5 | Webview がイベントを復元する（ready 時に 2 件）   | OK   | 拡張ログ                       |
+| D-6 | Claude Code 実行ファイルを解決できる              | OK   | 設定 → 同梱 → PATH/既知の場所   |
 
 ## NG 記録と対処
 
@@ -51,6 +54,8 @@
 | 拡張が有効化されない | ワークスペースが未信頼（Restricted Mode）。Nimbus は `untrustedWorkspaces.supported: false` | 仕様として正しい。確認時は `--disable-workspace-trust` を使う |
 | 拡張がコンパイルされない | `build/gulpfile.extensions.ts` の `compilations` は**手書きの一覧** | 一覧に `extensions/nimbus/tsconfig.json` を追加 |
 | `sanitize` が存在しないと型エラー | 移植元の API 名は `sanitizeString` | 呼び出し側を修正 |
+| **パッケージ版だけセッションが始まらない**（`Native CLI binary for darwin-arm64 not found`） | SDK のプラットフォーム別バイナリ（280MB）が同梱対象から外れていた | 同梱してアプリを 1.3G にするより、利用者の Claude Code を確実に見つける方針に。設定 → 同梱 → PATH/既知の場所の順で解決し、無ければ設定を開く案内を出す |
+| 撮影が「別ウィンドウが写る危険」で中止された（実際は前面だった） | 起動直後はウィンドウ座標が取れないことがある | 数回リトライしてから判定する |
 
 ## 未了（F3 以降）
 
