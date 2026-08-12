@@ -281,6 +281,9 @@ import './contrib/productivityGuide/browser/productivityGuide.contribution.js';
 // Structural search and replace
 import './contrib/structuralSearch/browser/structuralSearch.contribution.js';
 
+// Dependency structure matrix
+import './contrib/dependencyMatrix/browser/dependencyMatrix.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
