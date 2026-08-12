@@ -17,6 +17,7 @@ import { accessSync, constants, existsSync } from 'fs';
 import { delimiter, join } from 'path';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { missingExecutableGuidance } from './core/remoteGuidance';
 
 const WELL_KNOWN_DIRS = [
 	join(homedir(), '.local', 'bin'),
@@ -72,13 +73,24 @@ export function resolveClaudeExecutable(): string | undefined {
 	return bundledBinary() ?? fromSearchPaths();
 }
 
-/** 見つからなかったときに、利用者が次に何をすればよいかを示す */
+/**
+ * 見つからなかったときに、利用者が次に何をすればよいかを示す。
+ *
+ * **リモートに繋いでいるときは言い分ける（T-084）。** Nimbus の拡張は
+ * 既定でリモート側で動くので、手元に入れても直らない。
+ * そこを言わないと、入れる場所を間違えたまま何度も入れ直すことになる。
+ */
 export async function reportMissingExecutable(): Promise<void> {
 	const OPEN_SETTINGS = '設定を開く';
-	const choice = await vscode.window.showErrorMessage(
-		'Nimbus: Claude Code が見つかりません。インストールするか、設定 nimbus.claudeCodeExecutable にパスを指定してください。',
-		OPEN_SETTINGS
-	);
+	const guidance = missingExecutableGuidance(vscode.env.remoteName);
+	// リモートのときだけモーダルにする。入れる場所を間違えたまま進ませたくない
+	const choice = guidance.detail
+		? await vscode.window.showErrorMessage(
+			guidance.message,
+			{ modal: true, detail: guidance.detail },
+			OPEN_SETTINGS
+		)
+		: await vscode.window.showErrorMessage(guidance.message, OPEN_SETTINGS);
 	if (choice === OPEN_SETTINGS) {
 		await vscode.commands.executeCommand('workbench.action.openSettings', 'nimbus.claudeCodeExecutable');
 	}
