@@ -202,6 +202,7 @@ import { importCpuProfile } from './cpuProfile';
 import { splitTerminals } from './terminalLayout';
 import { managePlugins } from './plugins';
 import { exportGif } from './gifExport';
+import { packageSkills } from './skillPackage';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
 import { restackAfterMerge, showPrStack } from './prStack';
@@ -2846,6 +2847,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				log
 			})
 		),
+		// 自分のスキルを配れる形にする（T-070）
+		vscode.commands.registerCommand('nimbus.packageSkills', () => packageSkills({ log })),
 		// 作業の様子を GIF にする（T-223）
 		vscode.commands.registerCommand('nimbus.exportGif', () => exportGif({ log })),
 		// プラグインの一覧と有効／無効（T-032）

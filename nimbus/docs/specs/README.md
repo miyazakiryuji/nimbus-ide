@@ -34,6 +34,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`plugins.md`](plugins.md) — プラグインを見る
 - [`gif-export.md`](gif-export.md) — 作業の様子を GIF にする
 - [`notarization.md`](notarization.md) — 公証（notarization）
+- [`skill-package.md`](skill-package.md) — スキルを配れる形にする
 - [`api-check.md`](api-check.md) — 実物との突き合わせと仮の応答
 - [`openapi.md`](openapi.md) — スキーマから型を起こす
 - [`platform-channel.md`](platform-channel.md) — Dart とネイティブの橋渡しの突き合わせ

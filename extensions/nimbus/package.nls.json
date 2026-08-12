@@ -235,5 +235,6 @@
   "command.exportGif": "作業の様子を GIF にする",
   "config.gif.width": "GIF の横幅（px）。縦は比率のままです。",
   "command.pluginActions": "拡張が足した指示を使う",
-  "config.managedPolicy": "組織が決めた権限の上限。ここに書いた制限は利用者の設定では緩められません（狭める方向だけが効きます）。MDM などでマシン単位に配ることを想定しています。"
+  "config.managedPolicy": "組織が決めた権限の上限。ここに書いた制限は利用者の設定では緩められません（狭める方向だけが効きます）。MDM などでマシン単位に配ることを想定しています。",
+  "command.packageSkills": "スキルを配れる形にする"
 }

@@ -240,6 +240,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.packageSkills",
+        "title": "%command.packageSkills%",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.toggleRemoteApproval",
         "title": "%command.toggleRemoteApproval%",
         "category": "Nimbus",

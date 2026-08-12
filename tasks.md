@@ -35,14 +35,11 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 進行中
 
-- [ ] T-070 スキル・サブエージェントの共有マーケット @session-a 2026-08-13 [P3]
 
 
 
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
-
-- [ ] T-070 スキルを配れる形にする（共有マーケット）— 実装中 @yua 2026-08-13
 
 
 - [ ] T-085 マシンをまたぐセッション同期 — 束を出す・入れる前に手元と突き合わせる。
@@ -543,6 +540,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-070 スキルを配れる形にする（出す側。入れる側は別セッションの market）— 2026-08-13 / 仕様 [skill-package](nimbus/docs/specs/skill-package.md)
 - [x] T-006 公証の手順とスクリプト（既定は ad-hoc のまま・明示時のみ公証）— 2026-08-13 / 仕様 [notarization](nimbus/docs/specs/notarization.md) / **実際の公証は証明書を持つ本人が実行**
 - [x] T-223 作業の様子を GIF にする（枚数を先に見積もる・ffmpeg が無ければ手順を出す）— 2026-08-13 / 仕様 [gif-export](nimbus/docs/specs/gif-export.md)
 - [x] T-032 プラグインを見る（有効／無効の切り替え・入れるのは別導線）— 2026-08-13 / 仕様 [plugins](nimbus/docs/specs/plugins.md)
