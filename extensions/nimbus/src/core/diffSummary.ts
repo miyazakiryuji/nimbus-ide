@@ -11,6 +11,8 @@
  * VS Code に依存しないので単体で検証できる。
  */
 
+import { isGenerated, summarizeGenerated } from './generated';
+
 /** ファイルの役どころ。読む順番を決めるのに使う */
 export type FileRole = 'implementation' | 'test' | 'spec' | 'config' | 'core' | 'other';
 
@@ -33,6 +35,8 @@ export interface FileSummary {
 	isNew: boolean;
 	/** 消されたファイルか */
 	isDeleted: boolean;
+	/** 生成物か（T-140）。差分では畳んで、件数だけ見せる */
+	generated: boolean;
 }
 
 const ROLE_LABEL: Record<FileRole, string> = {
@@ -92,11 +96,15 @@ export function summarizeDiff(diff: string): FileSummary[] {
 	/** 同じ名前が消えて足された（＝中身の変更）は打ち消すため、いったん貯める */
 	let added: SymbolChange[] = [];
 	let removed: SymbolChange[] = [];
+	/** 足された行の冒頭。生成物の印を探すのに使う（全文は要らない） */
+	let addedHead: string[] = [];
 
 	const flush = (): void => {
 		if (!current) {
 			return;
 		}
+		// 名前で決まらないときは、足された行の冒頭に「生成物」の印が無いかを見る
+		current.generated = isGenerated(current.path, addedHead.join('\n'));
 		// 消えて足されたものは「変更」なので、増減としては出さない
 		const removedNames = new Set(removed.map((s) => `${s.kind}:${s.name}`));
 		const addedNames = new Set(added.map((s) => `${s.kind}:${s.name}`));
@@ -107,6 +115,7 @@ export function summarizeDiff(diff: string): FileSummary[] {
 		files.push(current);
 		added = [];
 		removed = [];
+		addedHead = [];
 	};
 
 	for (const line of diff.split('\n')) {
@@ -120,7 +129,9 @@ export function summarizeDiff(diff: string): FileSummary[] {
 				removed: 0,
 				symbols: [],
 				isNew: false,
-				isDeleted: false
+				isDeleted: false,
+				// 中身は flush のときに見る（この時点ではまだ 1 行も読んでいない）
+				generated: false
 			};
 			continue;
 		}
@@ -141,6 +152,9 @@ export function summarizeDiff(diff: string): FileSummary[] {
 		}
 		if (line.startsWith('+')) {
 			current.added++;
+			if (addedHead.length < 5) {
+				addedHead.push(line.slice(1));
+			}
 			const declaration = declarationOf(line.slice(1));
 			if (declaration) {
 				added.push({ ...declaration, change: 'added' });
@@ -179,9 +193,12 @@ export function formatSummary(files: readonly FileSummary[]): string {
 	if (files.length === 0) {
 		return '# 変更の要約\n\n変更はありません。\n';
 	}
-	const sorted = sortSummaries(files);
-	const added = sorted.reduce((sum, f) => sum + f.added, 0);
-	const removed = sorted.reduce((sum, f) => sum + f.removed, 0);
+	const all = sortSummaries(files);
+	// 生成物は畳む（T-140）。手書きと同じ重みで並ぶと、読むべき数行が埋もれる
+	const sorted = all.filter((file) => !file.generated);
+	const generated = all.filter((file) => file.generated);
+	const added = all.reduce((sum, f) => sum + f.added, 0);
+	const removed = all.reduce((sum, f) => sum + f.removed, 0);
 	const api = apiChanges(sorted);
 
 	const lines = [
@@ -218,6 +235,16 @@ export function formatSummary(files: readonly FileSummary[]): string {
 			}
 			lines.push('');
 		}
+	}
+
+	// 畳んでも**隠さない**。件数と行数は必ず見せ、名前も並べる。
+	// 生成物が「動いていないこと」に気づきたい場面があるため
+	if (generated.length > 0) {
+		lines.push('## 生成物', '', summarizeGenerated(generated), '');
+		for (const file of generated) {
+			lines.push(`- \`${file.path}\` +${file.added} −${file.removed}`);
+		}
+		lines.push('');
 	}
 	return lines.join('\n');
 }

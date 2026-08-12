@@ -41,8 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
 
-- [ ] T-140 生成物と手書きの区別 — 差分の要約で生成コードを畳む。実装前に claim。
-      ファイルは `core/generated.ts` を先に作って確保済み @session-b 2026-08-13 [P2]
 
 
       実装前に claim @session-b 2026-08-13 [P2]
@@ -216,7 +214,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📊 自分を観測する
 
-- [ ] T-206 セッションのリプレイ再生 [P3]
 
 ### 🔀 乗り換え・共存
 
@@ -348,6 +345,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-140 生成物と手書きの区別（差分の要約で生成物を畳む。畳むが隠さない）
+      — 2026-08-13 / 仕様 [diff-summary](nimbus/docs/specs/diff-summary.md)
+
 - [x] T-083 裏取りモード（指示で名前が出たライブラリの、実際に使っているバージョンを送る前に添える）
       — 2026-08-13 / 仕様 [signature-attachment](nimbus/docs/specs/signature-attachment.md)
 
@@ -477,6 +477,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-206 セッションをたどり直す（間隔つき・止まっていた場所を先に）— 2026-08-13 / 仕様 [replay](nimbus/docs/specs/replay.md)
 - [x] T-048 やり取りを人に見せる（伏せる内容を先に見せる・どこにも送らない）— 2026-08-13 / 仕様 [share-session](nimbus/docs/specs/share-session.md)
 - [x] T-116 レビューコメントの取り込み（感想を依頼として扱わない・1 件ずつ渡す）— 2026-08-13 / 仕様 [review-comments](nimbus/docs/specs/review-comments.md)
 - [x] T-045 何をしたかを並べ直す（理由は書かれたものだけ・推測で補わない）— 2026-08-13 / 仕様 [explain](nimbus/docs/specs/explain.md)
