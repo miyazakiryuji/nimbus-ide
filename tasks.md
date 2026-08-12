@@ -110,7 +110,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 - [ ] T-116 PR レビューの取り込み — レビューコメントを読んで修正し、返信まで下書きする [P2]
 - [ ] T-157 差分のセマンティック要約 — 「何を意図した変更か」を先に読める形にする [P2]
 - [ ] T-158 変更影響範囲の事前プレビュー — この変更が何を壊しうるかを、適用前に見せる [P2]
-- [ ] T-159 差分の統計 — 追加／削除行数、触ったファイル数 [P3]
 - [ ] T-160 レビュー済み／未レビューの管理 — 大きな変更を分割して見るときに要る [P2]
 
 ### ④ 制御層（Hooks・権限・MCP・設定）
@@ -335,7 +334,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🧪 「本当に動いたの？」
 
-- [ ] T-082 テスト無しコードへの警告 — 差分にテストが伴っていないときにそっと指摘する [P2]
 - [ ] T-083 裏取りモード — ライブラリの使い方を公式ドキュメントで確認してから書かせる（ハルシネーション対策）[P2]
 
 ### 🖥 環境まわり
@@ -498,6 +496,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-159 / T-082 変更のようす（統計と、テストが伴っていないときの指摘）— 2026-08-13 / 仕様 [change-stats](nimbus/docs/specs/change-stats.md)
 - [x] T-062 リリースノートの下書きを履歴から作る（分類・迷ったらその他）— 2026-08-13 / 仕様 [release-notes](nimbus/docs/specs/release-notes.md)
 - [x] T-096 連続稼働日数をふりかえりに出す — 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-105 スタックトレースから該当箇所を開く（Dart / JS・自分のコードの一番上を優先）— 2026-08-13 / 仕様 [stack-trace](nimbus/docs/specs/stack-trace.md)

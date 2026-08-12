@@ -271,6 +271,18 @@
         "title": "常に含めるファイル（ピン留め）",
         "category": "Nimbus",
         "icon": "$(pinned)"
+      },
+      {
+        "command": "nimbus.draftReleaseNotes",
+        "title": "リリースノートの下書きを作る",
+        "category": "Nimbus",
+        "icon": "$(note)"
+      },
+      {
+        "command": "nimbus.openChangeStats",
+        "title": "変更のようすを見る",
+        "category": "Nimbus",
+        "icon": "$(diff)"
       }
     ],
     "menus": {
