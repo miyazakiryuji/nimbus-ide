@@ -188,6 +188,7 @@ import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
+import { importCpuProfile } from './cpuProfile';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
 import { restackAfterMerge, showPrStack } from './prStack';
@@ -2777,6 +2778,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 落ちた CI のログを取りに行って切り分けさせる（T-131）
 		vscode.commands.registerCommand('nimbus.investigateCi', () =>
 			investigateCi({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 計測結果を渡して、重いところを見つけさせる（T-128）
+		vscode.commands.registerCommand('nimbus.importCpuProfile', () =>
+			importCpuProfile({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

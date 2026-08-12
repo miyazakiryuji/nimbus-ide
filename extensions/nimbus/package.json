@@ -219,6 +219,11 @@
         "icon": "$(github)"
       },
       {
+        "command": "nimbus.importCpuProfile",
+        "title": "計測結果を渡して重い箇所を調べる",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.showPrStack",
         "title": "積み上げた PR を見る",
         "category": "Nimbus",

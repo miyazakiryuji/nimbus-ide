@@ -39,7 +39,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-128 プロファイル結果の投入（重い箇所を特定させる）— 実装中 @yua 2026-08-13
+- [ ] T-222 メモリリークの調査支援と起動時間の計測 — `core/memoryTrend.ts` `core/startupTiming.ts`
+      `src/perfWatch.ts` を確保（ の `core/cpuProfile.ts` とは別モジュール）@session-c 2026-08-13 [P2]
 
 
 
@@ -281,8 +282,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### ⚡️ パフォーマンス
 
-- [ ] T-128 プロファイル結果の投入 — DevTools の計測結果を渡して、重い箇所を特定させる [P2]
-- [ ] T-222 メモリリークの調査支援と、起動時間の計測 [P2]
 
 ### 🔁 CI/CD
 
@@ -511,6 +510,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-128 計測結果を渡して重い箇所を調べる（直せる場所だけ出す）— 2026-08-13 / 仕様 [cpu-profile](nimbus/docs/specs/cpu-profile.md)
 - [x] T-215 出す前に見る（止めるものと知らせるものを分ける）— 2026-08-13 / 仕様 [preflight](nimbus/docs/specs/preflight.md)
 - [x] T-125 マイグレーションを起こす（壊す操作を先に・NOT NULL の落とし穴を指摘）— 2026-08-13 / 仕様 [schema-diff](nimbus/docs/specs/schema-diff.md)
 - [x] T-132 CI を手元で再現する（環境の版を突き合わせ・CI 専用の行は落とす）— 2026-08-13 / 仕様 [ci-repro](nimbus/docs/specs/ci-repro.md)
