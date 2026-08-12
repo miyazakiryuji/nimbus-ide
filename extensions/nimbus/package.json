@@ -910,6 +910,18 @@
         "title": "生成物を作り直す",
         "category": "Nimbus",
         "icon": "$(sync)"
+      },
+      {
+        "command": "nimbus.checkSql",
+        "title": "SQL を流す前に見る",
+        "category": "Nimbus",
+        "icon": "$(database)"
+      },
+      {
+        "command": "nimbus.weeklyReview",
+        "title": "今週のふりかえりを見る",
+        "category": "Nimbus",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -1376,6 +1388,11 @@
           "type": "boolean",
           "default": false,
           "description": "生成物のある元ファイル（model.dart など）を保存したときに、生成物を作り直すか聞きます。既定は無効です。"
+        },
+        "nimbus.clarifyVagueJapanese": {
+          "type": "boolean",
+          "default": true,
+          "description": "指示が曖昧なとき（対象の無い指示語・基準の無い言い方など）に、送る前に一度だけ確認します。"
         }
       }
     },
