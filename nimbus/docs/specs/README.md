@@ -16,6 +16,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`claude-md.md`](claude-md.md) — CLAUDE.md のタブ（階層別の一覧・節単位で開く・ひな形から足す）
 - [`parallel-tasks.md`](parallel-tasks.md) — 並列タスク（worktree × カンバン）
 - [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
+- [`protected-paths.md`](protected-paths.md) — 読ませたくないファイルを画面から指定する
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
 - [`usage.md`](usage.md) — 使用量（5 時間・週の枠／文脈の消費／費用と上限アラート）
 - [`session-activity.md`](session-activity.md) — セッションの中身（サブエージェント・フック・触ったファイル・コンパクション）と通知

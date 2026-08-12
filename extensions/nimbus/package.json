@@ -121,6 +121,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.verifyEdits",
+        "title": "型エラーを差し戻す",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
@@ -236,6 +241,12 @@
         "title": "完了報告を作る（証跡つき）",
         "category": "Nimbus",
         "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.editProtectedPaths",
+        "title": "読ませたくないファイルを指定する",
+        "category": "Nimbus",
+        "icon": "$(shield)"
       }
     ],
     "menus": {
@@ -416,6 +427,28 @@
           "type": "boolean",
           "default": true,
           "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+        },
+        "nimbus.lsp.verifyEdits": {
+          "type": "string",
+          "enum": [
+            "off",
+            "ask",
+            "auto"
+          ],
+          "enumDescriptions": [
+            "確かめません。",
+            "型エラーが増えたら通知で知らせ、差し戻すかを選べます。",
+            "型エラーが増えたら自動でセッションへ差し戻します（上限あり）。"
+          ],
+          "default": "ask",
+          "description": "Claude がファイルを書き換えたあと、そのターンで増えた型エラーだけを確かめます。"
+        },
+        "nimbus.lsp.maxAutoFixes": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "型エラーを自動で差し戻す回数の上限（1 セッションあたり）。直らないまま回り続けるのを止めます。"
         },
         "nimbus.terminal.captureFailures": {
           "type": "boolean",
