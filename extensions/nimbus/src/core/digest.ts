@@ -28,6 +28,25 @@ export interface Digest {
 	files: { path: string; count: number }[];
 	/** 動いていた日（`YYYY-MM-DD`・古い順） */
 	activeDays: string[];
+	/** いちばん長く続いた連続稼働日数（T-096） */
+	longestStreak: number;
+}
+
+/**
+ * 連続して動いていた日数の最大値。
+ * 続けられているかどうかは、件数より効く（1 日 100 件より、10 日 10 件のほうが進む）。
+ */
+export function longestStreak(days: readonly string[]): number {
+	let best = 0;
+	let run = 0;
+	let previous: number | undefined;
+	for (const day of [...days].sort()) {
+		const time = Date.parse(day + 'T00:00:00.000Z');
+		run = previous !== undefined && time - previous === 86400000 ? run + 1 : 1;
+		previous = time;
+		best = Math.max(best, run);
+	}
+	return best;
 }
 
 function rank(counts: Map<string, number>, limit: number): { name: string; count: number }[] {
@@ -82,7 +101,8 @@ export function buildDigest({ entries, since }: DigestInput, limit = 5): Digest 
 		replyCount,
 		tools: rank(tools, limit),
 		files: rank(files, limit).map((f) => ({ path: f.name, count: f.count })),
-		activeDays: [...days].sort()
+		activeDays: [...days].sort(),
+		longestStreak: longestStreak([...days])
 	};
 }
 
@@ -112,6 +132,7 @@ export function renderDigest(digest: Digest, root: string | undefined, days: num
 		`- 出した指示: **${digest.instructionCount} 件**`,
 		`- 返ってきた応答: **${digest.replyCount} 件**`,
 		`- 動いていた日: **${digest.activeDays.length} 日**（${digest.activeDays.join(' / ')}）`,
+		`- いちばん長く続いたのは **${digest.longestStreak} 日連続**`,
 		''
 	);
 

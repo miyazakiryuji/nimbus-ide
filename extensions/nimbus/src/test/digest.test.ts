@@ -86,3 +86,15 @@ test('Markdown に件数・日数・ツール・ファイルが並ぶ', () => {
 		[true, true, true, true]
 	);
 });
+
+test('連続して動いた日数の最大を数える（T-096）', () => {
+	const digest = buildDigest({
+		since,
+		entries: [
+			entry({ timestamp: '2026-08-11T10:00:00.000Z' }),
+			entry({ timestamp: '2026-08-12T10:00:00.000Z' }),
+			entry({ timestamp: '2026-08-14T10:00:00.000Z' })
+		]
+	});
+	assert.deepStrictEqual({ days: digest.activeDays.length, streak: digest.longestStreak }, { days: 3, streak: 2 });
+});

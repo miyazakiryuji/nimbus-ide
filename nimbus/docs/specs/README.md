@@ -18,6 +18,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
 - [`protected-paths.md`](protected-paths.md) — 読ませたくないファイルを画面から指定する
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
+- [`release-notes.md`](release-notes.md) — リリースノートの下書き
 - [`stack-trace.md`](stack-trace.md) — スタックトレースから該当箇所を開く
 - [`lock-diff.md`](lock-diff.md) — ロックファイルの変更を読む
 - [`digest.md`](digest.md) — ふりかえり（週次ダイジェスト・成長ログ）

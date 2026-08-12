@@ -282,7 +282,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-060 設計書・ADR の自動生成 — 会話の中で決まった判断を記録として残す（`nimbus/docs/specs/` と繋げる）[P2]
 - [ ] T-061 Mermaid 図のライブプレビュー — エージェントが描いた構成図をその場で確認する [P3]
-- [ ] T-062 リリースノート／コミットメッセージの下書きを差分から作る [P2]
 - [ ] T-208 社内 Wiki / Notion 連携 [P3]
 - [ ] T-209 API ドキュメントの追従更新 [P2]
 - [ ] T-210 コードコメントの整合性チェック — コメントだけ古い状態を検出する [P2]
@@ -378,7 +377,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🎮 続けたくなる
 
-- [ ] T-096 実績・連続稼働日数 — ゆるいゲーミフィケーション [P3]
 - [ ] T-097 今週のハイライト — 一番よく働いたサブエージェントを表彰する（T-047 の成長ログと同じ線）[P3]
 - [ ] T-223 GIF / 動画エクスポート — 作業の様子をそのまま共有する [P3]
 
@@ -502,6 +500,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-062 リリースノートの下書きを履歴から作る（分類・迷ったらその他）— 2026-08-13 / 仕様 [release-notes](nimbus/docs/specs/release-notes.md)
+- [x] T-096 連続稼働日数をふりかえりに出す — 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-105 スタックトレースから該当箇所を開く（Dart / JS・自分のコードの一番上を優先）— 2026-08-13 / 仕様 [stack-trace](nimbus/docs/specs/stack-trace.md)
 - [x] T-119 ロックファイルの変更を読む（pubspec.lock / package-lock.json・メジャーを先頭に）— 2026-08-13 / 仕様 [lock-diff](nimbus/docs/specs/lock-diff.md)
 - [x] T-207 / T-047 ふりかえり（週次ダイジェスト・成長ログ）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
