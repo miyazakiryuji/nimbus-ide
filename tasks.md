@@ -39,6 +39,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-131 CI 失敗の自動調査（落ちた行を先に見せる）— 実装中 @yua 2026-08-13
+
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
 
 
@@ -287,7 +289,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🔁 CI/CD
 
-- [ ] T-131 CI 失敗の自動調査 — 赤くなった瞬間にログを取りに行って、原因の当たりをつけておく（T-039 の延長）[P2]
 - [ ] T-215 デプロイ前チェックリストの自動実行 [P2]
 - [ ] T-216 ロールバックスクリプトの用意（T-144 のホットフィックスと対）[P3]
 
@@ -322,6 +323,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-131 落ちた CI を調べる（gh で失敗ログを取り、手元で再現するか CI 固有かを先に切り分けさせる）
+      — 2026-08-13 / 仕様 [ci-failure](nimbus/docs/specs/ci-failure.md)
 
 - [x] T-237 セッション中の繰り返し検出（3 回目を書いたその場で CLAUDE.md への追加を聞く。判定は既存の純関数を再利用）
       — 2026-08-13 / 仕様 [session-repeats](nimbus/docs/specs/session-repeats.md)

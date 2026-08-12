@@ -180,6 +180,7 @@ import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
+import { investigateCi } from './ciFailure';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2733,6 +2734,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		// このコードがなぜこうなっているのかを辿る（T-079）
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 落ちた CI のログを取りに行って切り分けさせる（T-131）
+		vscode.commands.registerCommand('nimbus.investigateCi', () =>
+			investigateCi({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

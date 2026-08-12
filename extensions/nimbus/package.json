@@ -213,6 +213,12 @@
         "icon": "$(type-hierarchy)"
       },
       {
+        "command": "nimbus.investigateCi",
+        "title": "落ちた CI を調べる",
+        "category": "Nimbus",
+        "icon": "$(github)"
+      },
+      {
         "command": "nimbus.exploreHistory",
         "title": "なぜこうなっているのかを辿る",
         "category": "Nimbus",
