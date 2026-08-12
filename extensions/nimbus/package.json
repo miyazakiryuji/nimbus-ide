@@ -213,6 +213,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.reverseSpec",
+        "title": "このコードから仕様書を起こす",
+        "category": "Nimbus",
+        "icon": "$(notebook)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",

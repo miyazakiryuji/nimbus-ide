@@ -145,6 +145,7 @@ import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
+import { reverseSpec } from './reverseSpec';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -2404,6 +2405,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// ドキュメントの無いコードから仕様書を起こす（T-080）
+		vscode.commands.registerCommand('nimbus.reverseSpec', () =>
+			reverseSpec({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// このコードがなぜこうなっているのかを辿る（T-079）
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
