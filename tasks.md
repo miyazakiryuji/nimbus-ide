@@ -40,6 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-002 `localize()` に残る "VS Code" 直書き 152 箇所の掃除（`grep -rn "localize" --include="*.ts" src/vs | grep "VS Code"`）@session-doctor 2026-08-13 [P1]
+
 - [ ] T-033 **スクラッチファイル**（IntelliJ 由来）— 実装・型チェック・単体テスト（13,177 件全通過）
       まで完了。残るは画面確認とパッケージ版スモーク（`nimbus/docs/testing/scratch-files.md` §2・§3）
       → 仕様 `nimbus/docs/specs/scratch-files.md` @claude 2026-08-13 [P1]
@@ -53,7 +55,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 次にやる
 
-- [ ] T-002 `localize()` に残る "VS Code" 直書き 152 箇所の掃除（`grep -rn "localize" --include="*.ts" src/vs | grep "VS Code"`）[P1]
 - [ ] T-004 `nimbus/docs/testing/f3-f6.md` §6 の画面確認 6 項目を実施して記録する [P1]
 - [ ] T-005 Copilot をソースとビルドスクリプトからも外す（`extensions/copilot/` と `compile-copilot`）— パッケージからの除去は済み [P2]
 
