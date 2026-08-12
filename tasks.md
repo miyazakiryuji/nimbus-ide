@@ -43,8 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
 
-- [ ] T-147 セッションのピン留め・タグ付け。実装前に claim @session-a 2026-08-13 [P3]
-- [ ] T-168 セッション → スキル化。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -93,7 +91,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 （Nimbus 自身を複数の AI で開発するときの作法は README「複数の AI で並行開発する」。こちらは**製品の機能**の話）
 
 - [ ] T-149 **複数ステップのワークフロー定義** — 調査 → 実装 → テスト → レビューを 1 本の流れとして定義する [P2]
-- [ ] T-151 オフライン時の入力キューイング — 繋がったら送る [P3]
 
 ### ② コンテキスト可視化層（文脈とコスト）
 
@@ -529,6 +526,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-147 タスクのピン留めとタグ（板の並びと絞り込みの判定）— 2026-08-13 / 仕様 [session-extras](nimbus/docs/specs/session-extras.md)
+- [x] T-151 送れなかった入力の預かり（繋がらない失敗だけ・自動では送らない）— 2026-08-13 / 仕様 [session-extras](nimbus/docs/specs/session-extras.md)
+- [x] T-168 セッション → スキル化（骨格まで書き、確かめていないことは書かない）— 2026-08-13 / 仕様 [session-extras](nimbus/docs/specs/session-extras.md)
 - [x] T-035 プロンプトライブラリ（変数つきテンプレ・埋め残しは残して知らせる）— 2026-08-13 / 仕様 [prompts-and-find](nimbus/docs/specs/prompts-and-find.md)
 - [x] T-117 スキル以外も同じ場所から探せる（コマンド・サブエージェント・MCP ツール・定型）— 2026-08-13 / 仕様 [prompts-and-find](nimbus/docs/specs/prompts-and-find.md)
 - [x] T-236 ツリービューの共通土台（4 ビューすべてを載せ替え・ツール入力の取り出しも共通化）— 2026-08-13 / 仕様 [tree-views](nimbus/docs/specs/tree-views.md)

@@ -45,6 +45,36 @@ export interface KanbanTask {
 	updatedAt: number;
 	/** 元になった tasks.md の行の ID（T-013）。あれば完了時に tasks.md へ戻せる */
 	sourceTaskId?: string;
+	/** ピン留め（T-147）。板の先頭に出す。待機列の優先度とは別物 */
+	pinned?: boolean;
+	/** タグ（T-147）。絞り込みに使う */
+	tags?: string[];
+}
+
+/** ピン留めを先に、次に作った順（板の並び。待機列の優先度とは別の話） */
+export function sortForBoard(tasks: readonly KanbanTask[]): KanbanTask[] {
+	return [...tasks].sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || a.createdAt - b.createdAt);
+}
+
+/** タグで絞る。指定が空なら全部通す */
+export function filterByTags(tasks: readonly KanbanTask[], tags: readonly string[]): KanbanTask[] {
+	if (tags.length === 0) {
+		return [...tasks];
+	}
+	return tasks.filter((task) => tags.every((tag) => task.tags?.includes(tag)));
+}
+
+/** 使われているタグを、多い順に集める */
+export function collectTags(tasks: readonly KanbanTask[]): { tag: string; count: number }[] {
+	const counts = new Map<string, number>();
+	for (const task of tasks) {
+		for (const tag of task.tags ?? []) {
+			counts.set(tag, (counts.get(tag) ?? 0) + 1);
+		}
+	}
+	return [...counts.entries()]
+		.map(([tag, count]) => ({ tag, count }))
+		.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
 
 export const KANBAN_COLUMNS: { state: KanbanState; label: string }[] = [

@@ -109,6 +109,22 @@ export class TaskService extends EventEmitter {
 		return task;
 	}
 
+	/** ピン留めの切り替え（T-147）。板の先頭に出したいものを固定する */
+	togglePinned(taskId: string): void {
+		const task = this.mustGet(taskId);
+		task.pinned = !task.pinned;
+		task.updatedAt = Date.now();
+		this.persistAndEmit();
+	}
+
+	/** タグを付け替える（T-147）。空文字は落とし、重複は 1 つにまとめる */
+	setTags(taskId: string, tags: readonly string[]): void {
+		const task = this.mustGet(taskId);
+		task.tags = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+		task.updatedAt = Date.now();
+		this.persistAndEmit();
+	}
+
 	/** 待機中タスクの優先度を変える（T-233）。走り出したあとに変えても意味がないので待機中だけ */
 	setPriority(taskId: string, priority: TaskPriority): void {
 		const task = this.mustGet(taskId);
