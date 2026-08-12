@@ -60,6 +60,7 @@ import { assistConflicts } from './conflicts';
 import { showDiffSummary } from './diffSummary';
 import { showImpact } from './impact';
 import { editPermissionRules } from './permissionRules';
+import { importPrReview } from './prReview';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -2303,6 +2304,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// PR のレビュー指摘をセッションへ（T-116）
+		vscode.commands.registerCommand('nimbus.importPrReview', () =>
+			importPrReview((text) => {
+				cockpit.reveal();
+				void send(text);
+			})
+		),
 		// 溜まった承認ルールを見返して減らす（T-028）
 		vscode.commands.registerCommand('nimbus.editPermissionRules', () => editPermissionRules()),
 		// 消した export の呼び出し元を先に見せる（T-158）

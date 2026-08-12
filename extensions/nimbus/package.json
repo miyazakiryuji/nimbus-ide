@@ -790,6 +790,12 @@
         "title": "いま開いているスキル／サブエージェントを試す",
         "category": "Nimbus",
         "icon": "$(play-circle)"
+      },
+      {
+        "command": "nimbus.importPrReview",
+        "title": "PR のレビュー指摘を取り込む",
+        "category": "Nimbus",
+        "icon": "$(comment-discussion)"
       }
     ],
     "menus": {
