@@ -51,9 +51,10 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 - [ ] T-185 **着手前の確認強制** — 曖昧な指示のまま走らせない @session-doctor 2026-08-13 [P1]
 
-- [ ] T-008 / T-009 **CLAUDE.md 専用のタブ**（階層別の一覧・セクション単位の編集・テンプレート追加）
-      — 新規 `core/claudeMdDoc.ts` / `claudeMdView.ts` / `test/claudeMdDoc.test.ts`、配線のみ
-      `extension.ts` と `package.json` @yua 2026-08-13 [P2]
+- [ ] T-008 / T-009 **CLAUDE.md 専用のタブ** — 実装・単体テスト（10 件全通過）・仕様・確認項目まで完了。
+      残るは配線のコミット（`extension.ts` / `package.json` に他セッションの作業が同居しているため待ち）と
+      画面確認（`nimbus/docs/testing/claude-md.md` §2）→ 仕様 `nimbus/docs/specs/claude-md.md`
+      @yua 2026-08-13 [P2]
 
 
 

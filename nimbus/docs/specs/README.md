@@ -13,6 +13,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`sessions.md`](sessions.md) — セッション実行エンジン・状態・コスト・課金モード・実行ファイル解決
 - [`approvals-and-diff.md`](approvals-and-diff.md) — 承認（`canUseTool`）と、承認前の差分
 - [`context-view.md`](context-view.md) — いま Claude に渡っている前提の一覧
+- [`claude-md.md`](claude-md.md) — CLAUDE.md のタブ（階層別の一覧・節単位で開く・ひな形から足す）
 - [`parallel-tasks.md`](parallel-tasks.md) — 並列タスク（worktree × カンバン）
 - [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
