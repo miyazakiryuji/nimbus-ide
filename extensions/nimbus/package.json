@@ -379,6 +379,30 @@
         "title": "PR の説明文を作る",
         "category": "Nimbus",
         "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "nimbus.bisect",
+        "title": "どこで壊れたかを絞り込む",
+        "category": "Nimbus",
+        "icon": "$(search)"
+      },
+      {
+        "command": "nimbus.openMobileChecks",
+        "title": "提出前の確認（iOS / 権限・プライバシー）",
+        "category": "Nimbus",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "nimbus.assistConflicts",
+        "title": "コンフリクトの解決を手伝う",
+        "category": "Nimbus",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "nimbus.openFlutterLint",
+        "title": "Flutter の確認（文言・読み上げ）",
+        "category": "Nimbus",
+        "icon": "$(symbol-color)"
       }
     ],
     "menus": {

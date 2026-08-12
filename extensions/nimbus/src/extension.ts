@@ -35,8 +35,12 @@ import { openChangeStats } from './changeStats';
 import { openCodeHealth } from './codeHealth';
 import { openBranchHealth } from './branchHealth';
 import { draftPrDescription } from './prDescription';
+import { bisect } from './bisect';
+import { openMobileChecks } from './mobileChecks';
+import { openFlutterLint } from './flutterLint';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
+import { assistConflicts } from './conflicts';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -49,7 +53,7 @@ import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from
 import { captureAfterReload, readHotReloadConfig } from './hotReload';
 import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile } from './core/pinned';
 import { thresholdLevel } from './core/usage';
-import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
+import { describeSessionConflict, SessionFilesTracker } from './core/sessionFiles';
 import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
 import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
 import { buildCompactCommand, compactCandidates } from './core/compactSelection';
@@ -445,7 +449,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			return;
 		}
 		warnedConflicts.add(key);
-		const message = describeConflict(conflict, sessionName);
+		const message = describeSessionConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
 	}
@@ -570,6 +574,18 @@ export function activate(context: vscode.ExtensionContext): void {
 		const command = buildCompactCommand(chosen.map((item) => item.candidate));
 		sessions.sendMessage(activeSessionId, command);
 		log(`[compact] ${chosen.length} 件を残すよう指示して圧縮します`);
+	}
+
+	/**
+	 * セッションを始めるには作業フォルダが要る。
+	 * 無いときの言い回しを 1 か所にまとめる（同じ案内が散ると、直すときに片方が残る）。
+	 */
+	function requireCwd(): string | undefined {
+		const cwd = workspaceCwd();
+		if (!cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
+		}
+		return cwd;
 	}
 
 	function tasksFileUri(): vscode.Uri | undefined {
@@ -708,9 +724,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		if (!start) {
 			return;
 		}
-		const cwd = workspaceCwd();
+		const cwd = requireCwd();
 		if (!cwd) {
-			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
 			return;
 		}
 		await newSession();
@@ -1033,9 +1048,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				sessions.sendMessage(activeSessionId, text, attachments);
 				return;
 			}
-			const cwd = workspaceCwd();
+			const cwd = requireCwd();
 			if (!cwd) {
-				void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
 				return;
 			}
 			if (!resolveClaudeExecutable()) {
@@ -1517,6 +1531,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openCodeHealth', () => openCodeHealth()),
 		vscode.commands.registerCommand('nimbus.openBranchHealth', () => openBranchHealth()),
 		vscode.commands.registerCommand('nimbus.draftPrDescription', () => draftPrDescription()),
+		vscode.commands.registerCommand('nimbus.bisect', () => bisect(context)),
+		vscode.commands.registerCommand('nimbus.openMobileChecks', () => openMobileChecks()),
+		vscode.commands.registerCommand('nimbus.openFlutterLint', () => openFlutterLint()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1551,6 +1568,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 競合を 1 件ずつ解決する。判断がつかないものは Claude に相談文を投げる（T-115）
+		vscode.commands.registerCommand('nimbus.assistConflicts', () =>
+			assistConflicts((text) => {
+				cockpit.reveal();
+				void send(text);
+			})
+		),
 		// エディタから直接頼む（T-171 / T-172）。ファイル名も行番号も打ち直さない
 		vscode.commands.registerCommand(
 			'nimbus.askAboutSelection',
