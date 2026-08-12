@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { NimbusEvent, SessionInitEvent, SessionSummary } from './events';
 import { SessionManager } from './session/SessionManager';
@@ -64,6 +65,7 @@ import { openVulnFixPlan } from './vulnFix';
 import { checkSql } from './sqlSafety';
 import { openCiRepro } from './ciRepro';
 import { openMigrationPlan } from './schemaDiff';
+import { openPreflight } from './preflight';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -75,6 +77,7 @@ import { findFlakyTests } from './flaky';
 import { regenerateNow, watchForRegeneration } from './regenerate';
 import { compareBenchmarks } from './benchmark';
 import { reproduceFromLog } from './reproTest';
+import { importMonitoredIssue } from './errorMonitor';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -186,6 +189,7 @@ import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
+import { planHotfix, prepareRollback } from './rollback';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -646,11 +650,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		if (description === undefined) {
 			return;
 		}
-		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-		if (!root) {
-			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+		const folder = await pickWorkspaceRoot();
+		if (!folder) {
 			return;
 		}
+		const root = folder.uri;
 		const draft = draftSkill(retained, title, description);
 		const target = vscode.Uri.joinPath(root, '.claude', 'skills', draft.name, 'SKILL.md');
 		try {
@@ -2570,6 +2574,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.checkSql', () => checkSql()),
 		vscode.commands.registerCommand('nimbus.openCiRepro', () => openCiRepro()),
 		vscode.commands.registerCommand('nimbus.openMigrationPlan', () => openMigrationPlan()),
+		vscode.commands.registerCommand('nimbus.openPreflight', () => openPreflight()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2620,6 +2625,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 監視ツールの障害をセッションへ（T-142）
+		vscode.commands.registerCommand('nimbus.importMonitoredIssue', () =>
+			importMonitoredIssue((text) => {
+				cockpit.reveal();
+				void send(text);
+			})
+		),
 		// ログから、まず落ちるテストを起こす（T-143）
 		vscode.commands.registerCommand('nimbus.reproduceFromLog', () =>
 			reproduceFromLog((text) => {
@@ -2768,6 +2780,10 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
+		// 戻す手順を出す。走らせない（T-216）
+		vscode.commands.registerCommand('nimbus.prepareRollback', () => prepareRollback({ log })),
+		// 急ぐときの手順。省かない段は省かない（T-144）
+		vscode.commands.registerCommand('nimbus.planHotfix', () => planHotfix({ log })),
 		// 触ったファイルの持ち主（CODEOWNERS）を出す。投げるのは人（T-221）
 		vscode.commands.registerCommand('nimbus.notifyCodeOwners', () => notifyCodeOwners({ log })),
 		vscode.commands.registerCommand('nimbus.showOwnersOfActiveFile', () =>

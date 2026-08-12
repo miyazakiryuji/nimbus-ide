@@ -219,6 +219,18 @@
         "icon": "$(github)"
       },
       {
+        "command": "nimbus.prepareRollback",
+        "title": "戻し方を用意する",
+        "category": "Nimbus",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "nimbus.planHotfix",
+        "title": "ホットフィックスの手順を出す",
+        "category": "Nimbus",
+        "icon": "$(flame)"
+      },
+      {
         "command": "nimbus.notifyCodeOwners",
         "title": "レビューを頼む相手を出す",
         "category": "Nimbus",
@@ -959,6 +971,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.openPreflight",
+        "title": "出す前に見る",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.runMcpTool",
         "title": "MCP ツールを 1 回だけ試す",
         "category": "Nimbus",
@@ -969,6 +986,12 @@
         "title": "ログから再現テストを起こす",
         "category": "Nimbus",
         "icon": "$(debug-rerun)"
+      },
+      {
+        "command": "nimbus.importMonitoredIssue",
+        "title": "監視ツールの障害を取り込む",
+        "category": "Nimbus",
+        "icon": "$(radio-tower)"
       }
     ],
     "menus": {

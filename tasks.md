@@ -43,10 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       再現は T-143（`core/reproTest.ts`）へ渡す。`core/errorMonitor.ts` を骨格＋テストで確保済み
       @session-b 2026-08-13 [P2]
 
-- [ ] T-215 デプロイ前チェックリストの自動実行 — 実装中 @yua 2026-08-13
-- [ ] T-216 ロールバックスクリプトの用意 / T-144 ホットフィックスの最短経路 — 対で実装中
-      `core/rollback.ts` `src/rollback.ts` を確保 @session-c 2026-08-13
-
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
 
@@ -294,7 +290,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🔁 CI/CD
 
-- [ ] T-215 デプロイ前チェックリストの自動実行 [P2]
 
 ### 🌿 ブランチ運用
 
@@ -332,6 +327,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       プロセス内のサーバーへ `InMemoryTransport` で繋ぐので API も課金も発生しない。
       引数はスキーマから型どおりに組み立てる
       — 2026-08-13 / 仕様 [headless-and-mcp-tools](nimbus/docs/specs/headless-and-mcp-tools.md)
+- [x] T-216 / T-144 戻す道と、急ぐ道（戻らないもの＝DB・データ・インフラを名指しする。
+      スクリプトは `--run` が無ければ何もしない。急ぐときもテスト・戻し口・既定ブランチへの戻しは省かない）
+      — 2026-08-13 / 仕様 [rollback-and-hotfix](nimbus/docs/specs/rollback-and-hotfix.md)
+
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
@@ -506,6 +505,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-215 出す前に見る（止めるものと知らせるものを分ける）— 2026-08-13 / 仕様 [preflight](nimbus/docs/specs/preflight.md)
 - [x] T-125 マイグレーションを起こす（壊す操作を先に・NOT NULL の落とし穴を指摘）— 2026-08-13 / 仕様 [schema-diff](nimbus/docs/specs/schema-diff.md)
 - [x] T-132 CI を手元で再現する（環境の版を突き合わせ・CI 専用の行は落とす）— 2026-08-13 / 仕様 [ci-repro](nimbus/docs/specs/ci-repro.md)
 - [x] T-126 / T-127 SQL を流す前に見る（何が起きるかを書く・DB には繋がない）— 2026-08-13 / 仕様 [sql-safety](nimbus/docs/specs/sql-safety.md)
