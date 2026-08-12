@@ -69,6 +69,7 @@ import { showImpact } from './impact';
 import { editPermissionRules } from './permissionRules';
 import { importPrReview } from './prReview';
 import { findFlakyTests } from './flaky';
+import { regenerateNow, watchForRegeneration } from './regenerate';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -2553,6 +2554,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 元を直したら生成物も作り直す（T-141）
+		vscode.commands.registerCommand('nimbus.regenerate', () => regenerateNow()),
+		watchForRegeneration(log),
 		// テストを何度か回して揺れているものを見つける（T-133）
 		vscode.commands.registerCommand('nimbus.findFlakyTests', () => findFlakyTests()),
 		// PR のレビュー指摘をセッションへ（T-116）

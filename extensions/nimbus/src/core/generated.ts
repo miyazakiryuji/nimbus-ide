@@ -112,6 +112,76 @@ export function regenerationAdvice(generatedPath: string): string | undefined {
 	return source ? `${source} を直してから、生成ツールを回し直します` : undefined;
 }
 
+/**
+ * 元を直したら、生成物も作り直す（tasks.md T-141）。
+ *
+ * `model.dart` の `@freezed` を触ったのに `model.g.dart` を作り直し忘れると、
+ * **型エラーではなく「古い実装が静かに動く」**という、いちばん気づきにくい壊れかたをする。
+ * 直した瞬間に「作り直しますか」と聞けるように、対応づけと作り直しかたをここに置く。
+ */
+
+/** そのファイルから生成されうる名前（実在するかは呼び出し側が見る） */
+export function generatedSiblingsOf(sourcePath: string): string[] {
+	const path = sourcePath.replace(/\\/g, '/');
+	const dart = /^(.*)\.dart$/.exec(path);
+	if (dart && !isGeneratedPath(path)) {
+		return ['g', 'freezed', 'gr', 'config'].map((kind) => `${dart[1]}.${kind}.dart`);
+	}
+	const proto = /^(.*)\.proto$/.exec(path);
+	if (proto) {
+		return ['pb.go', 'pb.ts', 'pb.dart', '_pb2.py'].map((suffix) =>
+			suffix.startsWith('_') ? `${proto[1]}${suffix}` : `${proto[1]}.${suffix}`
+		);
+	}
+	return [];
+}
+
+/** 生成物を作り直すコマンド。プロジェクトの形から決める */
+export interface RegenerateCommand {
+	command: string;
+	/** なぜこれなのか。人が確かめられるようにする */
+	reason: string;
+}
+
+/**
+ * どの生成ツールを回すか。
+ * **見つからなければ undefined。** 当てずっぽうのコマンドを走らせると、
+ * 別のものを壊しかねない（`build_runner` が無いのに走らせる等）。
+ *
+ * @param files プロジェクト直下にあるファイル名（`pubspec.yaml` など）
+ * @param manifest `pubspec.yaml` / `package.json` の中身。依存を見て決める
+ */
+export function regenerateCommandFor(files: readonly string[], manifest: string): RegenerateCommand | undefined {
+	const has = (name: string): boolean => files.includes(name);
+	if (has('pubspec.yaml')) {
+		if (/\bbuild_runner\b/.test(manifest)) {
+			return {
+				command: 'dart run build_runner build --delete-conflicting-outputs',
+				reason: 'pubspec.yaml に build_runner があります'
+			};
+		}
+		// build_runner が無い Flutter プロジェクトでは、生成物はそもそも無い
+		return undefined;
+	}
+	if (has('package.json')) {
+		if (/"(prisma)"\s*:/.test(manifest)) {
+			return { command: 'npx prisma generate', reason: 'package.json に prisma があります' };
+		}
+		if (/"(graphql-codegen|@graphql-codegen\/cli)"\s*:/.test(manifest)) {
+			return { command: 'npx graphql-codegen', reason: 'package.json に graphql-codegen があります' };
+		}
+		// `npm run generate` があればそれを使う（プロジェクトが決めた入口を尊重する）
+		if (/"generate"\s*:/.test(manifest)) {
+			return { command: 'npm run generate', reason: 'package.json に generate スクリプトがあります' };
+		}
+		return undefined;
+	}
+	if (has('go.mod')) {
+		return { command: 'go generate ./...', reason: 'go.mod があります' };
+	}
+	return undefined;
+}
+
 /** 畳んだときに出す 1 行。件数と行数だけは必ず見せる */
 export function summarizeGenerated(files: readonly { path: string; added: number; removed: number }[]): string {
 	if (files.length === 0) {

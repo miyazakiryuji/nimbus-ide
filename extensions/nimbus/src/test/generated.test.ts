@@ -9,9 +9,11 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import {
+	generatedSiblingsOf,
 	hasGeneratedHeader,
 	isGenerated,
 	isGeneratedPath,
+	regenerateCommandFor,
 	regenerationAdvice,
 	sourceFileFor,
 	summarizeGenerated
@@ -130,4 +132,48 @@ test('生成元があるものは「直してから回し直す」と伝える',
 		'lib/model.dart を直してから、生成ツールを回し直します'
 	);
 	assert.strictEqual(regenerationAdvice('src/handwritten.ts'), undefined);
+});
+
+test('元ファイルから生成されうる名前を出す（T-141）', () => {
+	assert.deepStrictEqual(generatedSiblingsOf('lib/model.dart'), [
+		'lib/model.g.dart',
+		'lib/model.freezed.dart',
+		'lib/model.gr.dart',
+		'lib/model.config.dart'
+	]);
+	assert.deepStrictEqual(generatedSiblingsOf('api/svc.proto'), [
+		'api/svc.pb.go',
+		'api/svc.pb.ts',
+		'api/svc.pb.dart',
+		'api/svc_pb2.py'
+	]);
+});
+
+test('生成物そのものからは、さらに生成物を導かない（無限に増えるので）', () => {
+	assert.deepStrictEqual(generatedSiblingsOf('lib/model.g.dart'), []);
+	assert.deepStrictEqual(generatedSiblingsOf('src/index.ts'), []);
+});
+
+test('作り直すコマンドはプロジェクトの形から決める', () => {
+	assert.deepStrictEqual(
+		[
+			regenerateCommandFor(['pubspec.yaml'], 'dev_dependencies:\n  build_runner: ^2.4.0\n')?.command,
+			regenerateCommandFor(['package.json'], '{"devDependencies":{"prisma":"^5"}}')?.command,
+			regenerateCommandFor(['package.json'], '{"scripts":{"generate":"x"}}')?.command,
+			regenerateCommandFor(['go.mod'], '')?.command
+		],
+		[
+			'dart run build_runner build --delete-conflicting-outputs',
+			'npx prisma generate',
+			'npm run generate',
+			'go generate ./...'
+		]
+	);
+});
+
+test('生成ツールが無ければ当てずっぽうのコマンドを出さない', () => {
+	// build_runner の無い Flutter プロジェクトで走らせると、別のものを壊しかねない
+	assert.strictEqual(regenerateCommandFor(['pubspec.yaml'], 'dependencies:\n  flutter:\n'), undefined);
+	assert.strictEqual(regenerateCommandFor(['package.json'], '{"dependencies":{"react":"^18"}}'), undefined);
+	assert.strictEqual(regenerateCommandFor([], ''), undefined);
 });

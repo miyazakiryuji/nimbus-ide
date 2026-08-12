@@ -904,6 +904,12 @@
         "title": "脆弱性の警告を直す順に並べる",
         "category": "Nimbus",
         "icon": "$(shield)"
+      },
+      {
+        "command": "nimbus.regenerate",
+        "title": "生成物を作り直す",
+        "category": "Nimbus",
+        "icon": "$(sync)"
       }
     ],
     "menus": {
@@ -1365,6 +1371,11 @@
           "type": "boolean",
           "default": true,
           "description": "生成物（*.g.dart / *.freezed.dart / ロックファイルなど）を直接書き換えようとしたときに止めて、代わりに直す先を伝えます。"
+        },
+        "nimbus.generate.offerAfterSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "生成物のある元ファイル（model.dart など）を保存したときに、生成物を作り直すか聞きます。既定は無効です。"
         }
       }
     },
