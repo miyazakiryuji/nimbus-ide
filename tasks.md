@@ -40,8 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-045 解説モード。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-149 複数ステップのワークフロー定義。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -200,7 +198,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-048 セッションの共有リンク — 会話＋差分をそのまま人に見せる。レビュー依頼や質問が楽になる。
       ※会話と差分には秘匿情報が混じるので、サニタイザ通過と公開範囲の設計が前提 [P2]
-- [ ] T-049 チーム設定の同期 — CLAUDE.md やスキルをリポジトリ経由で配って全員の足並みを揃える（T-043 と対）[P2]
 - [ ] T-212 権限管理（企業導入向け）[P3]
 
 ### ⏰ 時間軸
@@ -522,6 +519,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-045 解説モード（何をしたかではなく、なぜそうしたかを 1 行で添えさせる）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
+- [x] T-049 チーム設定の同期（リポジトリの配布物との差分を知らせる）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
+- [x] T-149 複数ステップのワークフロー定義（自動では進めない・位置を必ず出す）— 2026-08-13 / 仕様 [workflow-and-team](nimbus/docs/specs/workflow-and-team.md)
 - [x] T-187 見積もり表示（予測ではなく、直近 5 ターンの中央値）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
 - [x] T-188 選択肢の比較表（「まだ変更しないで」を型に入れる）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
 - [x] T-189 意見の相違の記録（どちらが正しいかを決めつけさせない）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
