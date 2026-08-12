@@ -351,6 +351,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-116 PR レビューの取り込み（指摘を要約せず差分つきで渡す・返信は下書きまで）
+      — 2026-08-13 / 仕様 [pr-review](nimbus/docs/specs/pr-review.md)
+
 - [x] T-079 考古学モード（`git blame` の経緯ごと渡して「なぜこうなっているのか」を読み取らせる。
       推測を事実として書かせない）— 2026-08-13 / 仕様 [archaeology](nimbus/docs/specs/archaeology.md)
 
