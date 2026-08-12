@@ -688,6 +688,24 @@
         "title": "依存のライセンスを見る",
         "category": "Nimbus",
         "icon": "$(law)"
+      },
+      {
+        "command": "nimbus.estimate",
+        "title": "これまでの実績から見積もる",
+        "category": "Nimbus",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "nimbus.compareOptions",
+        "title": "実装方針を比べてもらう",
+        "category": "Nimbus",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "nimbus.recordDisagreement",
+        "title": "意見の相違を残す",
+        "category": "Nimbus",
+        "icon": "$(git-compare)"
       }
     ],
     "menus": {

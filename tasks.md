@@ -40,7 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-187 見積もり表示。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -163,8 +162,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 
 **「何を作るか」ではなく「どう頼むか／どう返すか」の層。** ここが弱いと、他が良くても事故る。
 
-- [ ] T-188 選択肢の比較表 — 複数の実装方針をメリデメつきで並べ、選んだ理由も記録する [P2]
-- [ ] T-189 意見の相違の記録 — 自分の考えと Claude の提案の食い違いを残し、後から検証する [P2]
 - [ ] T-190 交代モード — 人間が書く番／エージェントが書く番を明示的に切り替える [P3]
 - [ ] T-191 肩越しモード — 自分が書く横で待機し、必要なときだけ口を出す [P3]
 
@@ -523,6 +520,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-187 見積もり表示（予測ではなく、直近 5 ターンの中央値）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
+- [x] T-188 選択肢の比較表（「まだ変更しないで」を型に入れる）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
+- [x] T-189 意見の相違の記録（どちらが正しいかを決めつけさせない）— 2026-08-13 / 仕様 [dialogue](nimbus/docs/specs/dialogue.md)
 - [x] T-015 デバッグモード（生イベントの時系列ビューア）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
 - [x] T-050 監査ログ（日付ごとの JSONL・サニタイズしてから書く）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
 - [x] T-056 アンビエント表示（走っている間だけ、いまのツールを視界の端に）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)

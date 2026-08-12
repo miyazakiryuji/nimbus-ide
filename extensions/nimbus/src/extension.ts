@@ -49,6 +49,7 @@ import { checkApiResponse, generateMockResponse } from './apiCheck';
 import { createSandbox } from './sandbox';
 import { scheduleRun, showSchedule, watchSchedule } from './schedule';
 import { openPromptStats } from './promptStats';
+import { openLicenses } from './licenses';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -92,6 +93,8 @@ import { exportBundle, importBundle } from './bundleCommands';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
 import { toAuditRecord, toJsonLine } from './core/audit';
+import { describeEstimate, estimate } from './core/estimate';
+import { COMPARE_OPTIONS_PROMPT, disagreementPrompt } from './core/dialogue';
 import { runningTool } from './core/activity';
 import {
 	BUILTIN_PROFILES,
@@ -617,6 +620,42 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/**
+	 * 見積もり（tasks.md T-187）。
+	 * **未来は予測しない。** このセッションで実際に起きたことの中央値を出す。
+	 */
+	async function showEstimate(): Promise<void> {
+		const value = estimate(retained);
+		const text = describeEstimate(value);
+		log(`[estimate] ${text}`);
+		if (value.samples === 0) {
+			void vscode.window.showInformationMessage(`Nimbus: ${text}`);
+			return;
+		}
+		void vscode.window.showInformationMessage(`Nimbus: ${text}`, { modal: false });
+	}
+
+	/** 意見の相違を残す（T-189）。どちらが正しいかは決めつけさせない */
+	async function recordDisagreement(): Promise<void> {
+		const mine = await vscode.window.showInputBox({
+			title: 'Nimbus: 意見の相違を残す',
+			prompt: 'あなたの考え',
+			placeHolder: '例: 既存の設計を活かすべきだと思う'
+		});
+		if (!mine) {
+			return;
+		}
+		const theirs = await vscode.window.showInputBox({
+			title: 'Nimbus: 意見の相違を残す',
+			prompt: 'Claude の提案の要点'
+		});
+		if (theirs === undefined) {
+			return;
+		}
+		cockpit.reveal();
+		await send(disagreementPrompt(mine, theirs));
 	}
 
 	/** 監査ログの置き場所（T-050）。globalStorage に日付ごとの JSONL で残す */
@@ -1925,6 +1964,10 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.settings', settingsView),
 		vscode.window.registerTreeDataProvider('nimbus.timeline', timelineView),
 		vscode.commands.registerCommand('nimbus.showAuditLog', () => showAuditLog()),
+		// 見積もり（T-187）と、決めたことの記録（T-060 / T-188 / T-189）
+		vscode.commands.registerCommand('nimbus.estimate', () => showEstimate()),
+		vscode.commands.registerCommand('nimbus.compareOptions', () => void send(COMPARE_OPTIONS_PROMPT)),
+		vscode.commands.registerCommand('nimbus.recordDisagreement', () => recordDisagreement()),
 		// 設定のパッケージ配布（T-043）
 		vscode.commands.registerCommand('nimbus.exportBundle', () => exportBundle((text) => sanitizer.detect(text), log)),
 		vscode.commands.registerCommand('nimbus.importBundle', () => importBundle(log)),
@@ -2031,6 +2074,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.scheduleRun', () => scheduleRun(context)),
 		vscode.commands.registerCommand('nimbus.showSchedule', () => showSchedule(context)),
 		vscode.commands.registerCommand('nimbus.openPromptStats', () => openPromptStats()),
+		vscode.commands.registerCommand('nimbus.openLicenses', () => openLicenses()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
