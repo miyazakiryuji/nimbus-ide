@@ -23,13 +23,6 @@ export interface ClaudeMdSection {
 	body: string;
 }
 
-export interface ClaudeMdFile {
-	path: string;
-	origin: ClaudeMdOrigin;
-	/** 表示用の短い名前（`~` 短縮・プロジェクト相対） */
-	label: string;
-}
-
 /**
  * どの階層の CLAUDE.md かを決める。
  *

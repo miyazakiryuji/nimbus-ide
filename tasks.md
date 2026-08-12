@@ -171,6 +171,8 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 
 **書かせる**
 
+- [ ] T-102 編集 → 解析 → 再編集の自動ループ — lint / analyzer の出力をそのままフィードバックに回し、
+      人間が見る前に整えておく（回数上限つき）[P2]
 - [ ] T-103 プロジェクト固有の規約適用 — 既存コードの書き方（命名・レイヤ構成・状態管理の流儀）を
       抽出して指示に混ぜる [P2]
 
@@ -191,7 +193,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
       （Flutter の major バージョンアップのような場面）[P2]
 - [ ] T-111 段階的リファクタの進捗管理 — 「全 120 箇所中 48 箇所置換済み」のようにチェックリスト化して、
       途中から再開できるように [P2]
-- [ ] T-112 デッドコード検出と削除提案 [P3]
 - [ ] T-175 **型定義の自動添付** — 使おうとしている API の実際のシグネチャを渡す（T-101 の前段）[P1]
 - [ ] T-176 リポジトリを開いた瞬間の構造要約カード — 何のプロジェクトで、どこに何があるか [P2]
 - [ ] T-177 スニペット化 — 生成された定型パターンを保存して使い回す [P3]
@@ -447,9 +448,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
-- [x] T-102 編集 → 解析 → 再編集の自動ループ（T-101 の auto モード。lint の警告まで回す設定を足した。
-      回数上限つき）— 2026-08-13 / 仕様 [verify-edits](nimbus/docs/specs/verify-edits.md)
-
 - [x] T-004 §6 の画面確認（6 項目を GUI テストのケースに起こし 13/13 通過。あわせて GUI テストが
       開発ビルドで動いていなかった不具合 2 件を修正）— 2026-08-13 / [f3-f6 §6](nimbus/docs/testing/f3-f6.md)
 
@@ -495,6 +493,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-112 使われていない export を挙げる（死骸と「export を外せるだけ」を分ける）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-178 / T-137 命名のゆれとそっくりな実装を見せる — 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-159 / T-082 変更のようす（統計と、テストが伴っていないときの指摘）— 2026-08-13 / 仕様 [change-stats](nimbus/docs/specs/change-stats.md)
 - [x] T-062 リリースノートの下書きを履歴から作る（分類・迷ったらその他）— 2026-08-13 / 仕様 [release-notes](nimbus/docs/specs/release-notes.md)
