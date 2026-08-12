@@ -45,8 +45,17 @@
           "type": "webview"
         },
         {
+          "id": "nimbus.approvals",
+          "name": "承認待ち",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.skills",
           "name": "スキル"
+        },
+        {
+          "id": "nimbus.claudeMd",
+          "name": "CLAUDE.md"
         },
         {
           "id": "nimbus.context",
@@ -115,6 +124,18 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "nimbus.refreshClaudeMd",
+        "title": "CLAUDE.md の一覧を更新",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.addClaudeMdSection",
+        "title": "CLAUDE.md に節を足す",
+        "category": "Nimbus",
+        "icon": "$(add)"
+      },
+      {
         "command": "nimbus.useSkill",
         "title": "コックピットで使う",
         "category": "Nimbus",
@@ -131,6 +152,30 @@
         "title": "文脈を圧縮する（コンパクション）",
         "category": "Nimbus",
         "icon": "$(fold)"
+      },
+      {
+        "command": "nimbus.approvals.allow",
+        "title": "許可",
+        "category": "Nimbus",
+        "icon": "$(check)"
+      },
+      {
+        "command": "nimbus.approvals.deny",
+        "title": "拒否",
+        "category": "Nimbus",
+        "icon": "$(close)"
+      },
+      {
+        "command": "nimbus.approvals.alwaysAllow",
+        "title": "今後この種類は常に許可",
+        "category": "Nimbus",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "nimbus.approvals.denyAll",
+        "title": "承認待ちをすべて拒否",
+        "category": "Nimbus",
+        "icon": "$(clear-all)"
       }
     ],
     "menus": {
@@ -146,6 +191,11 @@
       ],
       "view/title": [
         {
+          "command": "nimbus.approvals.denyAll",
+          "when": "view == nimbus.approvals",
+          "group": "navigation"
+        },
+        {
           "command": "nimbus.refreshUsage",
           "when": "view == nimbus.usage",
           "group": "navigation"
@@ -153,6 +203,16 @@
         {
           "command": "nimbus.refreshSkills",
           "when": "view == nimbus.skills",
+          "group": "navigation"
+        },
+        {
+          "command": "nimbus.addClaudeMdSection",
+          "when": "view == nimbus.claudeMd",
+          "group": "navigation"
+        },
+        {
+          "command": "nimbus.refreshClaudeMd",
+          "when": "view == nimbus.claudeMd",
           "group": "navigation"
         },
         {
@@ -166,6 +226,21 @@
           "command": "nimbus.useSkill",
           "when": "view == nimbus.skills && viewItem =~ /nimbusSkill/",
           "group": "inline"
+        },
+        {
+          "command": "nimbus.approvals.allow",
+          "when": "view == nimbus.approvals && viewItem =~ /nimbusApproval/ && nimbus.approvalQueueMode",
+          "group": "inline@1"
+        },
+        {
+          "command": "nimbus.approvals.deny",
+          "when": "view == nimbus.approvals && viewItem =~ /nimbusApproval/ && nimbus.approvalQueueMode",
+          "group": "inline@2"
+        },
+        {
+          "command": "nimbus.approvals.alwaysAllow",
+          "when": "view == nimbus.approvals && viewItem =~ /nimbusApprovalRule/ && nimbus.approvalQueueMode",
+          "group": "nimbus@1"
         }
       ]
     },
@@ -186,6 +261,19 @@
           "type": "boolean",
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+        },
+        "nimbus.permissions.queueApprovals": {
+          "type": "boolean",
+          "default": false,
+          "description": "承認をモーダルで聞かず、「承認待ち」ビューに積んで順に処理します。複数セッションを並列で走らせるときに、どのセッションが何で止まっているかを 1 か所で見られます。"
+        },
+        "nimbus.permissions.alwaysAllow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "確認せずに許可するツールの一覧。承認時の「今後この種類は常に許可」でここに追加されます。書きかたは Read（そのツール全部）／ Write(*.md)（拡張子）／ Bash(npm test)（コマンドの前方一致）。取り返しがつかない操作（rm -rf など）はルールに関わらず毎回確認します。"
         },
         "nimbus.notifications.enabled": {
           "type": "boolean",
@@ -234,6 +322,16 @@
           "minimum": 1,
           "maximum": 10,
           "description": "同時に実行するタスク（Claude セッション）の上限。上限に達したタスクは待機し、空きが出ると自動で開始します。"
+        },
+        "nimbus.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+        },
+        "nimbus.dialogue.confirmVaguePrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "曖昧な指示を送ろうとしたとき、走らせる前に足りていない情報を確認します。対象のファイル名などが書かれていれば確認しません。"
         }
       }
     },
@@ -258,7 +356,9 @@
     "test": "node --test out/test/*.test.js"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.226"
+    "@anthropic-ai/claude-agent-sdk": "^0.3.226",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
   },
   "repository": {
     "type": "git",

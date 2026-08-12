@@ -13,6 +13,7 @@ import { SessionManager } from './session/SessionManager';
 import { createPermissionBroker } from './permissions';
 import { CockpitViewProvider } from './cockpit/CockpitViewProvider';
 import { createSanitizer } from './sanitizer';
+import { assessClarity, formatClarification } from './core/clarify';
 import { reportMissingExecutable, resolveClaudeExecutable } from './claudeExecutable';
 import { ContextViewProvider } from './contextView';
 import { ProposedEditPreviewer } from './proposedEdit';
@@ -23,10 +24,14 @@ import { BoardViewProvider } from './tasks/BoardViewProvider';
 import { buildYuaSystemPrompt } from './help/yua';
 import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
+import { addClaudeMdSection, ClaudeMdViewProvider } from './claudeMdView';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
 import { buildNotifyCommand, oneLine } from './core/notify';
+import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
+import { ApprovalsViewProvider } from './approvalsView';
+import type { ApprovalDecision, PendingApproval } from './permissions';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -41,8 +46,12 @@ export function activate(context: vscode.ExtensionContext): void {
 	const previewer = new ProposedEditPreviewer();
 	const contextView = new ContextViewProvider();
 	const skillsView = new SkillsViewProvider();
+	const claudeMdView = new ClaudeMdViewProvider();
 	const usageView = new UsageViewProvider();
 	const activityView = new ActivityViewProvider();
+	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
+	const approvalsView = new ApprovalsViewProvider();
+	const approvals = vscode.window.createTreeView('nimbus.approvals', { treeDataProvider: approvalsView });
 	let pendingApprovals = 0;
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
@@ -62,8 +71,16 @@ export function activate(context: vscode.ExtensionContext): void {
 			pendingApprovals = pending.length;
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
 			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
+			// 横断キュー（T-010）。並列で走らせると「誰が何で止まっているか」がここにしか出ない
+			approvalsView.update(pending);
+			approvals.badge = pending.length > 0
+				? { value: pending.length, tooltip: `承認待ち ${pending.length} 件` }
+				: undefined;
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
-		}
+		},
+		queueMode: () => isApprovalQueueMode(),
+		alwaysAllowRules: () => vscode.workspace.getConfiguration('nimbus').get<string[]>('permissions.alwaysAllow') ?? [],
+		onAlwaysAllow: (rule) => saveAlwaysAllowRule(rule)
 	});
 
 	const sessions = new SessionManager(
@@ -271,7 +288,44 @@ export function activate(context: vscode.ExtensionContext): void {
 	 * サニタイザはログ・DB 向けに既にあるが、**送信は逆向き**（外に出る前）なので別経路で効かせる。
 	 * @returns 実際に送る文字列。undefined なら送らない
 	 */
+	/**
+	 * 曖昧な指示のまま走らせない（T-185）。
+	 *
+	 * 曖昧なまま走らせると、エージェントは自分で前提を埋めて動き出す。違っていたと分かるのは
+	 * たいてい何十ファイルも書き換えたあと。だから走らせる前に、足りていないものを名指しで聞く。
+	 * ただし**毎回聞かれる仕組みは無視されるようになる**ので、判定は保守的にしてある。
+	 */
+	async function confirmIfVague(text: string): Promise<boolean> {
+		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('dialogue.confirmVaguePrompt') === false) {
+			return true;
+		}
+		// 会話が続いているなら前のやり取りに文脈がある
+		const hasHistory = activeSessionId !== undefined && retained.length > 0;
+		const assessment = assessClarity(text, hasHistory);
+		if (assessment.level === 'ok') {
+			return true;
+		}
+		const SEND = 'このまま送る';
+		const EDIT = '書き直す';
+		const choice = await vscode.window.showWarningMessage(
+			'指示に足りていないものがあります。このまま走らせると、Claude が自分で前提を埋めます。',
+			{ modal: true, detail: formatClarification(assessment) },
+			SEND,
+			EDIT
+		);
+		if (choice === SEND) {
+			log(`[dialogue] 曖昧なまま送信（${assessment.issues.length} 件の指摘）`);
+			return true;
+		}
+		// Esc で閉じた場合も undefined。答えなかったものを送信に倒さない
+		log('[dialogue] 書き直しのため送信を取りやめました');
+		return false;
+	}
+
 	async function checkBeforeSending(text: string): Promise<string | undefined> {
+		if (!(await confirmIfVague(text))) {
+			return undefined;
+		}
 		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('safety.scanBeforeSend') === false) {
 			return text;
 		}
@@ -353,6 +407,55 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	/**
+	 * 承認をキューに積むモード（T-010）。既定は無効＝これまでどおりその場でモーダルを出す。
+	 * 有効にすると、走っている全セッションの承認待ちが「承認待ち」ビューに集まり、順に片付けられる。
+	 */
+	function isApprovalQueueMode(): boolean {
+		return vscode.workspace.getConfiguration('nimbus').get<boolean>('permissions.queueApprovals') === true;
+	}
+
+	/**
+	 * 「今後この種類は常に許可」を設定へ保存する（T-038）。
+	 *
+	 * ルールはプロジェクトごとに違う（`Bash(npm test)` は、そのリポジトリでしか意味がない）ので、
+	 * フォルダが開いていればワークスペース設定へ。開いていなければユーザー設定へ落とす。
+	 * 押し間違いは取り返しがつくべきなので、保存したことを伝えたうえで「元に戻す」を添える。
+	 */
+	async function saveAlwaysAllowRule(rule: string): Promise<void> {
+		const config = vscode.workspace.getConfiguration('nimbus');
+		const current = config.get<string[]>('permissions.alwaysAllow') ?? [];
+		if (current.includes(rule)) {
+			return;
+		}
+		const target = vscode.workspace.workspaceFolders?.length
+			? vscode.ConfigurationTarget.Workspace
+			: vscode.ConfigurationTarget.Global;
+		await config.update('permissions.alwaysAllow', [...current, rule], target);
+		log(`[permission] ルールを保存しました: ${rule}`);
+		const UNDO = '元に戻す';
+		const where = target === vscode.ConfigurationTarget.Workspace ? 'このワークスペース' : 'ユーザー設定';
+		const choice = await vscode.window.showInformationMessage(
+			`Nimbus: 今後「${rule}」は確認せずに許可します（${where}）。`,
+			UNDO
+		);
+		if (choice === UNDO) {
+			const saved = config.get<string[]>('permissions.alwaysAllow') ?? [];
+			await config.update('permissions.alwaysAllow', saved.filter((r) => r !== rule), target);
+			log(`[permission] ルールを取り消しました: ${rule}`);
+		}
+	}
+
+	/** キューの行から答える（T-010）。既に片付いていたら黙って何もしない */
+	function decideApproval(entry: PendingApproval | undefined, decision: ApprovalDecision): void {
+		const target = entry ?? approvalsView.list()[0];
+		if (!target) {
+			void vscode.window.showInformationMessage('Nimbus: 承認待ちはありません。');
+			return;
+		}
+		broker.decide(target.id, decision);
+	}
+
+	/**
 	 * 暴走の緊急停止（tasks.md T-057）。走っているセッションを全部止める。
 	 * 「1 つずつ中断して回る」では間に合わないので、確認 1 回で全部に効かせる。
 	 * 成果（worktree・未コミットの変更）には触らない — 止めることと捨てることは別。
@@ -376,8 +479,11 @@ export function activate(context: vscode.ExtensionContext): void {
 			return;
 		}
 		tasks.pauseAutoStart();
+		// 承認待ちも片付ける。答えを待っているものが残ると、止めたはずのセッションが
+		// 「承認さえすれば動ける」状態でぶら下がり続ける（キューモードでは特に気づけない）
+		const denied = broker.denyAll();
 		const stopped = await sessions.stopAll();
-		log(`[safety] 緊急停止: ${stopped} 件のセッションを止めました`);
+		log(`[safety] 緊急停止: ${stopped} 件のセッションを止めました${denied > 0 ? `（承認待ち ${denied} 件も拒否）` : ''}`);
 		updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		void vscode.window.showInformationMessage(`Nimbus: ${stopped} 件のセッションを止めました。`);
 	}
@@ -608,8 +714,40 @@ export function activate(context: vscode.ExtensionContext): void {
 		status,
 		stopButton,
 		previewer,
+		approvals,
+		approvalsView,
+		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは
+		// モーダルが正の入口なので、ボタンは package.json 側の when で隠してある
+		vscode.commands.registerCommand('nimbus.approvals.allow', (entry?: PendingApproval) =>
+			decideApproval(entry, 'allow')
+		),
+		vscode.commands.registerCommand('nimbus.approvals.deny', (entry?: PendingApproval) =>
+			decideApproval(entry, 'deny')
+		),
+		// 「今後この種類は常に許可」をルールとして残す（T-038）
+		vscode.commands.registerCommand('nimbus.approvals.alwaysAllow', (entry?: PendingApproval) =>
+			decideApproval(entry, 'always-allow')
+		),
+		// 待っているものを全部断る。「全部見ずに帰る」ときの出口
+		vscode.commands.registerCommand('nimbus.approvals.denyAll', async () => {
+			const waiting = approvalsView.list().length;
+			if (waiting === 0) {
+				void vscode.window.showInformationMessage('Nimbus: 承認待ちはありません。');
+				return;
+			}
+			const CONFIRM = 'すべて拒否';
+			const choice = await vscode.window.showWarningMessage(
+				`承認待ちの ${waiting} 件をすべて拒否します。`,
+				{ modal: true, detail: 'セッションは止まりません。拒否されたことを伝えて、そのまま続きを進めます。' },
+				CONFIRM
+			);
+			if (choice === CONFIRM) {
+				log(`[permission] まとめて拒否: ${broker.denyAll()} 件`);
+			}
+		}),
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
 		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
+		vscode.window.registerTreeDataProvider('nimbus.claudeMd', claudeMdView),
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
 		// 手動のコンパクション（T-022）。溜まってきたと感じた時点で自分で起こせるようにする。
@@ -638,6 +776,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.newTask', () => newTask()),
 		vscode.commands.registerCommand('nimbus.findSkill', () => findSkill()),
 		vscode.commands.registerCommand('nimbus.refreshSkills', () => skillsView.refresh()),
+		vscode.commands.registerCommand('nimbus.refreshClaudeMd', () => claudeMdView.refresh()),
+		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
 		// 一覧から直接「使う」。コックピットへ /<name> を送る
 		vscode.commands.registerCommand('nimbus.useSkill', async (node?: { skill?: { name?: string } }) => {
 			const name = node?.skill?.name;
@@ -649,6 +789,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		}),
 		// フォルダを開き直したら一覧も作り直す
 		vscode.workspace.onDidChangeWorkspaceFolders(() => skillsView.refresh()),
+		// キューモードの切り替えを行のボタンの出し分けに反映する（T-010）
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration('nimbus.permissions.queueApprovals')) {
+				void vscode.commands.executeCommand('setContext', 'nimbus.approvalQueueMode', isApprovalQueueMode());
+			}
+		}),
 		vscode.commands.registerCommand('nimbus.askYua', async () => {
 			await vscode.commands.executeCommand('nimbus.help.focus');
 		}),
@@ -661,6 +807,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
 		new vscode.Disposable(() => sessions.closeAll())
 	);
+
+	void vscode.commands.executeCommand('setContext', 'nimbus.approvalQueueMode', isApprovalQueueMode());
 
 	log('[nimbus] 拡張を有効化しました');
 
@@ -699,6 +847,11 @@ function buildOptions(): Partial<Options> {
 	const executable = resolveClaudeExecutable();
 	if (executable) {
 		options.pathToClaudeCodeExecutable = executable;
+	}
+	// LSP をツールとして渡す（T-098）。定義・参照・型を grep の総当たりより正確に引ける。
+	// 拡張ホストの中で動く MCP サーバーなので、別プロセスは立たない
+	if (vscode.workspace.getConfiguration('nimbus').get<boolean>('lsp.enabled') !== false) {
+		options.mcpServers = { ...options.mcpServers, [LSP_SERVER_NAME]: lspMcpServer() };
 	}
 	return options;
 }

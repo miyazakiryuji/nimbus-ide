@@ -49,7 +49,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       **エージェント抜きの単体実行は SDK に API が無く未着手**（仕様の「やらないこと」に理由）。残るは配線
       → 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md) @session-a 2026-08-13 [P2]
 
-- [ ] T-185 **着手前の確認強制** — 曖昧な指示のまま走らせない @session-doctor 2026-08-13 [P1]
 
 - [ ] T-008 / T-009 **CLAUDE.md 専用のタブ** — 実装・単体テスト（10 件全通過）・仕様・確認項目まで完了。
       残るは配線のコミット（`extension.ts` / `package.json` に他セッションの作業が同居しているため待ち）と
@@ -61,11 +60,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 - [ ] T-033 **スクラッチファイル**（IntelliJ 由来）— 実装・型チェック・単体テスト（13,177 件全通過）
       まで完了。残るは画面確認とパッケージ版スモーク（`nimbus/docs/testing/scratch-files.md` §2・§3）
       → 仕様 `nimbus/docs/specs/scratch-files.md` @claude 2026-08-13 [P1]
-- [ ] T-010 承認の横断キュー — 走っている全セッションの承認待ちを 1 か所に集めて順に処理する @session-b 2026-08-13 [P1]
-- [ ] T-038 **インライン権限承認 UI** — 差分やコマンドの内容を見ながらその場で Allow / Deny。
-      承認と同時に「今後この種類は常に許可」をワンクリックでルール化する（T-028 と繋がる）。
-      今は `permissions.ts` がモーダル（許可／このセッションでは常に許可／拒否）で、
-      「常に許可」もセッション内に留まる @session-b 2026-08-13 [P1]
 
 ## 次にやる
 
@@ -517,6 +511,11 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-010 承認の横断キュー（全セッションの承認待ちを 1 ビューに集約・危険な順・キューモードで順に処理）
+      — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
+- [x] T-038 インライン権限承認 UI（「今後この種類は常に許可」をルール化して `settings.json` へ保存）
+      — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
+
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
@@ -547,3 +546,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-234 重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
 - [x] T-002 `localize()` の "VS Code" 直書き 152 箇所 — 2026-08-13 / nls の集約点（`_format`）で置換。1 ファイルの変更で全部に効き、upstream の新しい文言にも追随する
 - [x] T-005 Copilot をソースとビルドスクリプトからも除去 — 2026-08-13 / `extensions/copilot/`（4193 ファイル・1.8GB）を削除し、npm スクリプトとビルド配線からも外した。**依存 `@github/copilot-sdk` `@vscode/copilot-api` はコアの agent host が使うため残す**（台帳に理由を記載）
+- [x] T-185 着手前の確認強制（曖昧な指示を走らせる前に止める）— 2026-08-13 / 仕様 [pre-send-confirmation](nimbus/docs/specs/pre-send-confirmation.md) / 判定は `src/core/clarify.ts`・テスト 12 件
