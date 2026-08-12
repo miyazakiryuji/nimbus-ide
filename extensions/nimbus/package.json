@@ -247,6 +247,12 @@
         "title": "読ませたくないファイルを指定する",
         "category": "Nimbus",
         "icon": "$(shield)"
+      },
+      {
+        "command": "nimbus.openDigest",
+        "title": "ふりかえりを開く",
+        "category": "Nimbus",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
