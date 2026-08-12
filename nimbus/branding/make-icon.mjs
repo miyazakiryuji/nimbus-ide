@@ -1,7 +1,7 @@
 /**
  * Nimbus のアプリアイコンを生成する（外部依存なし）。
  *
- * 意匠: 雨雲（青灰）＋ その背後にひろがる光背（淡い金）。
+ * 意匠: 雨雲（生成り）＋ その背後にひろがる光背（Claude のテラコッタ）。
  * VS Code / Electron のロゴは商標のため一切使わない。
  *
  *   node nimbus/branding/make-icon.mjs
@@ -50,29 +50,29 @@ function shade(px, py) {
   if (bg > 0) return null
 
   const vertical = clamp01(py)
-  let color = mix([0.106, 0.129, 0.184], [0.169, 0.204, 0.278], vertical) // #1b212f → #2b3447
+  let color = mix([0.122, 0.118, 0.114], [0.2, 0.188, 0.173], vertical) // #1f1e1d → #33302c
 
   // 光背: 雲の少し上を中心にした淡い金の放射
   const halo = Math.hypot(px - 0.47, py - 0.42)
-  const haloStrength = Math.pow(1 - smoothstep(0.04, 0.42, halo), 1.6) * 0.55
-  color = mix(color, [0.929, 0.804, 0.51], haloStrength) // #edcd82
+  const haloStrength = Math.pow(1 - smoothstep(0.05, 0.44, halo), 1.35) * 0.82
+  color = mix(color, [0.851, 0.467, 0.341], haloStrength) // #d97757
 
   // 光背の輪郭を一段はっきりさせる細いリング
   const ring = Math.abs(halo - 0.3)
-  color = mix(color, [0.965, 0.878, 0.643], (1 - smoothstep(0, 0.02, ring)) * 0.35)
+  color = mix(color, [0.902, 0.596, 0.478], (1 - smoothstep(0, 0.022, ring)) * 0.6)
 
   // 雨雲本体
   const cloud = sdCloud(px, py)
   if (cloud <= 0) {
     const top = clamp01((py - 0.33) / 0.28)
-    let body = mix([0.839, 0.882, 0.937], [0.478, 0.565, 0.694], top) // #d6e1ef → #7a90b1
+    let body = mix([0.973, 0.965, 0.937], [0.804, 0.573, 0.427], top) // #f8f6ef → #cd926d
     // 底面の内側に落ちる影で厚みを出す
-    body = mix(body, [0.353, 0.427, 0.549], smoothstep(-0.05, 0, cloud) * 0.45)
+    body = mix(body, [0.71, 0.475, 0.31], smoothstep(-0.05, 0, cloud) * 0.45)
     return body
   }
 
   // 雲のふちの淡い発光
-  color = mix(color, [0.929, 0.804, 0.51], (1 - smoothstep(0, 0.018, cloud)) * 0.5)
+  color = mix(color, [0.851, 0.467, 0.341], (1 - smoothstep(0, 0.018, cloud)) * 0.5)
 
   // 雨: 雲の下に落ちる 3 本の線
   for (const [rx, ry, len] of [
@@ -83,7 +83,7 @@ function shade(px, py) {
     const t = clamp01((py - ry) / len)
     const drop = Math.abs(px - (rx + t * 0.022)) - 0.0075 * (1 - t * 0.6)
     if (py >= ry && py <= ry + len) {
-      color = mix(color, [0.663, 0.769, 0.898], (1 - smoothstep(0, 0.004, drop)) * (1 - t * 0.75))
+      color = mix(color, [0.922, 0.859, 0.737], (1 - smoothstep(0, 0.004, drop)) * (1 - t * 0.75))
     }
   }
   return color

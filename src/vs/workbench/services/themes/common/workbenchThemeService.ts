@@ -39,8 +39,10 @@ export enum ThemeSettings {
 }
 
 export namespace ThemeSettingDefaults {
-	export const COLOR_THEME_DARK = 'Dark 2026';
-	export const COLOR_THEME_LIGHT = 'Light 2026';
+	// --- Start Nimbus ---
+	export const COLOR_THEME_DARK = 'Nimbus Dark';
+	export const COLOR_THEME_LIGHT = 'Nimbus Light';
+	// --- End Nimbus ---
 	export const COLOR_THEME_HC_DARK = 'Default High Contrast';
 	export const COLOR_THEME_HC_LIGHT = 'Default High Contrast Light';
 

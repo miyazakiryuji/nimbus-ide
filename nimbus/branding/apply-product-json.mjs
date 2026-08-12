@@ -86,6 +86,14 @@ for (const key of removeKeys) {
   }
 }
 
+// 初回のテーマ選択に Nimbus のテーマを最初に出す（既定と一致させる）
+product.onboardingThemes = [
+  { id: 'nimbus-dark', label: 'Nimbus Dark', themeId: 'Nimbus Dark', type: 'dark' },
+  { id: 'nimbus-light', label: 'Nimbus Light', themeId: 'Nimbus Light', type: 'light' },
+  { id: 'hc-dark', label: 'Dark High Contrast', themeId: 'Default High Contrast', type: 'hcDark' },
+  { id: 'hc-light', label: 'Light High Contrast', themeId: 'Default High Contrast Light', type: 'hcLight' }
+]
+
 // 拡張機能ギャラリー: Microsoft Marketplace は利用規約でフォークに開放されていないため Open VSX を使う。
 // controlUrl は Eclipse が管理する「無効化すべき拡張」のリスト。
 product.extensionsGallery = {

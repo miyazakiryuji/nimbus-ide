@@ -24,6 +24,7 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 9 | `src/.../extensions/browser/extensions.contribution.ts` | `extensions.verifySignature` の既定値を `true` → `false` | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無いため、既定のままだと**拡張を 1 つもインストールできない**（実測） | 同上 |
 | 10 | `build/gulpfile.vscode.ts` | macOS のターミナル用コマンドを `bin/code` 固定から `bin/${product.applicationName}` に | 本物の VS Code の `code` と衝突する。製品名から決めるのが素直（upstream にも通る一般化） | 同上 |
 | 11 | `build/gulpfile.vscode.ts` | パッケージ出力先を `VSCode-<platform>-<arch>` から `${product.nameShort}-…` に | 利用者の作業ディレクトリの隣に "VSCode" という名前のフォルダが生えるのは紛らわしい | 同上 |
+| 12 | `src/vs/workbench/services/themes/common/workbenchThemeService.ts` | 既定テーマを `Dark 2026` / `Light 2026` から `Nimbus Dark` / `Nimbus Light` に | 配色を Claude の意匠に寄せた自前テーマを既定にするため。テーマ自体は組み込み拡張が提供する | 同上 |
 
 ## リポジトリ運用（push できない問題とその回避）
 

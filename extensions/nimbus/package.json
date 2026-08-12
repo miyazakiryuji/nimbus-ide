@@ -162,7 +162,21 @@
           "description": "同時に実行するタスク（Claude セッション）の上限。上限に達したタスクは待機し、空きが出ると自動で開始します。"
         }
       }
-    }
+    },
+    "themes": [
+      {
+        "id": "Nimbus Dark",
+        "label": "Nimbus Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/nimbus-dark.json"
+      },
+      {
+        "id": "Nimbus Light",
+        "label": "Nimbus Light",
+        "uiTheme": "vs",
+        "path": "./themes/nimbus-light.json"
+      }
+    ]
   },
   "scripts": {
     "compile": "gulp compile-extension:nimbus",

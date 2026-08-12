@@ -20,6 +20,7 @@ const WELCOME_PAGE = 'src/vs/workbench/contrib/welcomeGettingStarted/browser/get
 const CHAT_CONTRIB = 'src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts'
 const EXTENSIONS_CONTRIB = 'src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts'
 const GULPFILE_VSCODE = 'build/gulpfile.vscode.ts'
+const THEME_SERVICE = 'src/vs/workbench/services/themes/common/workbenchThemeService.ts'
 const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extensionManagementService.ts'
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
@@ -164,6 +165,18 @@ const buildRoot = path.dirname(root);`
 				// --- End Nimbus ---
 				compileExtensionMediaBuildTask,
 				minified ? minifyVSCodeTask : bundleVSCodeTask,`
+  ],
+  // 既定のカラーテーマを Nimbus のものにする。
+  // 配色は Claude の意匠に寄せてある（テラコッタの差し色＋温かみのある無彩色）。
+  // テーマ自体は組み込み拡張 extensions/nimbus が提供するので、ここで変えるのは既定値だけ。
+  [
+    THEME_SERVICE,
+    `	export const COLOR_THEME_DARK = 'Dark 2026';
+	export const COLOR_THEME_LIGHT = 'Light 2026';`,
+    `	// --- Start Nimbus ---
+	export const COLOR_THEME_DARK = 'Nimbus Dark';
+	export const COLOR_THEME_LIGHT = 'Nimbus Light';
+	// --- End Nimbus ---`
   ],
   // パッケージの出力先が `VSCode-<platform>-<arch>` 固定になっている。
   // 利用者の作業ディレクトリの隣に "VSCode" という名前のフォルダが生えるのは紛らわしいので、
