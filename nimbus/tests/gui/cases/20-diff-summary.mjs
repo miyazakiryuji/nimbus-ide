@@ -5,7 +5,7 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { activeEditorText, git, runCommand } from '../helpers.mjs';
+import { activeEditorText, git, labels, runCommand } from '../helpers.mjs';
 
 export default {
 	name: '変更の要約が export を出し、生成物を畳む',
@@ -22,7 +22,7 @@ export default {
 		writeFileSync(join(ws, 'lib/model.dart'), '// base\nexport function handWritten() {}\n');
 		writeFileSync(join(ws, 'lib/model.g.dart'), '// base\nexport function generatedThing() {}\n');
 
-		await runCommand(page, 'Nimbus: 変更の要約を見る');
+		await runCommand(page, labels('command.showDiffSummary')[0]);
 		const text = await activeEditorText(page);
 
 		ctx.expect(text.includes('変更の要約'), `要約が開いていない:\n${text.slice(0, 400)}`);

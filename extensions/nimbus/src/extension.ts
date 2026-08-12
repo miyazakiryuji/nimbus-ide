@@ -168,6 +168,16 @@ import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-agent-sdk';
 import { runMcpToolOnce } from './mcpToolRunner';
+import { NimbusApiHost, type NimbusApi } from './nimbusApi';
+import {
+	applyToAlwaysAllow,
+	applyToAudit,
+	applyToProfile,
+	describeManagedPolicy,
+	hasManagedPolicy,
+	type ManagedPolicy
+} from './core/managedPolicy';
+import { readManagedPolicy } from './managedPolicySource';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
@@ -199,6 +209,7 @@ import { measureStartup, trackMemory } from './perfWatch';
 import { compareAgentWork } from './agentCompare';
 import { captureSimulator, writeFlowTest } from './simulator';
 import { exportToWiki } from './wikiExport';
+import { createRemoteApproval } from './remoteApproval';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -217,11 +228,13 @@ const WRITE_TOOL_NAMES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const output = vscode.window.createOutputChannel('Nimbus', { log: true });
 	const sanitizer = createSanitizer();
 	// ログに API キーやホームパス（＝OS ユーザー名）を残さない
 	const log = (message: string): void => output.appendLine(sanitizer.sanitizeString(message));
+	// 他の拡張が足した前提・指示を預かる（T-092）
+	const pluginApi = new NimbusApiHost(log);
 
 	const sessionAllowAll = new Set<string>();
 	const previewer = new ProposedEditPreviewer();
@@ -278,8 +291,25 @@ export function activate(context: vscode.ExtensionContext): void {
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		},
 		queueMode: () => isApprovalQueueMode(),
-		alwaysAllowRules: () => vscode.workspace.getConfiguration('nimbus').get<string[]>('permissions.alwaysAllow') ?? [],
+		alwaysAllowRules: () => {
+			// 組織が認めていないルールは、設定に書いてあっても効かせない（T-212）
+			const decided = applyToAlwaysAllow(
+				managedPolicy(),
+				vscode.workspace.getConfiguration('nimbus').get<string[]>('permissions.alwaysAllow') ?? []
+			);
+			if (decided.reason) {
+				log(`[policy] ${decided.reason}`);
+			}
+			return decided.value;
+		},
 		onAlwaysAllow: (rule) => saveAlwaysAllowRule(rule)
+	});
+
+	// 同じ Wi-Fi の中から承認だけする口（T-054 / T-086）。開くのは明示的に呼ばれたときだけ
+	const remoteApproval = createRemoteApproval({
+		pending: () => broker.pending(),
+		decide: (id, decision) => broker.decide(id, decision),
+		log
 	});
 
 	const sessions = new SessionManager(
@@ -1074,8 +1104,10 @@ export function activate(context: vscode.ExtensionContext): void {
 	 */
 	async function appendAudit(event: NimbusEvent): Promise<void> {
 		const auditConfig = vscode.workspace.getConfiguration('nimbus');
+		// 組織が「止めさせない」と決めていれば、設定で切られていても残す（T-212）
+		const auditOn = applyToAudit(managedPolicy(), auditConfig.get<boolean>('audit.enabled') !== false).value;
 		// ローカル完結モード（T-077）では、持ち出される経路そのものを作らない
-		if (auditConfig.get<boolean>('audit.enabled') === false || auditConfig.get<boolean>('localOnly') === true) {
+		if (!auditOn || auditConfig.get<boolean>('localOnly') === true) {
 			return;
 		}
 		const record = toAuditRecord(event);
@@ -1111,9 +1143,23 @@ export function activate(context: vscode.ExtensionContext): void {
 		await vscode.window.showTextDocument(uri);
 	}
 
+	/**
+	 * 組織が置いた制限（T-212）。マシン単位の設定なので、
+	 * 利用者のワークスペース設定では上書きできない。置かれていなければ何も変わらない。
+	 */
+	function managedPolicy(): ManagedPolicy | undefined {
+		return readManagedPolicy();
+	}
+
 	/** いま効いているプロファイル（T-162）。設定には名前だけを持つ */
 	function currentProfile(): PolicyProfile {
-		return findProfile(BUILTIN_PROFILES, vscode.workspace.getConfiguration('nimbus').get<string>('policy.profile'));
+		const requested = findProfile(BUILTIN_PROFILES, vscode.workspace.getConfiguration('nimbus').get<string>('policy.profile'));
+		const decided = applyToProfile(managedPolicy(), BUILTIN_PROFILES, requested);
+		if (decided.reason) {
+			// 黙って変えない。「なぜか設定が戻る」が一番たちが悪い
+			log(`[policy] ${decided.reason}`);
+		}
+		return decided.value;
 	}
 
 	/**
@@ -2417,6 +2463,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
 		// エージェント抜きでツールを 1 回だけ呼ぶ（T-235）
+		// 拡張が足した指示を選んで送る（T-092）
+		vscode.commands.registerCommand('nimbus.pluginActions', async () => {
+			const text = await pluginApi.pickAction();
+			if (text) {
+				cockpit.reveal();
+				void send(text);
+			}
+		}),
 		vscode.commands.registerCommand('nimbus.runMcpTool', () =>
 			runMcpToolOnce({ log, servers: inProcessMcpServers })
 		),
@@ -2808,6 +2862,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
+		// 同じ Wi-Fi の中から承認だけする。できるのは許す・断るだけ（T-054 / T-086）
+		remoteApproval,
+		vscode.commands.registerCommand('nimbus.toggleRemoteApproval', () => remoteApproval.toggle()),
 		// 書いたものを社内 Wiki に貼れる形にする。貼るのは人（T-208）
 		vscode.commands.registerCommand('nimbus.exportToWiki', () => exportToWiki({ log })),
 		// 画面を撮って渡す・流れを integration_test に起こす（T-073）
@@ -3031,6 +3088,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	void vscode.commands.executeCommand('setContext', 'nimbus.approvalQueueMode', isApprovalQueueMode());
 
+	// 組織の制限が効いているなら、起動時に一度だけ言う（見えない制限を作らない・T-212）
+	const managed = managedPolicy();
+	if (hasManagedPolicy(managed)) {
+		for (const line of describeManagedPolicy(managed)) {
+			log(`[policy] ${line}`);
+		}
+	}
+
 	log('[nimbus] 拡張を有効化しました');
 
 	// 自動確認用。UI を人手で操作せずにコックピットまで到達できるようにしておく。
@@ -3043,6 +3108,9 @@ export function activate(context: vscode.ExtensionContext): void {
 			void send(prompt);
 		}
 	}
+
+	// 他の拡張へ渡す口（T-092）。`activate()` の戻り値が公開面になる
+	return pluginApi;
 }
 
 export function deactivate(): void {

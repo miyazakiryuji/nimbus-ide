@@ -7,7 +7,7 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { activeEditorText, git, runCommand } from '../helpers.mjs';
+import { activeEditorText, git, labels, runCommand } from '../helpers.mjs';
 
 export default {
 	name: 'コミットの分けかたが、実際の変更から束を出す',
@@ -26,7 +26,7 @@ export default {
 		writeFileSync(join(ws, 'extensions/nimbus/src/core/other.ts'), 'export const c = 1;\n');
 		writeFileSync(join(ws, 'tasks.md'), '- [ ] T-999 何か\n');
 
-		await runCommand(page, 'Nimbus: コミットの分けかたを提案する');
+		await runCommand(page, labels('command.proposeCommitSplit')[0]);
 		const text = await activeEditorText(page);
 
 		ctx.expect(text.includes('コミットの分けかた'), `提案の一枚が開いていない:\n${text.slice(0, 400)}`);

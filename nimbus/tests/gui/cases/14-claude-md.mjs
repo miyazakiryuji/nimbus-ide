@@ -11,7 +11,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expandPane, openNimbusSidebar, runCommand, sidebarText } from '../helpers.mjs';
+import { expandPane, labels, openNimbusSidebar, runCommand, sidebarText } from '../helpers.mjs';
 
 /** 節・コードブロック・重複見出し（指摘を出すため）を仕込んだ CLAUDE.md */
 const CONTENT = [
@@ -40,10 +40,10 @@ export default {
 	name: 'CLAUDE.md タブに節と指摘が並ぶ',
 	async run(page, ctx) {
 		writeFileSync(join(ctx.workspace, 'CLAUDE.md'), CONTENT, 'utf8');
-		await runCommand(page, 'Nimbus: CLAUDE.md の一覧を更新');
+		await runCommand(page, labels('command.refreshClaudeMd')[0]);
 
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
-		await expandPane(page, 'CLAUDE.md');
+		await expandPane(page, labels('view.nimbus.claudeMd')[0]);
 		await page.waitForTimeout(1500);
 
 		const text = await sidebarText(page);

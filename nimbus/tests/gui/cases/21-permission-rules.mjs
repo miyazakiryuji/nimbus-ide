@@ -6,6 +6,7 @@
  * 実セッション（課金）は要らない — この機能は設定しか読まないため。
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { labels } from '../helpers.mjs';
 import { join } from 'node:path';
 
 export default {
@@ -24,7 +25,7 @@ export default {
 		await page.waitForTimeout(300);
 		await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
 		await page.waitForTimeout(1000);
-		await page.keyboard.type('Nimbus: 確認せずに許可するルールを編集する', { delay: 20 });
+		await page.keyboard.type(labels('command.editPermissionRules')[0], { delay: 20 });
 		await page.waitForTimeout(1200);
 		await page.keyboard.press('Enter');
 		await page.waitForTimeout(2000);

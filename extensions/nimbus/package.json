@@ -240,6 +240,12 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.toggleRemoteApproval",
+        "title": "%command.toggleRemoteApproval%",
+        "category": "Nimbus",
+        "icon": "$(radio-tower)"
+      },
+      {
         "command": "nimbus.exportToWiki",
         "title": "%command.exportToWiki%",
         "category": "Nimbus",
@@ -1061,6 +1067,11 @@
         "title": "%command.importMonitoredIssue%",
         "category": "Nimbus",
         "icon": "$(radio-tower)"
+      },
+      {
+        "command": "nimbus.pluginActions",
+        "title": "%command.pluginActions%",
+        "category": "Nimbus"
       }
     ],
     "menus": {
@@ -1542,6 +1553,52 @@
           "type": "number",
           "default": 800,
           "description": "%config.gif.width%"
+        },
+        "nimbus.managedPolicy": {
+          "type": "object",
+          "default": {},
+          "scope": "machine",
+          "description": "%config.managedPolicy%",
+          "properties": {
+            "allowedProfiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "使ってよい承認ポリシーの名前。空なら制限しません。"
+            },
+            "enforceBlockProtectedReads": {
+              "type": "boolean",
+              "description": "秘匿ファイルの遮断を外させません。"
+            },
+            "forbidAlwaysAllow": {
+              "type": "boolean",
+              "description": "確認なしで許可するルールを一切認めません。"
+            },
+            "allowedAlwaysAllow": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "認めてよい自動許可ルール。空なら制限しません。"
+            },
+            "enforceAudit": {
+              "type": "boolean",
+              "description": "監査ログを止めさせません。"
+            },
+            "requiredProtectedPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "必ず遮断するファイルのパターン。利用者は足せますが外せません。"
+            },
+            "contact": {
+              "type": "string",
+              "description": "制限について問い合わせる先。利用者に見せます。"
+            }
+          },
+          "additionalProperties": false
         }
       }
     },

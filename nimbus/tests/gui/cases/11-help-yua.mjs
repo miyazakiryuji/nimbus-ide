@@ -6,7 +6,7 @@
  * コックピットのものではなく「使い方を聞く」側になっていること。
  * 実際に会話させると課金が発生するので、往復は `--with-claude` の 07 に任せる。
  */
-import { expandPane, openNimbusSidebar, sidebarText } from '../helpers.mjs';
+import { expandPane, includesAny, labels, openNimbusSidebar, sidebarText } from '../helpers.mjs';
 
 export default {
 	name: 'ヘルプ（ゆあ）が開き、ゆあ用の入力欄になっている',
@@ -14,10 +14,13 @@ export default {
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
 
 		const sidebar = await sidebarText(page);
-		ctx.expect(sidebar.includes('ゆあ'), `サイドバーに「ヘルプ（ゆあ）」が無い:\n${sidebar.slice(0, 400)}`);
+		ctx.expect(
+			includesAny(sidebar, labels('view.nimbus.help')),
+			`サイドバーにヘルプのビューが無い:\n${sidebar.slice(0, 400)}`
+		);
 
 		// 畳まれているので開く。開くと Webview が読み込まれる
-		await expandPane(page, 'ゆあ');
+		await expandPane(page, labels('view.nimbus.help')[0]);
 		await page.waitForTimeout(1500);
 
 		const ok = await findPlaceholder(page, 'Nimbus の使い方を聞く');

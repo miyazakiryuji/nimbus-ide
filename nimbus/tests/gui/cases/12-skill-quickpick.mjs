@@ -6,6 +6,8 @@
  * 用意したスキルの説明文にしか無い語（「一覧表示」）で引けるかどうかで見る。
  * 名前だけで引けるなら普通の絞り込みと変わらず、この機能を入れた意味が無い。
  */
+import { labels } from '../helpers.mjs';
+
 export default {
 	name: 'スキル検索が説明文で絞り込める',
 	async run(page, ctx) {
@@ -13,13 +15,13 @@ export default {
 		await page.waitForTimeout(300);
 		await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
 		await page.waitForTimeout(1000);
-		await page.keyboard.type('Nimbus: スキルを探す', { delay: 20 });
+		await page.keyboard.type(labels('command.findSkill')[0], { delay: 20 });
 		await page.waitForTimeout(1200);
 
 		const palette = await page.evaluate(() => document.querySelector('.quick-input-widget')?.innerText ?? '');
 		ctx.expect(
-			palette.includes('スキルを探す'),
-			`コマンドパレットに「スキルを探す」が無い:\n${palette.slice(0, 400)}`
+			labels('command.findSkill').some((label) => palette.includes(label)),
+			`コマンドパレットに ${labels('command.findSkill').join(' / ')} が無い:\n${palette.slice(0, 400)}`
 		);
 
 		await page.keyboard.press('Enter');

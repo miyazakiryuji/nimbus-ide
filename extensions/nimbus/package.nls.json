@@ -34,6 +34,7 @@
   "command.investigateCi": "落ちた CI を調べる",
   "command.compareAgentWork": "別のツールの結果と並べて比べる",
   "command.exportToWiki": "社内 Wiki に貼れる形にする",
+  "command.toggleRemoteApproval": "手元の端末から承認だけできるようにする",
   "command.captureSimulator": "シミュレータの画面を撮って渡す",
   "command.writeFlowTest": "確かめたい流れをテストに起こす",
   "command.importCpuProfile": "計測結果を渡して重い箇所を調べる",
@@ -232,5 +233,7 @@
   "command.splitTerminals": "ターミナルを並べる",
   "command.managePlugins": "プラグインを見る",
   "command.exportGif": "作業の様子を GIF にする",
-  "config.gif.width": "GIF の横幅（px）。縦は比率のままです。"
+  "config.gif.width": "GIF の横幅（px）。縦は比率のままです。",
+  "command.pluginActions": "拡張が足した指示を使う",
+  "config.managedPolicy": "組織が決めた権限の上限。ここに書いた制限は利用者の設定では緩められません（狭める方向だけが効きます）。MDM などでマシン単位に配ることを想定しています。"
 }

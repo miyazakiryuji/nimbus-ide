@@ -5,11 +5,60 @@
  * （`{ name, run }` を要求される）ので、ケースではないものは 1 つ上の階層に置く。
  */
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-/** サイドバーに Nimbus のビューが出ているか。コックピットは畳んでも見出しが残るので目印にする */
+// このファイルは nimbus/tests/gui にあるので、リポジトリの根までは 3 つ上がる
+const EXT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'extensions', 'nimbus');
+
+function loadNls(name) {
+	try {
+		return JSON.parse(readFileSync(join(EXT, name), 'utf8'));
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * 表示文字列は**言語で変わる**（T-091 で `%key%` になった）。
+ * ケースが日本語を決め打ちすると、パッケージ版（既定ロケールが en）で全部落ちる。
+ *
+ * なので**キーで書き、候補の文字列は `package.nls*.json` から引く**。
+ * 翻訳が変わってもケースを直さなくて済むし、どの言語で動かしても通る。
+ */
+// 英語の訳は `nimbus/i18n/` へ移された（出荷物を日本語に保つため・T-091）。
+// どちらに置かれていても候補として拾えるように、両方を見る
+const NLS = [
+	loadNls('package.nls.json'),
+	loadNls('package.nls.en.json'),
+	loadNls(join('..', '..', 'nimbus', 'i18n', 'package.nls.en.json'))
+];
+
+/** そのキーに対して、いずれかの言語で出うる文字列 */
+export function labels(key) {
+	const found = NLS.map((table) => table[key]).filter((value) => typeof value === 'string' && value);
+	if (found.length === 0) {
+		throw new Error(`package.nls*.json にキーがありません: ${key}（変換の取りこぼしかもしれません）`);
+	}
+	return [...new Set(found)];
+}
+
+/** どれか 1 つでも含まれていれば true */
+export function includesAny(text, candidates) {
+	return candidates.some((candidate) => text.includes(candidate));
+}
+
+/**
+ * サイドバーに Nimbus のビューが出ているか。
+ *
+ * 目印は**翻訳されない**ものを使う。`viewsContainers` の title は `Nimbus` のままなので
+ * （製品名なので `%key%` にしていない）、サイドバーの見出しに出る `NIMBUS` を見る。
+ * ビュー名（コックピット / Cockpit）は言語で変わるので目印にしない。
+ */
 async function sidebarShowsNimbus(page) {
 	const text = await page.evaluate(() => document.querySelector('.part.sidebar')?.innerText ?? '');
-	return text.includes('コックピット');
+	return /NIMBUS/i.test(text);
 }
 
 /**
