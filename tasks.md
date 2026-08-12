@@ -298,12 +298,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [ ] T-074 実機ログの取り込み — クラッシュログをドロップしたら該当箇所まで一直線 [P2]
 - [ ] T-194 i18n 文言の抽出と追加 [P2]
 - [ ] T-195 アクセシビリティチェック [P2]
-- [ ] T-196 `Info.plist` / 権限まわりの差分警告 [P2]
-- [ ] T-197 プライバシーマニフェスト対応チェック [P2]
 - [ ] T-198 Podfile / SPM / Gradle の依存整合性 [P2]
 - [ ] T-199 Xcode プロジェクトファイルの競合解消 [P2]
 - [ ] T-200 Platform Channel（ネイティブ ⇄ Dart）の橋渡し支援 [P2]
-- [ ] T-201 ストア提出前チェックリスト [P2]
 
 ### 🔐 コンプラ・機密
 
@@ -498,6 +495,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-196 / T-197 / T-201 提出前の確認（権限の差分・プライバシーマニフェスト・版）— 2026-08-13 / 仕様 [mobile-checks](nimbus/docs/specs/mobile-checks.md)
 - [x] T-183 どこで壊れたかを絞り込む（残り回数を出す・git は勝手に動かさない）— 2026-08-13 / 仕様 [bisect](nimbus/docs/specs/bisect.md)
 - [x] T-220 PR の説明文の下書き（意図は人が書く・テスト無しは警告）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-052 朝のダイジェスト（ふりかえりに「昨夜から」を追加）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
