@@ -26,6 +26,7 @@ import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
 import { addClaudeMdSection, ClaudeMdViewProvider, promoteInstruction } from './claudeMdView';
 import { editProtectedPaths } from './protectedPaths';
+import { openDigest } from './digest';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -34,6 +35,9 @@ import { canReconnect, type McpServer } from './core/mcp';
 import { buildCheckpoints, checkpointLabel, describeRewind } from './core/checkpoints';
 import { searchTranscripts } from './transcriptSearch';
 import { openCompletionReport } from './completionReport';
+import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from './core/attachments';
+import { captureAfterReload, readHotReloadConfig } from './hotReload';
+import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { TerminalWatcher } from './terminalWatcher';
@@ -65,6 +69,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	let pendingApprovals = 0;
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
+	/** ホットリロードで自動投入した回数（T-072）。指示のたびに 0 に戻す */
+	let reloadRounds = 0;
 	/** コスト警告を出したセッション。同じ段階で何度も出さない（T-059） */
 	const costAlerted = new Map<string, 'warn' | 'over'>();
 
@@ -128,7 +134,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	stopButton.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
 
 	const cockpit = new CockpitViewProvider(context.extensionUri, {
-		onSend: (text) => void send(text),
+		onSend: (text, images) => void send(text, images),
 		onInterrupt: () => void interrupt(),
 		onNewSession: () => void newSession(),
 		snapshot: () => ({
@@ -167,6 +173,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		logEvent(event);
 		if (event.kind === 'turn-result') {
 			notify('Nimbus — ターンが終わりました', oneLine(event.resultText ?? '応答が返りました'));
+			void runHotReload(event.sessionId);
 			// ターンが終わるたびに取り直す。走っている最中に見えないと意味がない（T-017 / T-020）
 			void refreshUsage(event.sessionId);
 			checkCostLimit(event.sessionId, sessions.get(event.sessionId)?.totalCostUsd);
@@ -283,6 +290,33 @@ export function activate(context: vscode.ExtensionContext): void {
 			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
 		}
 		await refreshMcp();
+	}
+
+	/**
+	 * ホットリロード連携（tasks.md T-072）。ターンが終わって対象ファイルが変わっていたら、
+	 * リロード → スクショ → セッションへ投入、までを自動で回す。
+	 * **回数の上限がある**（既定 3 周）。無いと、直す → 撮る → 直す、が止まらない。
+	 */
+	async function runHotReload(sessionId: string): Promise<void> {
+		if (sessionId !== activeSessionId || !sessions.isAccepting(sessionId)) {
+			return;
+		}
+		const config = readHotReloadConfig();
+		const cwd = workspaceCwd();
+		if (!config.enabled || !cwd) {
+			return;
+		}
+		const changed = collectEvidence(retained).changedFiles;
+		const outcome = await captureAfterReload(config, changed, reloadRounds, cwd, log);
+		if (!outcome.sent || !outcome.attachment || !outcome.prompt) {
+			if (outcome.reason && outcome.reason !== 'not-watched' && outcome.reason !== 'disabled') {
+				log(`[hot-reload] 見送りました: ${outcome.reason}`);
+			}
+			return;
+		}
+		reloadRounds++;
+		log(`[hot-reload] スクショを投入します（${reloadRounds} 周目）`);
+		sessions.sendMessage(sessionId, outcome.prompt, [outcome.attachment]);
 	}
 
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
@@ -453,15 +487,44 @@ export function activate(context: vscode.ExtensionContext): void {
 		return undefined;
 	}
 
-	async function send(rawText: string): Promise<void> {
+	/**
+	 * Webview から来たデータ URL を、送れる添付に整える（T-040）。
+	 * 送れないものは**理由を出して落とす**（黙って消すと「貼ったのに無視された」に見える）。
+	 */
+	function toAttachments(images: { name: string; dataUrl: string }[] | undefined): Attachment[] {
+		const attachments: Attachment[] = [];
+		for (const image of images ?? []) {
+			const parsed = parseDataUrl(image.dataUrl);
+			if (!parsed) {
+				void vscode.window.showWarningMessage(`Nimbus: ${image.name} を読み取れませんでした。`);
+				continue;
+			}
+			const bytes = Buffer.from(parsed.base64, 'base64');
+			const result = toAttachment(image.name, bytes, (raw) => Buffer.from(raw).toString('base64'));
+			if (result.ok) {
+				attachments.push(result.attachment);
+			} else {
+				void vscode.window.showWarningMessage(`Nimbus: ${image.name} は送れません — ${result.reason}`);
+			}
+		}
+		return attachments;
+	}
+
+	async function send(rawText: string, images?: { name: string; dataUrl: string }[]): Promise<void> {
 		try {
 			const text = await checkBeforeSending(rawText);
 			if (text === undefined) {
 				return;
 			}
+			// 利用者が新しい指示を出したら、自動リロードの周回数を戻す
+			reloadRounds = 0;
+			const attachments = toAttachments(images);
+			if (attachments.length > 0) {
+				log(`[send] ${describeAttachments(attachments)} を添えます`);
+			}
 			// 停止済みのセッションへ送らない。緊急停止のあとは新しいセッションとして始める
 			if (activeSessionId && sessions.isAccepting(activeSessionId)) {
-				sessions.sendMessage(activeSessionId, text);
+				sessions.sendMessage(activeSessionId, text, attachments);
 				return;
 			}
 			const cwd = workspaceCwd();
@@ -481,7 +544,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			const sessionId = randomUUID();
 			activeSessionId = sessionId;
 			retained.length = 0;
-			await sessions.createSession({ cwd, firstMessage: text, reuseSessionId: sessionId });
+			await sessions.createSession({ cwd, firstMessage: text, firstImages: attachments, reuseSessionId: sessionId });
 			log(`[session] 新規セッション ${sessionId} cwd=${cwd}`);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -915,6 +978,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.refreshClaudeMd', () => claudeMdView.refresh()),
 		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
 		vscode.commands.registerCommand('nimbus.editProtectedPaths', () => editProtectedPaths()),
+		vscode.commands.registerCommand('nimbus.openDigest', () => openDigest()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),

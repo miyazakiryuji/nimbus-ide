@@ -141,13 +141,82 @@
 		}
 	}
 
-	function send() {
-		const text = input.value.trim();
-		if (!text) {
+	/**
+	 * 貼り付け・ドロップで受けた画像（T-040）。
+	 * 送るまで溜めておき、送信と一緒に拡張へ渡す。
+	 */
+	const pending = [];
+
+	function renderPending() {
+		let bar = document.getElementById('attachments');
+		if (!bar) {
+			bar = document.createElement('div');
+			bar.id = 'attachments';
+			bar.className = 'attachments';
+			input.parentElement.insertBefore(bar, input);
+		}
+		bar.textContent = '';
+		bar.hidden = pending.length === 0;
+		pending.forEach((item, index) => {
+			const chip = document.createElement('button');
+			chip.className = 'attachment';
+			chip.type = 'button';
+			// 押したら外せる。貼り間違いを送るしかないのは困る
+			chip.title = '外す';
+			chip.textContent = `🖼 ${item.name} ✕`;
+			chip.addEventListener('click', () => {
+				pending.splice(index, 1);
+				renderPending();
+			});
+			bar.appendChild(chip);
+		});
+	}
+
+	function addFile(file) {
+		if (!file || !file.type.startsWith('image/')) {
 			return;
 		}
+		const reader = new FileReader();
+		reader.addEventListener('load', () => {
+			if (typeof reader.result === 'string') {
+				pending.push({ name: file.name || 'clipboard', dataUrl: reader.result });
+				renderPending();
+			}
+		});
+		reader.readAsDataURL(file);
+	}
+
+	function send() {
+		const text = input.value.trim();
+		// 画像だけでも送れるようにする（「これ見て」で通じる場面がある）
+		if (!text && pending.length === 0) {
+			return;
+		}
+		const images = pending.splice(0, pending.length);
+		renderPending();
 		input.value = '';
-		vscode.postMessage({ type: 'send', text });
+		vscode.postMessage({ type: 'send', text, images });
+	}
+
+	input.addEventListener('paste', (e) => {
+		const items = (e.clipboardData && e.clipboardData.files) || [];
+		for (const file of items) {
+			addFile(file);
+		}
+	});
+
+	for (const target of [input, document.body]) {
+		target.addEventListener('dragover', (e) => e.preventDefault());
+		target.addEventListener('drop', (e) => {
+			const files = (e.dataTransfer && e.dataTransfer.files) || [];
+			if (files.length === 0) {
+				return;
+			}
+			e.preventDefault();
+			for (const file of files) {
+				addFile(file);
+			}
+		});
 	}
 
 	sendButton.addEventListener('click', send);

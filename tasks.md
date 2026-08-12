@@ -43,10 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-040 **画像・スクショのドロップ投入** — Figma や実機のスクショを貼って「この通りに直して」。
-      実装前に claim（コードはまだ書いていない）@session-a 2026-08-13 [P1]
-- [ ] T-072 **ホットリロード連携** — 直したら即リロードし、結果のスクショを自分で見て次へ。
-      T-040 の画像経路が前提。実装前に claim @session-a 2026-08-13 [P1]
 
 - [ ] T-004 `nimbus/docs/testing/f3-f6.md` §6 の画面確認 6 項目 — 手作業で 1 回見るのではなく
       GUI テストのケースに起こして繰り返し確認できるようにする @session-b 2026-08-13 [P1]
@@ -521,6 +517,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-040 画像・スクショのドロップ投入（貼り付け／ドロップ・中身で種類を判定）— 2026-08-13 / 仕様 [images-and-hot-reload](nimbus/docs/specs/images-and-hot-reload.md)
+- [x] T-072 ホットリロード連携（直す→リロード→スクショ→自分で見る。上限つき・既定オフ）— 2026-08-13 / 仕様 [images-and-hot-reload](nimbus/docs/specs/images-and-hot-reload.md)
 - [x] T-081 証跡つき完了報告（テスト実行の有無と成否を機械で拾い、報告に添える）— 2026-08-13 / 仕様 [completion-evidence](nimbus/docs/specs/completion-evidence.md)
 - [x] T-024 「この修正はどの指示から生まれたか」の紐づけ（指示ごとに修正と読んだファイルをまとめる）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
 - [x] T-192 思考中の可視化（走っているツールと対象を「セッションの中身」の先頭に出す）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)

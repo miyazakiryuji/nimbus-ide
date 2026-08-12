@@ -13,7 +13,8 @@ import { WebviewViewHost } from '../webview/WebviewViewHost';
 /** Webview → 拡張 */
 export type InboundMessage =
 	| { type: 'ready' }
-	| { type: 'send'; text: string }
+	// images は貼り付け・ドロップで添えた画像のデータ URL（T-040）
+	| { type: 'send'; text: string; images?: { name: string; dataUrl: string }[] }
 	| { type: 'interrupt' }
 	| { type: 'newSession' };
 
@@ -25,7 +26,8 @@ export type OutboundMessage =
 	| { type: 'session'; session?: SessionSummary };
 
 export interface CockpitHandlers {
-	onSend(text: string): void | Promise<void>;
+	/** @param images 貼り付け・ドロップで添えた画像（T-040）。省略時の振る舞いは従来どおり */
+	onSend(text: string, images?: { name: string; dataUrl: string }[]): void | Promise<void>;
 	onInterrupt(): void | Promise<void>;
 	onNewSession(): void | Promise<void>;
 	/** Webview が（再）生成されたときに現在の状態を復元するための材料 */
@@ -69,7 +71,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				}
 				case 'send':
-					await this.handlers.onSend(message.text);
+					await this.handlers.onSend(message.text, message.images);
 					break;
 				case 'interrupt':
 					await this.handlers.onInterrupt();

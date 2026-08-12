@@ -33,6 +33,8 @@ export interface CreateSessionInput {
   cwd?: string
   /** 省略時（resume 時）は最初のメッセージを送らず入力待ちで開始する */
   firstMessage?: string
+  /** 最初のメッセージに添える画像（T-040） */
+  firstImages?: readonly MessageImage[]
   /** 再開時に指定する Claude セッション ID（options.resume に渡す） */
   resumeClaudeSessionId?: string
   /** 再開時に Nimbus セッション ID を引き継ぐ（イベント・DB のキーを安定させる） */
@@ -64,11 +66,29 @@ async function withTimeout(promise: Promise<unknown>, ms: number): Promise<void>
 /** テスト注入用に query() と同シグネチャの関数型を切り出す */
 export type QueryFn = typeof query
 
-function userMessage(text: string): SDKUserMessage {
+/** 添付画像（`core/attachments.ts` の Attachment と構造互換） */
+export interface MessageImage {
+  mediaType: string
+  /** base64（データ URL のヘッダは含めない） */
+  data: string
+}
+
+function userMessage(text: string, images?: readonly MessageImage[]): SDKUserMessage {
   // SDK 0.3.226 sdk.d.ts 実測: SDKUserMessage = { type:'user', message: MessageParam, parent_tool_use_id, ... }
+  // 画像を添えるときだけブロック配列にする（文字列のままのほうが素直なので、既定は変えない）。
+  // 画像を先に置くのは、Anthropic API が「画像 → それについての指示」の順を推奨しているため
+  const content = images?.length
+    ? [
+        ...images.map((image) => ({
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: image.mediaType as 'image/png', data: image.data }
+        })),
+        { type: 'text' as const, text }
+      ]
+    : text
   return {
     type: 'user',
-    message: { role: 'user', content: text },
+    message: { role: 'user', content },
     parent_tool_use_id: null
   }
 }
@@ -131,7 +151,7 @@ export class SessionManager extends EventEmitter {
     })
     if (input.firstMessage !== undefined) {
       // 最初のユーザーメッセージもイベントとして正規化ストリームに流す（表示・永続化の正はメイン側）
-      queue.push(userMessage(input.firstMessage))
+      queue.push(userMessage(input.firstMessage, input.firstImages))
       this.emitEvent({
         kind: 'user-text',
         sessionId: id,
@@ -159,14 +179,15 @@ export class SessionManager extends EventEmitter {
     return session !== undefined && !session.queue.isClosed && !TERMINAL_STATUSES.has(session.status)
   }
 
-  sendMessage(sessionId: string, text: string): void {
+  /** @param images 添付画像（T-040）。省略時の振る舞いは従来どおり */
+  sendMessage(sessionId: string, text: string, images?: readonly MessageImage[]): void {
     const session = this.mustGet(sessionId)
     if (TERMINAL_STATUSES.has(session.status) || session.queue.isClosed) {
       // 終了済みセッションへの送信は黙殺せず IPC エラーとして返す（レビュー指摘 #1）
       throw new Error(`Session ${sessionId} is not accepting input (status: ${session.status})`)
     }
     // push が成功してから user-text を記録する（幻のメッセージを残さない）
-    session.queue.push(userMessage(text))
+    session.queue.push(userMessage(text, images))
     this.emitEvent({
       kind: 'user-text',
       sessionId,

@@ -24,6 +24,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`checkpoints-and-mcp.md`](checkpoints-and-mcp.md) — チェックポイントの巻き戻しと MCP サーバーの管理
 - [`transcript-search.md`](transcript-search.md) — 過去セッションの横断検索
 - [`completion-evidence.md`](completion-evidence.md) — 証跡つき完了報告（テスト実行の有無と成否）
+- [`images-and-hot-reload.md`](images-and-hot-reload.md) — 画像の投入とホットリロード連携
 
 IDE 基礎機能:
 

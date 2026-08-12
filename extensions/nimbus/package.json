@@ -484,6 +484,44 @@
           "type": "boolean",
           "default": true,
           "description": "曖昧な指示を送ろうとしたとき、走らせる前に足りていない情報を確認します。対象のファイル名などが書かれていれば確認しません。"
+        },
+        "nimbus.hotReload.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "ターンが終わって対象ファイルが変わっていたら、リロードしてスクリーンショットを撮り、セッションへ自動で投入します（既定はオフ）。"
+        },
+        "nimbus.hotReload.reloadCommand": {
+          "type": "string",
+          "default": "",
+          "description": "リロードを起こすシェルコマンド。空ならスクリーンショットだけを撮ります。"
+        },
+        "nimbus.hotReload.screenshotCommand": {
+          "type": "string",
+          "default": "",
+          "description": "スクリーンショットを撮るシェルコマンド。{file} が出力先のパスに置き換わります（例: xcrun simctl io booted screenshot {file}）。"
+        },
+        "nimbus.hotReload.extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".dart",
+            ".swift",
+            ".kt",
+            ".tsx",
+            ".jsx",
+            ".vue",
+            ".css"
+          ],
+          "description": "この拡張子のファイルが変わったときだけリロードします。空なら変更があれば常に。"
+        },
+        "nimbus.hotReload.maxRounds": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "1 つの指示につき、自動で回してよい周回数の上限。"
         }
       }
     },

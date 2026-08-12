@@ -164,3 +164,21 @@ button:disabled {
 	padding-left: 18px;
 	line-height: 1.5;
 }
+
+/* 貼り付け・ドロップで添えた画像（T-040） */
+.attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 4px;
+}
+
+.attachment {
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	border: none;
+	border-radius: 4px;
+	padding: 2px 6px;
+	font-size: 11px;
+	cursor: pointer;
+}
