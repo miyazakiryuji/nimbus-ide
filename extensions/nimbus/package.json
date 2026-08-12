@@ -207,6 +207,12 @@
         "icon": "$(book)"
       },
       {
+        "command": "nimbus.trackSchemaImpact",
+        "title": "型の変更が壊す場所を洗い出す",
+        "category": "Nimbus",
+        "icon": "$(type-hierarchy)"
+      },
+      {
         "command": "nimbus.exploreHistory",
         "title": "なぜこうなっているのかを辿る",
         "category": "Nimbus",

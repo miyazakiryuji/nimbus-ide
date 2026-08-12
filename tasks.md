@@ -40,6 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-126 / T-127 SQL の安全確認（読み取りだけモード・実行計画）— 実装中 @yua 2026-08-13
+
 - [ ] T-141 生成物の作り直し — 元を直したら生成コマンドまで回す。T-139 / T-140 の続きで
       `core/generated.ts` は承認・レビュー層のもの。`regenerate.ts` を確保済み @session-b 2026-08-13 [P2]
 
@@ -266,7 +268,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🔄 バージョン追従
 
-- [ ] T-094 Claude Code の更新通知 — 新しいフックや機能が増えたときに「使ってみます？」と提案する [P2]
 
 ### 🎮 続けたくなる
 
@@ -329,6 +330,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-094 Claude Code の更新に気づく（init の一覧の差分で、実際に増えたものだけを名指しする）
+      — 2026-08-13 / 仕様 [version-watch](nimbus/docs/specs/version-watch.md)
 
 - [x] T-139 生成物への直接編集をガードする（自動許可より先に止め、代わりに直す先を名指しする）
       — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)

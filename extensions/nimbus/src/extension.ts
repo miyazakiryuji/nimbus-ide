@@ -60,6 +60,7 @@ import { checkMermaidDiagrams } from './mermaid';
 import { runSetupWizard } from './setupWizard';
 import { openEnvCheck } from './envCheck';
 import { auditDependency } from './depAudit';
+import { openVulnFixPlan } from './vulnFix';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -172,6 +173,8 @@ import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
+import { trackSchemaImpact } from './schemaImpact';
+import { noticeUpgrade } from './versionWatch';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
@@ -321,6 +324,14 @@ export function activate(context: vscode.ExtensionContext): void {
 			retained.splice(0, retained.length - MAX_RETAINED_EVENTS);
 		}
 		if (event.kind === 'session-init') {
+			// Claude Code が上がって使えるものが増えたら知らせる（T-094）
+			void noticeUpgrade(context.globalState, event, {
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			});
 			lastInit = event;
 			void refreshMcp();
 			contextView.update(event);
@@ -2491,6 +2502,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.runSetupWizard', () => runSetupWizard()),
 		vscode.commands.registerCommand('nimbus.openEnvCheck', () => openEnvCheck()),
 		vscode.commands.registerCommand('nimbus.auditDependency', () => auditDependency()),
+		vscode.commands.registerCommand('nimbus.openVulnFixPlan', () => openVulnFixPlan()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2660,6 +2672,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		// このコードがなぜこうなっているのかを辿る（T-079）
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 変えた型を参照している場所が壊れていないかを確かめさせる（T-123）
+		vscode.commands.registerCommand('nimbus.trackSchemaImpact', () =>
+			trackSchemaImpact({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);
