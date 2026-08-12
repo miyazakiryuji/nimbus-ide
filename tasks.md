@@ -44,16 +44,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       アウトライン・シンボル検索・呼び出し階層・診断を `mcp__nimbus_lsp__*` として渡す。残るは画面確認
       （`nimbus/docs/testing/lsp-tools.md`）→ 仕様 `nimbus/docs/specs/lsp-tools.md` @session-lsp 2026-08-13 [P1]
 
-- [ ] T-186 **前提・仮定のリスト表示** — エージェントが置いた仮定を先に見せる @session-doctor 2026-08-13 [P1]
 
-- [ ] T-025 **チェックポイントのタイムライン UI** — 判断ロジック・巻き戻し API・単体テストまで完了。
-      残るは `extension.ts` / `package.json` への配線（他セッションが編集中のため待ち）
-      → 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md) @session-a 2026-08-13 [P1]
-- [ ] T-029 **MCP サーバーの接続管理** — ビューと操作ロジック・単体テストまで完了。残るは配線
-      → 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md) @session-a 2026-08-13 [P2]
-- [ ] T-042 **MCP ツールエクスプローラ** — 一覧・説明・破壊的かどうかの表示まで完了。
-      **エージェント抜きの単体実行は SDK に API が無く未着手**（仕様の「やらないこと」に理由）。残るは配線
-      → 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md) @session-a 2026-08-13 [P2]
 
 
 - [ ] T-008 / T-009 **CLAUDE.md 専用のタブ** — 実装・単体テスト（10 件全通過）・仕様・確認項目まで完了。
@@ -79,10 +70,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ### コックピットとセッション履歴
 
-- [ ] T-034 **過去セッションの横断検索** — 「あの実装どうやったっけ」を transcript 全体から全文検索。
-      ファイル名・変更したパス・使ったツールでも絞り込む。Claude Code 単体だと過去ログを漁るのが
-      一番つらいので効く。※フォークにはまだ永続化層が無い。Claude Code 本体が
-      `~/.claude/projects/**` に JSONL を残しているので、自前 DB を作る前にそれを読む線を調べる [P1]
 - [ ] T-040 **画像・スクショのドロップ投入** — Figma や実機のスクショを貼って「この通りに直して」。
       実装後のスクショと並べて差分を見られるようにする（UI 調整が捗る）[P1]
 
@@ -154,6 +141,9 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 - [ ] T-162 承認ポリシーのプロファイル切り替え — 開発用／本番接続時で許可の広さを変える [P2]
 - [ ] T-163 実行サンドボックス／ネットワーク遮断モード — 危ないことを試すときの器 [P2]
 
+- [ ] T-235 MCP ツールの単体実行 — エージェント抜きでツールを 1 回だけ呼んで試す。
+      SDK の `Query` に直接呼ぶ API が無く、`@modelcontextprotocol/sdk` で別途繋ぐ必要がある
+      （T-042 の残り。接続設定の二重管理になるので設計から）[P2]
 ### ⑤ ラボ層（スキル・サブエージェント・コマンド）
 
 **スキルの一覧と検索は F6 で実装済み** — サイドバーの「スキル」ビュー（出どころ別に分類・行をクリックで
@@ -522,6 +512,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-025 チェックポイントのタイムライン UI（戻す先を選び、変更内容を見てから戻す）— 2026-08-13 / 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md)
+- [x] T-029 MCP サーバーの接続管理（状態・エラー・繋ぎ直し・有効無効）— 2026-08-13 / 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md)
+- [x] T-034 過去セッションの横断検索（`~/.claude/projects/**` を読む・`file:` `tool:` で絞り込み）— 2026-08-13 / 仕様 [transcript-search](nimbus/docs/specs/transcript-search.md)
+- [x] T-042 MCP ツールエクスプローラ（一覧・説明・破壊的かどうか。単体実行は T-235 へ分割）— 2026-08-13 / 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md)
 - [x] T-018 サブエージェントのツリー可視化（指示・種別・消費・状態・まとめ）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
 - [x] T-019 完了通知（ターン完了と承認待ちを OS 通知・裏にいるときだけ）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
 - [x] T-022 コンパクションの可視化（発生の記録と手動実行 `nimbus.compact`）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
@@ -550,3 +544,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-002 `localize()` の "VS Code" 直書き 152 箇所 — 2026-08-13 / nls の集約点（`_format`）で置換。1 ファイルの変更で全部に効き、upstream の新しい文言にも追随する
 - [x] T-005 Copilot をソースとビルドスクリプトからも除去 — 2026-08-13 / `extensions/copilot/`（4193 ファイル・1.8GB）を削除し、npm スクリプトとビルド配線からも外した。**依存 `@github/copilot-sdk` `@vscode/copilot-api` はコアの agent host が使うため残す**（台帳に理由を記載）
 - [x] T-185 着手前の確認強制（曖昧な指示を走らせる前に止める）— 2026-08-13 / 仕様 [pre-send-confirmation](nimbus/docs/specs/pre-send-confirmation.md) / 判定は `src/core/clarify.ts`・テスト 12 件
+- [x] T-186 前提・仮定のリスト表示 — 2026-08-13 / 仕様 [assumptions](nimbus/docs/specs/assumptions.md) / 抽出は `src/core/assumptions.ts`・テスト 12 件

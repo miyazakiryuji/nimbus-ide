@@ -30,6 +30,7 @@ IDE 基礎機能:
 - [`distribution.md`](distribution.md) — 配布（dmg・ad-hoc 署名）と upstream 追従
 - [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
 - [`pre-send-confirmation.md`](pre-send-confirmation.md) — 着手前の確認（曖昧な指示を止める）
+- [`assumptions.md`](assumptions.md) — 置いた仮定の表示
 
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 

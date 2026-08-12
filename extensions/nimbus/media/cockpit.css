@@ -146,3 +146,21 @@ button:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
+
+/* 置いた仮定。本文と混ざらないよう、注意色の縁で囲って独立させる */
+.entry.assumption {
+	border: 1px solid var(--vscode-editorWarning-foreground);
+	border-radius: 3px;
+	padding: 6px 8px;
+	background: var(--vscode-textBlockQuote-background);
+}
+
+.entry.assumption .who {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.assumption-list {
+	margin: 2px 0 0;
+	padding-left: 18px;
+	line-height: 1.5;
+}

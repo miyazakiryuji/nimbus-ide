@@ -118,6 +118,29 @@
 		}
 	}
 
+	/** 置かれた仮定を、本文とは別に目立たせて並べる（違っていたら早く気づけるように） */
+	function renderAssumptions(assumptions) {
+		const stick = atBottom();
+		const entry = document.createElement('div');
+		entry.className = 'entry assumption';
+		const label = document.createElement('div');
+		label.className = 'who';
+		label.textContent = '置いた仮定';
+		entry.appendChild(label);
+		const list = document.createElement('ul');
+		list.className = 'assumption-list';
+		for (const text of assumptions) {
+			const item = document.createElement('li');
+			item.textContent = text;
+			list.appendChild(item);
+		}
+		entry.appendChild(list);
+		log.appendChild(entry);
+		if (stick) {
+			log.scrollTop = log.scrollHeight;
+		}
+	}
+
 	function send() {
 		const text = input.value.trim();
 		if (!text) {
@@ -151,6 +174,9 @@
 			log.scrollTop = log.scrollHeight;
 		} else if (message.type === 'event') {
 			renderEvent(message.event);
+			if (message.assumptions && message.assumptions.length > 0) {
+				renderAssumptions(message.assumptions);
+			}
 		}
 	});
 

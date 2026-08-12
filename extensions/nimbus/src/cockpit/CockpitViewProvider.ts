@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
 import { renderWebviewPage } from '../webview/page';
+import { extractAssumptions } from '../core/assumptions';
 import { WebviewViewHost } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
@@ -18,7 +19,8 @@ export type InboundMessage =
 
 /** 拡張 → Webview */
 export type OutboundMessage =
-	| { type: 'event'; event: NimbusEvent }
+	/** `assumptions` は本文から抜き出した「置かれた仮定」。本文とは別に目立たせて出す */
+	| { type: 'event'; event: NimbusEvent; assumptions?: string[] }
 	| { type: 'history'; events: NimbusEvent[]; session?: SessionSummary }
 	| { type: 'session'; session?: SessionSummary };
 
@@ -80,6 +82,14 @@ export class CockpitViewProvider extends WebviewViewHost {
 	}
 
 	post(message: OutboundMessage): void {
+		// エージェントが置いた仮定は、本文に紛れると読み飛ばされる。抜き出して別に渡す（T-186）
+		if (message.type === 'event' && message.event.kind === 'assistant-text') {
+			const assumptions = extractAssumptions(message.event.text);
+			if (assumptions.length > 0) {
+				this.postMessage({ ...message, assumptions });
+				return;
+			}
+		}
 		this.postMessage(message);
 	}
 
