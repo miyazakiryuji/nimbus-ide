@@ -35,7 +35,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 進行中
 
-- [ ] T-091 UI とドキュメントの多言語化 — 判断を書いてから実装 @session-a 2026-08-13 [P2]
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
@@ -336,6 +335,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       対話のコマンドは `pickWorkspaceRoot`（1 フォルダなら聞かない）、聞けない・聞くべきでない 5 箇所は
       `resolveWorkspaceRoot`。セッションの作業ディレクトリ（`workspaceCwd()`）は範囲外として残す
       — 2026-08-13 / 仕様 [workspace-roots](nimbus/docs/specs/workspace-roots.md)
+- [x] T-091 UI とドキュメントの多言語化 — `package.json` の 227 件を `package.nls.json` へ出し、英語を全件そろえた。
+      `src/**` の 4,463 件は**載せ替えない**と決めた（判断を変える条件も仕様書に明記）。
+      `nimbus/scripts/nls-extract.mjs --check` で取りこぼしと訳の抜けを見る
+      — 2026-08-13 / 仕様 [localization](nimbus/docs/specs/localization.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
