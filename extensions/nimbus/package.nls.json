@@ -32,6 +32,7 @@
   "command.checkApiDocs": "古くなった API ドキュメントを探す",
   "command.trackSchemaImpact": "型の変更が壊す場所を洗い出す",
   "command.investigateCi": "落ちた CI を調べる",
+  "command.compareAgentWork": "別のツールの結果と並べて比べる",
   "command.importCpuProfile": "計測結果を渡して重い箇所を調べる",
   "command.trackMemory": "メモリが増え続けていないかを見る",
   "command.measureStartup": "起動時間を前回と比べる",

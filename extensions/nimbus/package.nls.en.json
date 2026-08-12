@@ -32,6 +32,7 @@
   "command.checkApiDocs": "Find Stale API Documentation",
   "command.trackSchemaImpact": "Find What a Type Change Breaks",
   "command.investigateCi": "Investigate a Failed CI Run",
+  "command.compareAgentWork": "Compare Work From Another Tool",
   "command.importCpuProfile": "Investigate Hot Spots from a Profile",
   "command.trackMemory": "Check Whether Memory Keeps Growing",
   "command.measureStartup": "Compare Startup Time with Last Run",

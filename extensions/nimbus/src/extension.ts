@@ -194,6 +194,7 @@ import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
 import { restackAfterMerge, showPrStack } from './prStack';
 import { measureStartup, trackMemory } from './perfWatch';
+import { compareAgentWork } from './agentCompare';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2792,6 +2793,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 計測結果を渡して、重いところを見つけさせる（T-128）
 		vscode.commands.registerCommand('nimbus.importCpuProfile', () =>
 			importCpuProfile({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 別のツールの結果と並べる。どちらが良いかは言わない（T-069）
+		vscode.commands.registerCommand('nimbus.compareAgentWork', () =>
+			compareAgentWork({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

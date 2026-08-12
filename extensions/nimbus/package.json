@@ -230,6 +230,12 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.compareAgentWork",
+        "title": "%command.compareAgentWork%",
+        "category": "Nimbus",
+        "icon": "$(git-compare)"
+      },
+      {
         "command": "nimbus.trackMemory",
         "title": "%command.trackMemory%",
         "category": "Nimbus",
