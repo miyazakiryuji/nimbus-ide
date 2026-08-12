@@ -11,9 +11,12 @@ import * as vscode from 'vscode';
 import type { NimbusEvent } from './events';
 import {
 	buildActivity,
+	buildAttributions,
 	describeCompaction,
 	hookIcon,
+	runningTool,
 	subagentIcon,
+	type Attribution,
 	type HookRun,
 	type SubagentRun,
 	type TouchedFile
@@ -104,6 +107,38 @@ function fileNode(file: TouchedFile): Node {
 	};
 }
 
+/** 1 つの指示と、そこから生まれた修正（T-024） */
+function attributionNode(attribution: Attribution): Node {
+	const prompt = attribution.prompt.replace(/\s+/g, ' ').trim();
+	const children: Node[] = attribution.edits.map((edit) => ({
+		label: edit.path.split('/').pop() ?? edit.path,
+		description: `${edit.toolName} · ${time(edit.at)}`,
+		tooltip: edit.path,
+		icon: 'edit',
+		resource: vscode.Uri.file(edit.path)
+	}));
+	if (attribution.reads.length > 0) {
+		// 何を見て決めたかが分かると、修正の妥当性を判断できる
+		children.push({
+			label: '読んだファイル',
+			description: String(attribution.reads.length),
+			icon: 'file',
+			children: attribution.reads.map((path) => ({
+				label: path.split('/').pop() ?? path,
+				tooltip: path,
+				resource: vscode.Uri.file(path)
+			}))
+		});
+	}
+	return {
+		label: prompt.length > 60 ? `${prompt.slice(0, 60)}…` : prompt,
+		description: `${attribution.edits.length} 件の修正 · ${time(attribution.at)}`,
+		tooltip: attribution.prompt,
+		icon: 'comment-discussion',
+		children
+	};
+}
+
 function group(label: string, icon: string, children: Node[], emptyLabel: string): Node {
 	return {
 		label,
@@ -155,7 +190,19 @@ export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 		) {
 			return [{ label: 'セッションが動き出すと、ここに中身が表示されます', icon: 'info' }];
 		}
-		return [
+		const nodes: Node[] = [];
+		// いま何をしているかは一番上に。走っている間だけ出す（T-192）
+		const running = runningTool(this.events);
+		if (running) {
+			nodes.push({
+				label: `いま: ${running.toolName}`,
+				description: running.target ?? '',
+				tooltip: running.target ?? running.toolName,
+				icon: 'sync~spin'
+			});
+		}
+		nodes.push(
+			group('指示ごとの修正', 'comment-discussion', buildAttributions(this.events).map(attributionNode), '（まだありません）'),
 			group('サブエージェント', 'organization', activity.subagents.map(subagentNode), '（まだ動いていません）'),
 			group('フック', 'zap', activity.hooks.map(hookNode), '（発火していません）'),
 			group('触ったファイル', 'files', activity.files.map(fileNode), '（まだありません）'),
@@ -169,6 +216,7 @@ export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 				})),
 				'（発生していません）'
 			)
-		];
+		);
+		return nodes;
 	}
 }

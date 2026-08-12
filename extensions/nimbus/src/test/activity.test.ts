@@ -10,7 +10,14 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import type { NimbusEvent } from '../events';
-import { buildActivity, describeCompaction, hookIcon, subagentIcon } from '../core/activity';
+import {
+	buildActivity,
+	buildAttributions,
+	describeCompaction,
+	hookIcon,
+	runningTool,
+	subagentIcon
+} from '../core/activity';
 import { buildNotifyCommand, oneLine } from '../core/notify';
 
 const SESSION = 's1';
@@ -173,4 +180,70 @@ test('通知を出せないプラットフォームでは undefined（呼び出�
 test('通知の本文は 1 行に畳む', () => {
 	assert.strictEqual(oneLine('  複数\n行の  文章  '), '複数 行の 文章');
 	assert.strictEqual(oneLine('x'.repeat(200)).length, 121);
+});
+
+// --- 指示と修正の紐づけ（T-024）・思考中の可視化（T-192） ---
+
+test('修正は、きっかけになった指示ごとにまとまる', () => {
+	const attributions = buildAttributions([
+		at(1, { kind: 'user-text', text: 'ログを直して' }),
+		at(2, { kind: 'tool-use', toolUseId: 'u1', toolName: 'Read', input: { file_path: '/w/log.ts' } }),
+		at(3, { kind: 'tool-use', toolUseId: 'u2', toolName: 'Edit', input: { file_path: '/w/log.ts' } }),
+		at(4, { kind: 'user-text', text: 'テストも足して' }),
+		at(5, { kind: 'tool-use', toolUseId: 'u3', toolName: 'Write', input: { file_path: '/w/log.test.ts' } })
+	]);
+	assert.deepStrictEqual(attributions, [
+		{
+			prompt: 'テストも足して',
+			at: 4,
+			edits: [{ path: '/w/log.test.ts', toolName: 'Write', at: 5 }],
+			reads: []
+		},
+		{
+			prompt: 'ログを直して',
+			at: 1,
+			edits: [{ path: '/w/log.ts', toolName: 'Edit', at: 3 }],
+			reads: ['/w/log.ts']
+		}
+	]);
+});
+
+test('修正が生まれなかった指示は出さない（見たいのは修正の出どころ）', () => {
+	const attributions = buildAttributions([
+		at(1, { kind: 'user-text', text: '調べるだけ' }),
+		at(2, { kind: 'tool-use', toolUseId: 'u1', toolName: 'Read', input: { file_path: '/w/a.ts' } })
+	]);
+	assert.deepStrictEqual(attributions, []);
+});
+
+test('指示より前のツール実行は、どの指示にも紐づけない', () => {
+	const attributions = buildAttributions([
+		at(1, { kind: 'tool-use', toolUseId: 'u0', toolName: 'Edit', input: { file_path: '/w/orphan.ts' } }),
+		at(2, { kind: 'user-text', text: '指示' }),
+		at(3, { kind: 'tool-use', toolUseId: 'u1', toolName: 'Edit', input: { file_path: '/w/a.ts' } })
+	]);
+	assert.deepStrictEqual(attributions.length, 1);
+	assert.deepStrictEqual(attributions[0].edits.map((e) => e.path), ['/w/a.ts']);
+});
+
+test('走っているツールは、結果が返っていない最後の呼び出し', () => {
+	assert.deepStrictEqual(
+		runningTool([
+			at(1, { kind: 'tool-use', toolUseId: 'u1', toolName: 'Read', input: { file_path: '/w/a.ts' } }),
+			at(2, { kind: 'tool-result', toolUseId: 'u1', isError: false, preview: '' }),
+			at(3, { kind: 'tool-use', toolUseId: 'u2', toolName: 'Bash', input: { command: 'npm  test\n' } })
+		]),
+		{ toolName: 'Bash', target: 'npm test', since: 3 }
+	);
+});
+
+test('ターンが終わっていれば、走っているツールは無い', () => {
+	assert.strictEqual(
+		runningTool([
+			at(1, { kind: 'tool-use', toolUseId: 'u1', toolName: 'Read', input: { file_path: '/w/a.ts' } }),
+			at(2, { kind: 'turn-result', subtype: 'success', isError: false, numTurns: 1, durationMs: 10 })
+		]),
+		undefined
+	);
+	assert.strictEqual(runningTool([]), undefined);
 });

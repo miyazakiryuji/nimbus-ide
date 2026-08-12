@@ -181,6 +181,98 @@ export function buildActivity(events: readonly NimbusEvent[]): Activity {
 	};
 }
 
+/**
+ * 「この修正はどの指示から生まれたか」（tasks.md T-024）。
+ *
+ * 差分をファイル単位で見せても「なぜこうなったか」は分からない。
+ * **きっかけになった指示**と結びつけると、レビューの単位が「ファイル」から「意図」になる。
+ */
+export interface Attribution {
+	/** きっかけになった指示 */
+	prompt: string;
+	at: number;
+	/** その指示から生まれた書き込み */
+	edits: { path: string; toolName: string; at: number }[];
+	/** その指示で読んだファイル（何を見て決めたかが分かる） */
+	reads: string[];
+}
+
+/**
+ * 指示ごとに、その後の書き込みをまとめる。**新しい指示が来るまで**が 1 つの区切り。
+ * 書き込みが 1 つも無かった指示は返さない（見たいのは「修正の出どころ」なので）。
+ */
+export function buildAttributions(events: readonly NimbusEvent[]): Attribution[] {
+	const turns: Attribution[] = [];
+	let current: Attribution | undefined;
+	for (const event of events) {
+		if (event.kind === 'user-text') {
+			current = { prompt: event.text, at: event.timestamp, edits: [], reads: [] };
+			turns.push(current);
+			continue;
+		}
+		if (event.kind !== 'tool-use' || !current) {
+			continue;
+		}
+		const path = filePathOf(event.input);
+		if (!path) {
+			continue;
+		}
+		if (WRITE_TOOLS.has(event.toolName)) {
+			current.edits.push({ path, toolName: event.toolName, at: event.timestamp });
+		} else if (READ_TOOLS.has(event.toolName) && !current.reads.includes(path)) {
+			current.reads.push(path);
+		}
+	}
+	return turns.filter((turn) => turn.edits.length > 0).reverse();
+}
+
+/**
+ * いま走っているツール（tasks.md T-192）。
+ *
+ * 「読み込まれたファイル一覧」（T-023）が済んだ話なら、こちらは**進行中**の話。
+ * 結果（`tool-result`）がまだ返っていない呼び出しを、最後のものから探す。
+ */
+export interface RunningTool {
+	toolName: string;
+	/** 何に対して実行しているか（ファイル・コマンドなど） */
+	target?: string;
+	since: number;
+}
+
+export function runningTool(events: readonly NimbusEvent[]): RunningTool | undefined {
+	const finished = new Set<string>();
+	for (const event of events) {
+		if (event.kind === 'tool-result') {
+			finished.add(event.toolUseId);
+		}
+	}
+	// 後ろから探す。走っているのはたいてい最後に投げたもの
+	for (let i = events.length - 1; i >= 0; i--) {
+		const event = events[i];
+		if (event.kind === 'turn-result') {
+			// ターンが終わっていれば、走っているツールは無い
+			return undefined;
+		}
+		if (event.kind === 'tool-use' && !finished.has(event.toolUseId)) {
+			return {
+				toolName: event.toolName,
+				target: filePathOf(event.input) ?? commandOf(event.input),
+				since: event.timestamp
+			};
+		}
+	}
+	return undefined;
+}
+
+/** Bash など、パスではなくコマンドで「何をしているか」が分かるもの */
+function commandOf(input: unknown): string | undefined {
+	if (!input || typeof input !== 'object') {
+		return undefined;
+	}
+	const command = (input as Record<string, unknown>)['command'];
+	return typeof command === 'string' && command ? command.replace(/\s+/g, ' ').trim() : undefined;
+}
+
 /** サブエージェントの状態を 1 文字の記号にする（一覧で状態を先頭に置くため） */
 export function subagentIcon(status: SubagentRun['status']): string {
 	switch (status) {

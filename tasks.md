@@ -110,8 +110,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 
 **承認前に差分エディタで見せる仕組みは F3 で実装済み**（`core/editPreview.ts`）。ここに残るのはその先。
 
-- [ ] T-024 **「この修正はどの指示から生まれたか」の紐づけ** — 差分をファイル単位ではなく、
-      きっかけになった指示（プロンプト・ターン）と結びつけて見せる [P1]
 - [ ] T-114 コミットの意味単位への分割 — まとめた変更を、レビューしやすい粒度に切り分けて提案する
       （README の「1 コミット = 1 つの意図」を機械側から助ける形）[P2]
 - [ ] T-115 コンフリクト解消支援 — 両方の変更意図を読んだ上でマージ案を出す。
@@ -236,7 +234,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 - [ ] T-189 意見の相違の記録 — 自分の考えと Claude の提案の食い違いを残し、後から検証する [P2]
 - [ ] T-190 交代モード — 人間が書く番／エージェントが書く番を明示的に切り替える [P3]
 - [ ] T-191 肩越しモード — 自分が書く横で待機し、必要なときだけ口を出す [P3]
-- [ ] T-192 思考中の可視化 — 今どのファイルを読んでいるかがライブで見える（T-023 の動的版）[P2]
 
 ### IntelliJ IDEA 由来の IDE 基礎機能
 
@@ -516,6 +513,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-024 「この修正はどの指示から生まれたか」の紐づけ（指示ごとに修正と読んだファイルをまとめる）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
+- [x] T-192 思考中の可視化（走っているツールと対象を「セッションの中身」の先頭に出す）— 2026-08-13 / 仕様 [session-activity](nimbus/docs/specs/session-activity.md)
 - [x] T-025 チェックポイントのタイムライン UI（戻す先を選び、変更内容を見てから戻す）— 2026-08-13 / 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md)
 - [x] T-029 MCP サーバーの接続管理（状態・エラー・繋ぎ直し・有効無効）— 2026-08-13 / 仕様 [checkpoints-and-mcp](nimbus/docs/specs/checkpoints-and-mcp.md)
 - [x] T-034 過去セッションの横断検索（`~/.claude/projects/**` を読む・`file:` `tool:` で絞り込み）— 2026-08-13 / 仕様 [transcript-search](nimbus/docs/specs/transcript-search.md)
