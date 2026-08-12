@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { findDuplicateBlocks, findNamingIssues, renderCodeHealth } from './core/codeHealth';
 import { findDeadExports, renderDeadExports } from './core/deadCode';
 import { findLayerViolations, rankComplexity, renderStructure } from './core/structure';
+import { findDeadReferences, findParamMismatches, renderCommentFindings } from './core/commentCheck';
 
 /** 一度に読むファイル数の上限（大きなリポジトリで固まらせない） */
 const MAX_FILES = 400;
@@ -60,8 +61,15 @@ export async function openCodeHealth(): Promise<void> {
 	// 使われていない export も同じ面に出す（T-112）。どれも「増えていること」を見せる話なので、
 	// コマンドを分けるより 1 枚にまとめたほうが読まれる
 	// 層の逆流は先に出す。約束を破っているものは、読みにくさより先に直したい（T-138）
+	// コメントだけが古い場所も同じ面に出す（T-210）。読む人は本文よりコメントを信じる
+	const paths = files.map((file) => file.path);
+	const comments = files.flatMap((file) => [
+		...findParamMismatches(file.path, file.content),
+		...findDeadReferences(file.path, file.content, paths)
+	]);
 	const markdown = [
 		renderStructure(rankComplexity(files), findLayerViolations(files)),
+		renderCommentFindings(comments),
 		renderCodeHealth(findNamingIssues(names), findDuplicateBlocks(files)),
 		renderDeadExports(findDeadExports(files))
 	]

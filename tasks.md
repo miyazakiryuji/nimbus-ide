@@ -248,7 +248,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [ ] T-061 Mermaid 図のライブプレビュー — エージェントが描いた構成図をその場で確認する [P3]
 - [ ] T-208 社内 Wiki / Notion 連携 [P3]
 - [ ] T-209 API ドキュメントの追従更新 [P2]
-- [ ] T-210 コードコメントの整合性チェック — コメントだけ古い状態を検出する [P2]
 
 ### 🎨 自分だけの相棒にする
 
@@ -491,6 +490,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-210 古くなっているコメントの検出（`@param` の食い違い・存在しない参照）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-160 レビューの進み（見たあとに変わったら見ていない扱いに戻す）— 2026-08-13 / 仕様 [review-progress](nimbus/docs/specs/review-progress.md)
 - [x] T-198 依存の食い違い（pubspec と Podfile.lock の突き合わせ）— 2026-08-13 / 仕様 [dep-consistency](nimbus/docs/specs/dep-consistency.md)
 - [x] T-199 Xcode プロジェクトの衝突を解く（両方残す・1 つでも怪しければ触らない）— 2026-08-13 / 仕様 [xcode-conflict](nimbus/docs/specs/xcode-conflict.md)
