@@ -243,7 +243,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🧪 「本当に動いたの？」
 
-- [ ] T-083 裏取りモード — ライブラリの使い方を公式ドキュメントで確認してから書かせる（ハルシネーション対策）[P2]
 
 ### 🖥 環境まわり
 
@@ -348,6 +347,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-083 裏取りモード（指示で名前が出たライブラリの、実際に使っているバージョンを送る前に添える）
+      — 2026-08-13 / 仕様 [signature-attachment](nimbus/docs/specs/signature-attachment.md)
 
 - [x] T-080 仕様の逆生成（事実と推測を分けさせ、既存の記述は消させない。型は既存の仕様書に合わせる）
       — 2026-08-13 / 仕様 [reverse-spec](nimbus/docs/specs/reverse-spec.md)

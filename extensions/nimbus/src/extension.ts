@@ -54,6 +54,7 @@ import { openHighlights } from './highlights';
 import { draftReviewRequest } from './reviewRequest';
 import { openExplanation } from './explain';
 import { importReviewComments } from './reviewComments';
+import { shareSession } from './shareSession';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -130,6 +131,7 @@ import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
+import { buildGroundingForPrompt, clearDependencyCache } from './grounding';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
@@ -1664,6 +1666,9 @@ export function activate(context: vscode.ExtensionContext): void {
 			// 名指しされた API の実物のシグネチャを添える（T-175）。推測で書かせないための前段
 			const signatures = await buildSignatureNote(text);
 			text = signatures ? `${text}\n\n${signatures}` : text;
+			// 使っているライブラリのバージョンを添える（T-083）。記憶で書かせない
+			const grounding = await buildGroundingForPrompt(text);
+			text = grounding ? `${text}\n\n${grounding}` : text;
 			// 利用者が新しい指示を出したら、自動リロードの周回数を戻す
 			reloadRounds = 0;
 			const attachments = toAttachments(images);
@@ -2148,6 +2153,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.exportBundle', () => exportBundle((text) => sanitizer.detect(text), log)),
 		vscode.commands.registerCommand('nimbus.importBundle', () => importBundle(log)),
 		// 設定が変わったら設定タブを出し直す
+		vscode.workspace.onDidSaveTextDocument((document) => {
+			// マニフェストを直したら、添えるバージョンも取り直す（T-083）
+			if (/(package\.json|pubspec\.yaml|go\.mod)$/.test(document.uri.path)) {
+				clearDependencyCache();
+			}
+		}),
 		vscode.workspace.onDidChangeConfiguration((event) => {
 			if (event.affectsConfiguration('nimbus')) {
 				settingsView.reload();
@@ -2255,6 +2266,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.draftReviewRequest', () => draftReviewRequest()),
 		vscode.commands.registerCommand('nimbus.openExplanation', () => openExplanation()),
 		vscode.commands.registerCommand('nimbus.importReviewComments', () => importReviewComments((text) => void send(text))),
+		vscode.commands.registerCommand('nimbus.shareSession', () => shareSession()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
