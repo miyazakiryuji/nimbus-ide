@@ -31,6 +31,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`platform-channel.md`](platform-channel.md) — Dart とネイティブの橋渡しの突き合わせ
 - [`flutter-lint.md`](flutter-lint.md) — Flutter の確認（文言・読み上げ）
 - [`licenses.md`](licenses.md) — 依存のライセンス
+- [`vuln-fix.md`](vuln-fix.md) — 脆弱性の警告を直す順に
 - [`dep-audit.md`](dep-audit.md) — 依存を足す前に見る
 - [`dep-consistency.md`](dep-consistency.md) — 依存の食い違い（pub get / pod install）
 - [`xcode-conflict.md`](xcode-conflict.md) — Xcode プロジェクトの衝突を解く

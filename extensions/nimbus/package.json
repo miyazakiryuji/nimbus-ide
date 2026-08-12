@@ -892,6 +892,12 @@
         "title": "他のツールのルールを CLAUDE.md へ取り込む",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "nimbus.openVulnFixPlan",
+        "title": "脆弱性の警告を直す順に並べる",
+        "category": "Nimbus",
+        "icon": "$(shield)"
       }
     ],
     "menus": {
