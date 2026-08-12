@@ -40,9 +40,13 @@
           "type": "webview"
         },
         {
+          "id": "nimbus.board",
+          "name": "タスク",
+          "type": "webview"
+        },
+        {
           "id": "nimbus.context",
-          "name": "文脈",
-          "icon": "$(book)"
+          "name": "文脈"
         }
       ]
     },
@@ -60,6 +64,11 @@
       {
         "command": "nimbus.showLog",
         "title": "ログを表示",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.newTask",
+        "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
       }
     ],
@@ -88,6 +97,13 @@
           "type": "boolean",
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+        },
+        "nimbus.tasks.maxConcurrent": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "同時に実行するタスク（Claude セッション）の上限。上限に達したタスクは待機し、空きが出ると自動で開始します。"
         }
       }
     }

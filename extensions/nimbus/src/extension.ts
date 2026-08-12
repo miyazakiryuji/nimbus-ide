@@ -16,6 +16,9 @@ import { reportMissingExecutable, resolveClaudeExecutable } from './claudeExecut
 import { ContextViewProvider } from './contextView';
 import { ProposedEditPreviewer } from './proposedEdit';
 import { billingModeLabel } from './billing';
+import { WorktreeManager } from './core/worktree';
+import { TaskService } from './tasks/TaskService';
+import { BoardViewProvider } from './tasks/BoardViewProvider';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -37,6 +40,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		previewer,
 		onPendingChanged: (pending) => {
 			pendingApprovals = pending.length;
+			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
+			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		}
 	});
@@ -45,6 +50,15 @@ export function activate(context: vscode.ExtensionContext): void {
 		undefined,
 		async () => buildOptions(),
 		(sessionId) => broker.canUseToolFor(sessionId)
+	);
+
+	const worktrees = new WorktreeManager();
+	const tasks: TaskService = new TaskService(
+		context.globalState,
+		worktrees,
+		sessions,
+		() => vscode.workspace.getConfiguration('nimbus').get<number>('tasks.maxConcurrent') ?? 2,
+		log
 	);
 
 	/** 現在前面で操作しているセッション。並列セッションは F4 で本格対応する */
@@ -181,11 +195,96 @@ export function activate(context: vscode.ExtensionContext): void {
 		cockpit.reveal();
 	}
 
+	const board = new BoardViewProvider(context.extensionUri, {
+		onNewTask: () => newTask(),
+		onStart: async (taskId) => {
+			const result = await tasks.startTask(taskId);
+			if (!result.started && result.reason) {
+				void vscode.window.showInformationMessage(`Nimbus: ${result.reason}`);
+			}
+		},
+		onComplete: (taskId) => completeTask(taskId),
+		onOpen: (taskId) => openTaskWorktree(taskId),
+		onForget: (taskId) => tasks.forget(taskId),
+		tasks: () => tasks.list(),
+		log
+	});
+	tasks.on('changed', () => board.refresh());
+
+	/** タスクを作る。タイトルと指示は 2 段階で聞く（後から編集できないので、ここは丁寧に） */
+	async function newTask(): Promise<void> {
+		const cwd = workspaceCwd();
+		if (!cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからタスクを作成してください。');
+			return;
+		}
+		const title = await vscode.window.showInputBox({
+			title: 'Nimbus: 新しいタスク',
+			prompt: 'タスク名（worktree のブランチ名にも使われます）',
+			placeHolder: '例: ログイン画面のバリデーションを直す'
+		});
+		if (!title) {
+			return;
+		}
+		const prompt = await vscode.window.showInputBox({
+			title: 'Nimbus: 新しいタスク',
+			prompt: 'Claude への最初の指示',
+			placeHolder: '何をしてほしいかを書く'
+		});
+		if (!prompt) {
+			return;
+		}
+		try {
+			await tasks.createTask({ title, prompt, repoCwd: cwd, autoStart: true });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			log(`[task] 作成に失敗: ${message}`);
+			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+		}
+	}
+
+	async function completeTask(taskId: string): Promise<void> {
+		const task = tasks.get(taskId);
+		if (!task) {
+			return;
+		}
+		const CONFIRM = '完了にする';
+		const choice = await vscode.window.showWarningMessage(
+			`「${task.title}」を完了にします。worktree は削除しますが、未コミットの変更は ${task.branch} に自動でコミットして残します。`,
+			{ modal: true },
+			CONFIRM
+		);
+		if (choice !== CONFIRM) {
+			return;
+		}
+		const { wipCommit } = await tasks.completeTask(taskId);
+		void vscode.window.showInformationMessage(
+			wipCommit
+				? `Nimbus: 完了しました。未コミットの成果は ${task.branch} の ${wipCommit.slice(0, 8)} に保存しました。`
+				: `Nimbus: 完了しました（${task.branch} は残っています）。`
+		);
+	}
+
+	/** worktree は別ウィンドウで開く。並列タスクは「窓を分ける」のがいちばん分かりやすい */
+	async function openTaskWorktree(taskId: string): Promise<void> {
+		const task = tasks.get(taskId);
+		if (!task) {
+			return;
+		}
+		await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(task.worktreePath), {
+			forceNewWindow: true
+		});
+	}
+
 	context.subscriptions.push(
 		output,
 		status,
 		previewer,
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
+		vscode.window.registerWebviewViewProvider(BoardViewProvider.viewType, board, {
+			webviewOptions: { retainContextWhenHidden: true }
+		}),
+		vscode.commands.registerCommand('nimbus.newTask', () => newTask()),
 		vscode.window.registerWebviewViewProvider(CockpitViewProvider.viewType, cockpit, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),
