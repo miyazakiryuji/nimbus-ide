@@ -564,6 +564,18 @@
         "title": "Platform Channel を突き合わせる",
         "category": "Nimbus",
         "icon": "$(plug)"
+      },
+      {
+        "command": "nimbus.switchPolicy",
+        "title": "承認ポリシーを切り替える",
+        "category": "Nimbus",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "nimbus.showImpact",
+        "title": "変更の影響範囲を見る",
+        "category": "Nimbus",
+        "icon": "$(references)"
       }
     ],
     "menus": {
@@ -953,6 +965,17 @@
           "type": "string",
           "default": "",
           "description": "大きさを見る成果物のパス（プロジェクト相対）。空のときは時間だけ比べます。"
+        },
+        "nimbus.policy.profile": {
+          "type": "string",
+          "default": "開発",
+          "enum": [
+            "開発",
+            "調べるだけ",
+            "本番に触る",
+            "隔離（ネットワーク遮断）"
+          ],
+          "description": "いま効いている承認ポリシー。切り替えると権限モード・自動許可・サンドボックスがまとめて変わります。"
         }
       }
     },

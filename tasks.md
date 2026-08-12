@@ -43,8 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
 
-- [ ] T-158 変更影響範囲の事前プレビュー — 消した／変えた export の呼び出し元を先に見せる。
-      実装前に claim @session-b 2026-08-13 [P2]
 
 
 
@@ -399,6 +397,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-158 変更影響範囲の事前プレビュー（消した export の呼び出し元を、適用の前に並べる）
+      — 2026-08-13 / 仕様 [impact-preview](nimbus/docs/specs/impact-preview.md)
 
 - [x] T-181 スナップショットの更新レビュー（何が更新されたかを名指しし、「直して」ではなく「説明して」から入る）
       — 2026-08-13 / 仕様 [snapshot-review](nimbus/docs/specs/snapshot-review.md)

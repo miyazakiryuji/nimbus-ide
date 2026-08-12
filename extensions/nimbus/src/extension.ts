@@ -43,10 +43,12 @@ import { resolveXcodeConflict } from './pbxprojConflict';
 import { openDepConsistency } from './depConsistency';
 import { openReviewProgress } from './reviewProgress';
 import { openRhythm } from './rhythm';
+import { openPlatformChannels } from './platformChannel';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
 import { showDiffSummary } from './diffSummary';
+import { showImpact } from './impact';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -80,6 +82,15 @@ import { describeFindable, searchFindables, toPrompt, type Findable } from './co
 import { draftSkill, renderSkillFile } from './core/sessionToSkill';
 import { describeOutbox, isTransientFailure, Outbox } from './core/outbox';
 import { collectTags } from './core/tasks';
+import { dryRunHook, manageHooks } from './hooksBuilder';
+import {
+	BUILTIN_PROFILES,
+	describeProfile,
+	findProfile,
+	isWidening,
+	toSdkSandbox,
+	type PolicyProfile
+} from './core/policyProfiles';
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
@@ -93,6 +104,7 @@ import { runImpactedTests } from './impactedTests';
 import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { showRepoSummary } from './repoSummary';
 import { reviewSnapshots } from './snapshotReview';
+import { captureBehavior, verifyEquivalence } from './equivalence';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -166,7 +178,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const sessions = new SessionManager(
 		undefined,
-		async () => buildOptions(await readPinnedFiles(), await readAgentFiles()),
+		async () => buildOptions(await readPinnedFiles(), await readAgentFiles(), currentProfile()),
 		(sessionId) => broker.canUseToolFor(sessionId)
 	);
 
@@ -585,6 +597,51 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/** いま効いているプロファイル（T-162）。設定には名前だけを持つ */
+	function currentProfile(): PolicyProfile {
+		return findProfile(BUILTIN_PROFILES, vscode.workspace.getConfiguration('nimbus').get<string>('policy.profile'));
+	}
+
+	/**
+	 * 承認ポリシーの切り替え（tasks.md T-162 / T-163）。
+	 * 許可の広さは何をしているかで変わる。まとめて名前で切り替えられるようにする。
+	 */
+	async function switchPolicy(): Promise<void> {
+		const now = currentProfile();
+		const chosen = await vscode.window.showQuickPick(
+			BUILTIN_PROFILES.map((profile) => ({
+				label: `${profile.name === now.name ? '$(check) ' : ''}${profile.name}`,
+				description: describeProfile(profile),
+				detail: profile.description,
+				profile
+			})),
+			{ title: `Nimbus: いまは「${now.name}」`, matchOnDetail: true }
+		);
+		if (!chosen || chosen.profile.name === now.name) {
+			return;
+		}
+		// 広げるときだけ確認する。狭めるのは黙って通してよい
+		if (isWidening(now, chosen.profile)) {
+			const CONFIRM = '切り替える';
+			const answer = await vscode.window.showWarningMessage(
+				`Nimbus: 「${chosen.profile.name}」は、いまより許可が広くなります。`,
+				{ modal: true, detail: describeProfile(chosen.profile) },
+				CONFIRM
+			);
+			if (answer !== CONFIRM) {
+				return;
+			}
+		}
+		const config = vscode.workspace.getConfiguration('nimbus');
+		await config.update('policy.profile', chosen.profile.name, vscode.ConfigurationTarget.Workspace);
+		await config.update('permissions.autoApproveReadOnly', chosen.profile.autoApproveReadOnly, vscode.ConfigurationTarget.Workspace);
+		await config.update('safety.blockProtectedReads', chosen.profile.blockProtectedReads, vscode.ConfigurationTarget.Workspace);
+		log(`[policy] ${now.name} → ${chosen.profile.name}（${describeProfile(chosen.profile)}）`);
+		void vscode.window.showInformationMessage(
+			`Nimbus: 「${chosen.profile.name}」に切り替えました。次のセッションから効きます。`
+		);
 	}
 
 	const PROMPT_KEY = 'nimbus.promptTemplates';
@@ -1807,6 +1864,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		// スキル以外も同じ場所から探す（T-117）
 		vscode.commands.registerCommand('nimbus.findAnything', () => findAnything()),
 		// 送れなかった入力（T-151）
+		// フックの組み立てとドライラン（T-026 / T-161）
+		vscode.commands.registerCommand('nimbus.hooks', () => manageHooks(log)),
+		vscode.commands.registerCommand('nimbus.hookDryRun', () => dryRunHook(log)),
+		// 承認ポリシーのプロファイル（T-162 / T-163）
+		vscode.commands.registerCommand('nimbus.switchPolicy', () => switchPolicy()),
 		vscode.commands.registerCommand('nimbus.flushOutbox', () => flushOutbox()),
 		// うまくいった流れをスキルにする（T-168）
 		vscode.commands.registerCommand('nimbus.sessionToSkill', () => sessionToSkill()),
@@ -1880,6 +1942,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.resolveXcodeConflict', () => resolveXcodeConflict()),
 		vscode.commands.registerCommand('nimbus.openDepConsistency', () => openDepConsistency()),
 		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
+		vscode.commands.registerCommand('nimbus.openPlatformChannels', () => openPlatformChannels()),
 		vscode.commands.registerCommand('nimbus.openRhythm', () =>
 			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals }))
 		),
@@ -1917,6 +1980,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 消した export の呼び出し元を先に見せる（T-158）
+		vscode.commands.registerCommand('nimbus.showImpact', () => showImpact()),
 		// 差分を読む前の見取り図（T-157）
 		vscode.commands.registerCommand('nimbus.showDiffSummary', () =>
 			showDiffSummary((text) => {
@@ -2006,6 +2071,25 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 移行の前に、いまの振る舞いを写したテストを書かせる（T-179）
+		vscode.commands.registerCommand('nimbus.captureBehavior', () =>
+			captureBehavior({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		vscode.commands.registerCommand('nimbus.verifyEquivalence', () =>
+			verifyEquivalence({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// スナップショットは通すために更新できてしまう（T-181）。更新そのものをレビューする
 		vscode.commands.registerCommand('nimbus.reviewSnapshots', () =>
 			reviewSnapshots({
@@ -2102,8 +2186,21 @@ function workspaceCwd(): string | undefined {
  * `settingSources: []` を明示して、利用者の ~/.claude 設定を暗黙に読み込ませない
  * （何が文脈に入るかを Nimbus 側で説明できる状態に保つため）。
  */
-function buildOptions(pinned: readonly PinnedFile[] = [], agentFiles: readonly AgentFile[] = []): Partial<Options> {
+function buildOptions(
+	pinned: readonly PinnedFile[] = [],
+	agentFiles: readonly AgentFile[] = [],
+	profile?: PolicyProfile
+): Partial<Options> {
 	const options: Partial<Options> = { settingSources: [] };
+	// 承認ポリシー（T-162）と、危ないことを試すときの器（T-163）
+	if (profile) {
+		options.permissionMode = profile.permissionMode;
+		const sandbox = toSdkSandbox(profile.sandbox);
+		if (sandbox) {
+			// SDK の SandboxSettings は zod 由来。ここでは必要なぶんだけを渡す
+			options.sandbox = sandbox as Options['sandbox'];
+		}
+	}
 	// サブエージェントごとのモデル（T-232）。**割り当てが 1 つも無ければ渡さない** —
 	// 渡すと、利用者の定義を Nimbus が組み直したもので置き換えることになる
 	const agentModels = vscode.workspace.getConfiguration('nimbus').get<Record<string, string>>('agents.models') ?? {};
