@@ -39,6 +39,11 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-128 プロファイル結果の投入（重い箇所を特定させる）— 実装中 @yua 2026-08-13
+
+- [ ] T-135 スタックした PR の管理 — 積んだ順・下が入った後の付け替え。`core/prStack.ts` `src/prStack.ts`
+      を確保 @session-c 2026-08-13 [P3]
+
 
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
@@ -293,7 +298,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 **worktree の自動管理は F4 で実装済み** — タスクごとに切り、完了時は未コミットの変更を WIP コミットで
 保存してから `git worktree remove` する（`core/worktree.ts`）。ここに残るのはその先。
 
-- [ ] T-135 スタックした PR の管理 — 積み上げたブランチの依存関係を整理する [P3]
 
 ### 📊 コード品質
 
