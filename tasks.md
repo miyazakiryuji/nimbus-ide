@@ -39,6 +39,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-014 ターミナルを好きな数に分割する — 実装中 @yua 2026-08-13
+
 - [ ] T-222 メモリリークの調査支援と起動時間の計測 — `core/memoryTrend.ts` `core/startupTiming.ts`
       `src/perfWatch.ts` を確保（ の `core/cpuProfile.ts` とは別モジュール）@session-c 2026-08-13 [P2]
 
