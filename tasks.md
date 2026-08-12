@@ -171,7 +171,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
       （Flutter の major バージョンアップのような場面）[P2]
 - [ ] T-177 スニペット化 — 生成された定型パターンを保存して使い回す [P3]
 - [ ] T-179 移行前後の等価性確認 — 振る舞いが変わっていないかのテストを生成する [P2]
-- [ ] T-181 スナップショット／ゴールデンテストの更新レビュー [P2]
 - [ ] T-182 ミューテーションテストによるテストの質評価 [P3]
 - [ ] T-184 ログの時系列ビューア（Inbox の T-015 デバッグモードと同じ面になりそう）[P2]
 
@@ -231,7 +230,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### ⏰ 時間軸
 
 - [ ] T-051 就寝前の予約実行 — 「朝までにこれ調べといて」を仕込んで寝る [P2]
-- [ ] T-053 待ち時間の使い方 — エージェント稼働中に、別タスクへの切り替えを提案する [P3]
 
 ### 📱 デスクを離れる
 
@@ -311,7 +309,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       ※T-019 の完了通知と方針が衝突するので、どちらを既定にするかを決める [P3]
 - [ ] T-088 失敗時のリカバリ提案 — 詰まったときに「一旦戻す／別解を試す／人間が手を入れる」を選ばせる
       （T-025 のチェックポイントと繋がる）[P2]
-- [ ] T-089 区切りの提案 — 長時間ぶっ通しのときに休憩を促す [P3]
 
 ### 🌏 日本語まわり
 
@@ -404,6 +401,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-181 スナップショットの更新レビュー（何が更新されたかを名指しし、「直して」ではなく「説明して」から入る）
+      — 2026-08-13 / 仕様 [snapshot-review](nimbus/docs/specs/snapshot-review.md)
+
 - [x] T-176 リポジトリの構造要約カード（数えた事実だけを 1 枚にして、そのままセッションへ渡せる）
       — 2026-08-13 / 仕様 [repo-summary](nimbus/docs/specs/repo-summary.md)
 
@@ -490,6 +490,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-089 / T-053 いまのようす（続けすぎの区切り・待ち時間の使い道）— 2026-08-13 / 仕様 [rhythm](nimbus/docs/specs/rhythm.md)
 - [x] T-210 古くなっているコメントの検出（`@param` の食い違い・存在しない参照）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-160 レビューの進み（見たあとに変わったら見ていない扱いに戻す）— 2026-08-13 / 仕様 [review-progress](nimbus/docs/specs/review-progress.md)
 - [x] T-198 依存の食い違い（pubspec と Podfile.lock の突き合わせ）— 2026-08-13 / 仕様 [dep-consistency](nimbus/docs/specs/dep-consistency.md)

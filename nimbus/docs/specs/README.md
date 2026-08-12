@@ -32,6 +32,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`bisect.md`](bisect.md) — どこで壊れたかを絞り込む
 - [`stack-trace.md`](stack-trace.md) — スタックトレースから該当箇所を開く
 - [`lock-diff.md`](lock-diff.md) — ロックファイルの変更を読む
+- [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
 - [`digest.md`](digest.md) — ふりかえり（週次ダイジェスト・成長ログ）
 - [`usage.md`](usage.md) — 使用量（5 時間・週の枠／文脈の消費／費用と上限アラート）
 - [`session-activity.md`](session-activity.md) — セッションの中身（サブエージェント・フック・触ったファイル・コンパクション）と通知

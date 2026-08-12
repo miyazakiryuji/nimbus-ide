@@ -155,10 +155,10 @@
         "icon": "$(play-circle)"
       },
       {
-        "command": "nimbus.repoSummary",
-        "title": "リポジトリの構造要約を作る",
+        "command": "nimbus.reviewSnapshots",
+        "title": "スナップショットの更新をレビューする",
         "category": "Nimbus",
-        "icon": "$(book)"
+        "icon": "$(device-camera)"
       },
       {
         "command": "nimbus.repoSummary",
@@ -540,6 +540,24 @@
         "title": "変更の要約を見る",
         "category": "Nimbus",
         "icon": "$(list-tree)"
+      },
+      {
+        "command": "nimbus.hooks",
+        "title": "フックを組み立てる",
+        "category": "Nimbus",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "nimbus.hookDryRun",
+        "title": "フックを試す（ドライラン）",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.openRhythm",
+        "title": "いまのようすを見る",
+        "category": "Nimbus",
+        "icon": "$(pulse)"
       }
     ],
     "menus": {
@@ -944,6 +962,16 @@
         "label": "Nimbus Light",
         "uiTheme": "vs",
         "path": "./themes/nimbus-light.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "key": "shift+enter",
+        "command": "workbench.action.terminal.sendSequence",
+        "when": "terminalFocus",
+        "args": {
+          "text": "\u001b\r"
+        }
       }
     ]
   },
