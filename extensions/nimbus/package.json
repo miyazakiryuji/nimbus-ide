@@ -86,6 +86,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.settings",
+          "name": "設定",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.help",
           "name": "ヘルプ（ゆあ）",
           "type": "webview",
@@ -159,6 +164,12 @@
         "title": "スナップショットの更新をレビューする",
         "category": "Nimbus",
         "icon": "$(device-camera)"
+      },
+      {
+        "command": "nimbus.projectConventions",
+        "title": "このリポジトリの書き方を数える",
+        "category": "Nimbus",
+        "icon": "$(symbol-ruler)"
       },
       {
         "command": "nimbus.captureBehavior",
@@ -606,6 +617,18 @@
         "title": "仮の応答を作る",
         "category": "Nimbus",
         "icon": "$(json)"
+      },
+      {
+        "command": "nimbus.exportBundle",
+        "title": "設定をまとめて配る",
+        "category": "Nimbus",
+        "icon": "$(package)"
+      },
+      {
+        "command": "nimbus.importBundle",
+        "title": "配られた設定を読み込む",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {

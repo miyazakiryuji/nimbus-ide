@@ -45,6 +45,7 @@ import { openReviewProgress } from './reviewProgress';
 import { openRhythm } from './rhythm';
 import { openPlatformChannels } from './platformChannel';
 import { generateFromSchema } from './openapi';
+import { checkApiResponse, generateMockResponse } from './apiCheck';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -84,6 +85,8 @@ import { draftSkill, renderSkillFile } from './core/sessionToSkill';
 import { describeOutbox, isTransientFailure, Outbox } from './core/outbox';
 import { collectTags } from './core/tasks';
 import { dryRunHook, manageHooks } from './hooksBuilder';
+import { exportBundle, importBundle } from './bundleCommands';
+import { SettingsViewProvider } from './settingsView';
 import {
 	BUILTIN_PROFILES,
 	describeProfile,
@@ -106,6 +109,7 @@ import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { showRepoSummary } from './repoSummary';
 import { reviewSnapshots } from './snapshotReview';
 import { captureBehavior, verifyEquivalence } from './equivalence';
+import { showConventions } from './conventions';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -132,6 +136,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const usageView = new UsageViewProvider();
 	const activityView = new ActivityViewProvider();
 	const mcpView = new McpViewProvider();
+	// 設定タブ（T-016）。いま効いている値を 1 か所に集める
+	const settingsView = new SettingsViewProvider();
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
@@ -1852,6 +1858,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
+		vscode.window.registerTreeDataProvider('nimbus.settings', settingsView),
+		// 設定のパッケージ配布（T-043）
+		vscode.commands.registerCommand('nimbus.exportBundle', () => exportBundle((text) => sanitizer.detect(text), log)),
+		vscode.commands.registerCommand('nimbus.importBundle', () => importBundle(log)),
+		// 設定が変わったら設定タブを出し直す
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration('nimbus')) {
+				settingsView.reload();
+			}
+		}),
 		// 過去セッションの横断検索（T-034）。読むのは Claude Code 本体の記録で、Nimbus は書かない
 		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
 		vscode.commands.registerCommand('nimbus.pinnedFiles', () => managePinnedFiles()),
@@ -1945,6 +1961,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
 		vscode.commands.registerCommand('nimbus.openPlatformChannels', () => openPlatformChannels()),
 		vscode.commands.registerCommand('nimbus.generateFromSchema', () => generateFromSchema()),
+		vscode.commands.registerCommand('nimbus.checkApiResponse', () => checkApiResponse()),
+		vscode.commands.registerCommand('nimbus.generateMockResponse', () => generateMockResponse()),
 		vscode.commands.registerCommand('nimbus.openRhythm', () =>
 			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals }))
 		),
@@ -2073,6 +2091,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 既存のファイルを数えて、このリポジトリの書き方を渡す（T-103）
+		vscode.commands.registerCommand('nimbus.projectConventions', () =>
+			showConventions({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 移行の前に、いまの振る舞いを写したテストを書かせる（T-179）
 		vscode.commands.registerCommand('nimbus.captureBehavior', () =>
 			captureBehavior({
