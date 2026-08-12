@@ -67,6 +67,7 @@ import { buildSignatureNote } from './signatureAttachment';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
+import { runImpactedTests } from './impactedTests';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1612,6 +1613,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 変更に関係するテストだけを走らせる（T-180）
+		vscode.commands.registerCommand('nimbus.runImpactedTests', () => runImpactedTests({ log })),
 		// 先に落ちるテストを書かせて、赤 → 緑になるまで回す（T-107）
 		vscode.commands.registerCommand('nimbus.startFromFailingTest', async () => {
 			const goal = await vscode.window.showInputBox({

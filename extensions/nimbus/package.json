@@ -144,6 +144,12 @@
         "icon": "$(beaker)"
       },
       {
+        "command": "nimbus.runImpactedTests",
+        "title": "変更に関係するテストだけを走らせる",
+        "category": "Nimbus",
+        "icon": "$(play-circle)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
