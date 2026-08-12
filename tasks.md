@@ -35,7 +35,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 進行中
 
-- [ ] T-212 権限管理（企業導入向け）/ T-092 プラグイン API @session-a 2026-08-13
 
 
 
@@ -353,6 +352,12 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       衝突 113 件はすべて「消したファイルを upstream が変えた」形で、台帳のファイルは内容衝突 0 件。
       基点が `@{u}` で毎回「全部変更あり」と出ていたのも直した。実際の rebase は未実施（理由も記録）
       — 2026-08-13 / 記録 [upstream-sync](nimbus/docs/upstream-sync.md)
+- [x] T-212 権限管理（企業導入向け）— `nimbus.managedPolicy` を上限として扱う。利用者の設定は狭める方向だけ効く。
+      ポリシー・自動許可・遮断パス・監査ログにかかる。読むのはユーザー設定だけ（`scope: machine`）
+      — 2026-08-13 / 仕様 [managed-policy-and-plugins](nimbus/docs/specs/managed-policy-and-plugins.md)
+- [x] T-092 Nimbus 自体のプラグイン API — `activate()` の戻り値を公開面にし、足せるものを
+      「読ませるもの」「作らせるもの」の 2 つに限った。権限の判断には触らせない
+      — 2026-08-13 / 仕様 [managed-policy-and-plugins](nimbus/docs/specs/managed-policy-and-plugins.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
