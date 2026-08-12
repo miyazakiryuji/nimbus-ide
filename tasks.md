@@ -40,8 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-068 他ツールからの設定インポート / T-071 ワンクリック導入 / T-074 実機ログの取り込み —
-      `core/importSettings.ts` `core/crashLog.ts` を確保済み @session-a 2026-08-13 [P2]
+- [ ] T-071 ワンクリック導入 / T-074 実機ログの取り込み — `core/crashLog.ts` を確保済み
+      ※T-068 は別セッションが先に実装済み（`core/importRules.ts`）@session-a 2026-08-13 [P2]
 
       `core/recovery.ts` を確保済み @session-a 2026-08-13 [P2]
 
@@ -332,6 +332,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-068 他のツールの設定を取り込む（Cursor / Copilot / Windsurf のルールを、出どころつきで CLAUDE.md へ）
+      — 2026-08-13 / 仕様 [import-rules](nimbus/docs/specs/import-rules.md)
 
 - [x] T-170 コピーしたエラー文に気づく（既定は無効。戻ってきた瞬間に 1 回だけ見て、中身は画面に出さない）
       — 2026-08-13 / 仕様 [clipboard-hints](nimbus/docs/specs/clipboard-hints.md)
