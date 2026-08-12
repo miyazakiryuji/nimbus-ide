@@ -4,6 +4,7 @@
  * ここに置いてある理由: `cases/` に置くと run.mjs がテストケースとして読み込もうとする
  * （`{ name, run }` を要求される）ので、ケースではないものは 1 つ上の階層に置く。
  */
+import { execFileSync } from 'node:child_process';
 
 /** サイドバーに Nimbus のビューが出ているか。コックピットは畳んでも見出しが残るので目印にする */
 async function sidebarShowsNimbus(page) {
@@ -106,4 +107,42 @@ export async function webviewText(page, mustInclude, { attempts = 10 } = {}) {
 		await page.waitForTimeout(1000);
 	}
 	return undefined;
+}
+
+/**
+ * 使い捨てワークスペースで git を動かす。
+ *
+ * 入口だけの確認（ビューが出る・コマンドが引ける）から一歩進めて、
+ * **実際の変更に対して機能が動くこと**を見るために使う。
+ * 実セッション（課金）が要るのは承認モーダルまわりだけで、
+ * git を読む機能はここまで確認できる。
+ */
+export function git(cwd, args) {
+	return execFileSync('git', args, {
+		cwd,
+		encoding: 'utf8',
+		env: {
+			...process.env,
+			GIT_AUTHOR_NAME: 'nimbus-gui',
+			GIT_AUTHOR_EMAIL: 'gui@example.invalid',
+			GIT_COMMITTER_NAME: 'nimbus-gui',
+			GIT_COMMITTER_EMAIL: 'gui@example.invalid'
+		}
+	});
+}
+
+/**
+ * 新しく開いたタブ（コマンドが出した一枚）の中身を読む。
+ *
+ * **空白を普通の空白に直してから返す。** VS Code のエディタは行の描画で
+ * ノーブレークスペース（U+00A0）を使うので、素の `includes(' ')` が当たらない。
+ * 画面上は同じに見えるのに一致しない、といういちばん分かりにくい壊れかたをする（実測）。
+ */
+export async function activeEditorText(page) {
+	// エディタ本体は仮想化されているので、見えている行をつなぐ
+	const text = await page.evaluate(() => {
+		const editor = document.querySelector('.editor-instance .view-lines');
+		return editor ? editor.innerText : '';
+	});
+	return text.replace(/\u00a0/g, ' ');
 }
