@@ -33,6 +33,8 @@
   "command.trackSchemaImpact": "型の変更が壊す場所を洗い出す",
   "command.investigateCi": "落ちた CI を調べる",
   "command.compareAgentWork": "別のツールの結果と並べて比べる",
+  "command.captureSimulator": "シミュレータの画面を撮って渡す",
+  "command.writeFlowTest": "確かめたい流れをテストに起こす",
   "command.importCpuProfile": "計測結果を渡して重い箇所を調べる",
   "command.trackMemory": "メモリが増え続けていないかを見る",
   "command.measureStartup": "起動時間を前回と比べる",
@@ -226,5 +228,6 @@
   "config.safety.warnOnGeneratedEdit": "生成物（*.g.dart / *.freezed.dart / ロックファイルなど）を直接書き換えようとしたときに止めて、代わりに直す先を伝えます。",
   "config.generate.offerAfterSave": "生成物のある元ファイル（model.dart など）を保存したときに、生成物を作り直すか聞きます。既定は無効です。",
   "config.clarifyVagueJapanese": "指示が曖昧なとき（対象の無い指示語・基準の無い言い方など）に、送る前に一度だけ確認します。",
-  "command.splitTerminals": "ターミナルを並べる"
+  "command.splitTerminals": "ターミナルを並べる",
+  "command.managePlugins": "プラグインを見る"
 }

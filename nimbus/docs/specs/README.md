@@ -31,6 +31,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`preflight.md`](preflight.md) — 出す前に
 - [`cpu-profile.md`](cpu-profile.md) — 計測結果を渡す
 - [`terminal-layout.md`](terminal-layout.md) — ターミナルを並べる
+- [`plugins.md`](plugins.md) — プラグインを見る
 - [`api-check.md`](api-check.md) — 実物との突き合わせと仮の応答
 - [`openapi.md`](openapi.md) — スキーマから型を起こす
 - [`platform-channel.md`](platform-channel.md) — Dart とネイティブの橋渡しの突き合わせ

@@ -230,6 +230,23 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.managePlugins",
+        "title": "%command.managePlugins%",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.captureSimulator",
+        "title": "%command.captureSimulator%",
+        "category": "Nimbus",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "nimbus.writeFlowTest",
+        "title": "%command.writeFlowTest%",
+        "category": "Nimbus",
+        "icon": "$(checklist)"
+      },
+      {
         "command": "nimbus.compareAgentWork",
         "title": "%command.compareAgentWork%",
         "category": "Nimbus",

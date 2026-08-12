@@ -190,11 +190,13 @@ import { trackSchemaImpact } from './schemaImpact';
 import { investigateCi } from './ciFailure';
 import { importCpuProfile } from './cpuProfile';
 import { splitTerminals } from './terminalLayout';
+import { managePlugins } from './plugins';
 import { notifyCodeOwners, showOwnersOfActiveFile } from './codeowners';
 import { planHotfix, prepareRollback } from './rollback';
 import { restackAfterMerge, showPrStack } from './prStack';
 import { measureStartup, trackMemory } from './perfWatch';
 import { compareAgentWork } from './agentCompare';
+import { captureSimulator, writeFlowTest } from './simulator';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2788,11 +2790,32 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
+		// プラグインの一覧と有効／無効（T-032）
+		vscode.commands.registerCommand('nimbus.managePlugins', () => managePlugins({ log })),
 		// ターミナルを好きな数に並べる（T-014）
 		vscode.commands.registerCommand('nimbus.splitTerminals', () => splitTerminals({ log })),
 		// 計測結果を渡して、重いところを見つけさせる（T-128）
 		vscode.commands.registerCommand('nimbus.importCpuProfile', () =>
 			importCpuProfile({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 画面を撮って渡す・流れを integration_test に起こす（T-073）
+		vscode.commands.registerCommand('nimbus.captureSimulator', () =>
+			captureSimulator({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		vscode.commands.registerCommand('nimbus.writeFlowTest', () =>
+			writeFlowTest({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

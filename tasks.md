@@ -40,7 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-032 プラグインのインストールと有効／無効の切り替え — 実装中 @yua 2026-08-13
+- [ ] T-073 シミュレータ操作 — 実機の画面を撮って渡す・流れを integration_test に起こす。
+      `core/simulator.ts` `src/simulator.ts` を確保 @session-c 2026-08-13 [P2]
 
 
 
@@ -138,7 +139,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 `SKILL.md` が開く・▶ でコックピットへ `/<name>` を送る）と、見出しの「探す」（曖昧な言葉で絞り込む
 QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` と `nimbus.findSkill`。
 
-- [ ] T-032 プラグインのインストールと有効／無効の切り替え [P3]
 
 ### ⑥ IDE との統合（フォークにした旨味が出る場所）
 
@@ -231,7 +231,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📱 モバイル開発
 
-- [ ] T-073 シミュレータ操作 — タップ操作を代行し、UI が実際に動くところまで確認させる [P2]
 
 ### 🔐 コンプラ・機密
 
@@ -519,6 +518,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-032 プラグインを見る（有効／無効の切り替え・入れるのは別導線）— 2026-08-13 / 仕様 [plugins](nimbus/docs/specs/plugins.md)
 - [x] T-014 ターミナルを好きな数に並べる（読める枚数で頭打ち・フォルダごとに 1 枚）— 2026-08-13 / 仕様 [terminal-layout](nimbus/docs/specs/terminal-layout.md)
 - [x] T-128 計測結果を渡して重い箇所を調べる（直せる場所だけ出す）— 2026-08-13 / 仕様 [cpu-profile](nimbus/docs/specs/cpu-profile.md)
 - [x] T-215 出す前に見る（止めるものと知らせるものを分ける）— 2026-08-13 / 仕様 [preflight](nimbus/docs/specs/preflight.md)
