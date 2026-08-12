@@ -33,6 +33,8 @@
   "command.trackSchemaImpact": "Find What a Type Change Breaks",
   "command.investigateCi": "Investigate a Failed CI Run",
   "command.compareAgentWork": "Compare Work From Another Tool",
+  "command.captureSimulator": "Capture the Simulator Screen",
+  "command.writeFlowTest": "Turn a Flow Into a Test",
   "command.importCpuProfile": "Investigate Hot Spots from a Profile",
   "command.trackMemory": "Check Whether Memory Keeps Growing",
   "command.measureStartup": "Compare Startup Time with Last Run",
@@ -226,5 +228,6 @@
   "config.safety.warnOnGeneratedEdit": "Stop an attempt to edit generated files (*.g.dart, *.freezed.dart, lockfiles, and so on) directly, and say what to edit instead.",
   "config.generate.offerAfterSave": "When you save a source file that has generated output (model.dart and similar), offer to regenerate. Off by default.",
   "config.clarifyVagueJapanese": "When an instruction is vague — a demonstrative with no target, a standard with no measure — ask once before sending.",
-  "command.splitTerminals": "Arrange Terminals Side by Side"
+  "command.splitTerminals": "Arrange Terminals Side by Side",
+  "command.managePlugins": "Show Plugins"
 }

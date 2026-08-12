@@ -35,13 +35,10 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 進行中
 
-- [ ] T-007 sync-upstream.sh を実際に回して記録する @session-a 2026-08-13 [P2]
 
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-073 シミュレータ操作 — 実機の画面を撮って渡す・流れを integration_test に起こす。
-      `core/simulator.ts` `src/simulator.ts` を確保 @session-c 2026-08-13 [P2]
 
 
 
@@ -309,6 +306,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-073 シミュレータ操作（座標では押さない。画面を撮って「何が見えるか」から言わせ、
+      流れは integration_test に起こして資産にする）
+      — 2026-08-13 / 仕様 [simulator](nimbus/docs/specs/simulator.md)
+
 - [x] T-069 別のツールの結果と並べて比べる（同じ行を触ったところだけが選ぶ場所。ファイルが同じでも
       離れていれば両方採れる。どちらが良いかは言わない）
       — 2026-08-13 / 仕様 [agent-compare](nimbus/docs/specs/agent-compare.md)
@@ -344,6 +345,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       `src/**` の 4,463 件は**載せ替えない**と決めた（判断を変える条件も仕様書に明記）。
       `nimbus/scripts/nls-extract.mjs --check` で取りこぼしと訳の抜けを見る
       — 2026-08-13 / 仕様 [localization](nimbus/docs/specs/localization.md)
+- [x] T-007 upstream 追従を実際に一度回した（1.132.0 → release/1.133）。手順書と実態が違ったので直した。
+      衝突 113 件はすべて「消したファイルを upstream が変えた」形で、台帳のファイルは内容衝突 0 件。
+      基点が `@{u}` で毎回「全部変更あり」と出ていたのも直した。実際の rebase は未実施（理由も記録）
+      — 2026-08-13 / 記録 [upstream-sync](nimbus/docs/upstream-sync.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
