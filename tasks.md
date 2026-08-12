@@ -435,6 +435,17 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-109 カバレッジ差分（この変更で足した行のうち、テストで実行されていない行を名指しする）
+      — 2026-08-13 / 仕様 [test-runner](nimbus/docs/specs/test-runner.md)
+- [x] T-108 回帰の検知（前回通っていたテストが落ちたら、上限で切られる前に先頭で名指しする）
+      — 2026-08-13 / 仕様 [test-runner](nimbus/docs/specs/test-runner.md)
+- [x] T-102 編集 → 解析 → 再編集の自動ループ（T-101 の auto モード。lint の警告まで回す設定つき・回数上限あり）
+      — 2026-08-13 / 仕様 [verify-edits](nimbus/docs/specs/verify-edits.md)
+- [x] T-171 / T-172 エディタから直接頼む（右クリックと、関数の上のコードレンズ。説明／リファクタ／テスト／自由指示）
+      — 2026-08-13 / 仕様 [editor-actions](nimbus/docs/specs/editor-actions.md)
+- [x] T-175 型定義の自動添付（指示で名指しした API の実物のシグネチャを、送る前に見出しつきで添える）
+      — 2026-08-13 / 仕様 [signature-attachment](nimbus/docs/specs/signature-attachment.md)
+
 - [x] T-193 Widget / ゴールデンテストの生成（開いている Dart から widget の実引数を読み、
       `test/` の規約どおりの場所に雛形を作る）— 2026-08-13 / 仕様 [widget-tests](nimbus/docs/specs/widget-tests.md)
 
