@@ -161,6 +161,12 @@
         "icon": "$(book)"
       },
       {
+        "command": "nimbus.repoSummary",
+        "title": "リポジトリの構造要約を作る",
+        "category": "Nimbus",
+        "icon": "$(book)"
+      },
+      {
         "command": "nimbus.trackRefactor",
         "title": "置き換えを追いかける",
         "category": "Nimbus",

@@ -91,6 +91,7 @@ import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
 import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { showRepoSummary } from './repoSummary';
+import { showRepoSummary } from './repoSummary';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -2001,6 +2002,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 何のプロジェクトで、どこに何があるか（T-176）。最初の探索を省くための地図
+		vscode.commands.registerCommand('nimbus.repoSummary', () =>
+			showRepoSummary({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 何のプロジェクトで、どこに何があるか（T-176）。最初の探索を省くための地図
 		vscode.commands.registerCommand('nimbus.repoSummary', () =>
 			showRepoSummary({
