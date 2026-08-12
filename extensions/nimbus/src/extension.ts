@@ -40,9 +40,12 @@ import { openMobileChecks } from './mobileChecks';
 import { openFlutterLint } from './flutterLint';
 import { measureBuild } from './buildMetrics';
 import { resolveXcodeConflict } from './pbxprojConflict';
+import { openDepConsistency } from './depConsistency';
+import { openReviewProgress } from './reviewProgress';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
+import { showDiffSummary } from './diffSummary';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -73,6 +76,9 @@ import {
 	type PromptTemplate
 } from './core/promptLibrary';
 import { describeFindable, searchFindables, toPrompt, type Findable } from './core/findAnything';
+import { draftSkill, renderSkillFile } from './core/sessionToSkill';
+import { describeOutbox, isTransientFailure, Outbox } from './core/outbox';
+import { collectTags } from './core/tasks';
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
@@ -84,7 +90,7 @@ import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
 import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
-import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
+import { showRepoSummary } from './repoSummary';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -113,6 +119,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const mcpView = new McpViewProvider();
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
+	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
+	const outbox = new Outbox();
 	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
 	const reviewView = new ReviewViewProvider(context.workspaceState, () => workspaceCwd(), log);
 	const reviewTree = vscode.window.createTreeView('nimbus.review', { treeDataProvider: reviewView });
@@ -476,6 +484,105 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeSessionConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	/**
+	 * うまくいった流れをスキルにする（tasks.md T-168）。
+	 * 骨格までを書き、中身を練るのは Claude に任せる。
+	 */
+	async function sessionToSkill(): Promise<void> {
+		if (retained.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: まだスキルにできる流れがありません。');
+			return;
+		}
+		const title = await vscode.window.showInputBox({
+			title: 'Nimbus: このセッションをスキルにする',
+			prompt: 'スキルの名前',
+			placeHolder: '例: ログイン画面のバリデーションを直す'
+		});
+		if (!title) {
+			return;
+		}
+		const description = await vscode.window.showInputBox({
+			title: 'Nimbus: このセッションをスキルにする',
+			prompt: 'どんなときに使うか（1 行）',
+			placeHolder: 'この説明で呼び出されるので、使いどきが分かる書き方にする'
+		});
+		if (description === undefined) {
+			return;
+		}
+		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+		if (!root) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+			return;
+		}
+		const draft = draftSkill(retained, title, description);
+		const target = vscode.Uri.joinPath(root, '.claude', 'skills', draft.name, 'SKILL.md');
+		try {
+			// 既にあるものは絶対に上書きしない（書いたスキルが消えるのが一番困る）
+			await vscode.workspace.fs.stat(target);
+			void vscode.window.showWarningMessage(`Nimbus: ${draft.name} は既にあります。上書きはしません。`);
+			await vscode.window.showTextDocument(target);
+			return;
+		} catch {
+			// 無いので作る
+		}
+		await vscode.workspace.fs.writeFile(target, Buffer.from(renderSkillFile(draft), 'utf8'));
+		log(`[skill] ${draft.name} を作りました`);
+		await vscode.window.showTextDocument(target);
+		skillsView.refresh();
+		void vscode.window.showInformationMessage(
+			`Nimbus: ${draft.name} の下書きを作りました。手順と気をつけることを整えてください。`
+		);
+	}
+
+	/** タスクのピン留め（T-147） */
+	async function pinTask(taskId: string | undefined): Promise<void> {
+		const target = taskId ?? (await pickTask('どのタスクをピン留めしますか'));
+		if (!target) {
+			return;
+		}
+		tasks.togglePinned(target);
+	}
+
+	/** タスクのタグ付け（T-147）。既にあるタグを候補に出す */
+	async function tagTask(taskId: string | undefined): Promise<void> {
+		const target = taskId ?? (await pickTask('どのタスクにタグを付けますか'));
+		if (!target) {
+			return;
+		}
+		const task = tasks.get(target);
+		if (!task) {
+			return;
+		}
+		const known = collectTags(tasks.list()).map((entry) => entry.tag);
+		const value = await vscode.window.showInputBox({
+			title: `Nimbus: ${task.title} のタグ`,
+			prompt: 'カンマ区切り。空にすると外れます',
+			value: (task.tags ?? []).join(', '),
+			placeHolder: known.length > 0 ? `既にあるタグ: ${known.join(', ')}` : '例: 調査, UI'
+		});
+		if (value === undefined) {
+			return;
+		}
+		tasks.setTags(target, value.split(','));
+	}
+
+	async function pickTask(title: string): Promise<string | undefined> {
+		const all = tasks.list();
+		if (all.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: タスクがありません。');
+			return undefined;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			all.map((task) => ({
+				label: `${task.pinned ? '$(pinned) ' : ''}${task.title}`,
+				description: (task.tags ?? []).join(' '),
+				taskId: task.taskId
+			})),
+			{ title: `Nimbus: ${title}` }
+		);
+		return chosen?.taskId;
 	}
 
 	const PROMPT_KEY = 'nimbus.promptTemplates';
@@ -1264,7 +1371,33 @@ export function activate(context: vscode.ExtensionContext): void {
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			log(`[session] 送信に失敗: ${message}`);
+			if (isTransientFailure(message)) {
+				// 繋がらない類の失敗だけ預かる。書き方の誤りは送り直しても同じ結果になる
+				outbox.add(rawText, message, Date.now());
+				const RETRY = '送り直す';
+				void vscode.window
+					.showWarningMessage(`Nimbus: 送れなかったので預かりました（${describeOutbox(outbox)}）。`, RETRY)
+					.then((choice) => {
+						if (choice === RETRY) {
+							void flushOutbox();
+						}
+					});
+				return;
+			}
 			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+		}
+	}
+
+	/** 預かっている入力を順に送り直す（T-151）。出すかどうかは利用者が決める */
+	async function flushOutbox(): Promise<void> {
+		const queued = outbox.drain();
+		if (queued.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 預かっている入力はありません。');
+			return;
+		}
+		log(`[outbox] ${queued.length} 件を送り直します`);
+		for (const item of queued) {
+			await send(item.text);
 		}
 	}
 
@@ -1671,6 +1804,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.managePrompts', () => managePromptTemplates()),
 		// スキル以外も同じ場所から探す（T-117）
 		vscode.commands.registerCommand('nimbus.findAnything', () => findAnything()),
+		// 送れなかった入力（T-151）
+		vscode.commands.registerCommand('nimbus.flushOutbox', () => flushOutbox()),
+		// うまくいった流れをスキルにする（T-168）
+		vscode.commands.registerCommand('nimbus.sessionToSkill', () => sessionToSkill()),
+		// タスクのピン留めとタグ（T-147）
+		vscode.commands.registerCommand('nimbus.pinTask', (node?: { taskId?: string }) => pinTask(node?.taskId)),
+		vscode.commands.registerCommand('nimbus.tagTask', (node?: { taskId?: string }) => tagTask(node?.taskId)),
 		vscode.commands.registerCommand('nimbus.agentModels', () => assignAgentModels()),
 		vscode.commands.registerCommand('nimbus.compactWithSelection', () => compactWithSelection()),
 		vscode.commands.registerCommand('nimbus.taskFromFile', () => taskFromTasksFile()),
@@ -1736,6 +1876,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openFlutterLint', () => openFlutterLint()),
 		vscode.commands.registerCommand('nimbus.measureBuild', () => measureBuild(context)),
 		vscode.commands.registerCommand('nimbus.resolveXcodeConflict', () => resolveXcodeConflict()),
+		vscode.commands.registerCommand('nimbus.openDepConsistency', () => openDepConsistency()),
+		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1770,6 +1912,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// 差分を読む前の見取り図（T-157）
+		vscode.commands.registerCommand('nimbus.showDiffSummary', () =>
+			showDiffSummary((text) => {
+				cockpit.reveal();
+				void send(text);
+			})
+		),
 		// 競合を 1 件ずつ解決する。判断がつかないものは Claude に相談文を投げる（T-115）
 		reviewTree,
 		reviewView,
@@ -1852,13 +2001,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
-		// 段階的リファクタの進捗（T-111）。残りの数が見えないと、大きな置き換えは途中で止まる
-		vscode.commands.registerCommand('nimbus.trackRefactor', () =>
-			startRefactorTrack({ storage: context.workspaceState, send: (text) => void send(text), log })
-		),
-		vscode.commands.registerCommand('nimbus.refactorProgress', () =>
-			showRefactorProgress({
-				storage: context.workspaceState,
+		// 何のプロジェクトで、どこに何があるか（T-176）。最初の探索を省くための地図
+		vscode.commands.registerCommand('nimbus.repoSummary', () =>
+			showRepoSummary({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

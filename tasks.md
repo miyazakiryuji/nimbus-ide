@@ -42,8 +42,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-157 差分のセマンティック要約 — 差分を読む前に「何がどう変わったか」を構造で出す。
-      実装前に claim @session-b 2026-08-13 [P2]
 
 - [ ] T-147 セッションのピン留め・タグ付け。実装前に claim @session-a 2026-08-13 [P3]
 - [ ] T-168 セッション → スキル化。実装前に claim @session-a 2026-08-13 [P2]
@@ -412,6 +410,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-157 差分のセマンティック要約（export の増減を先頭に・構造だけ出して意図は Claude へ）
+      — 2026-08-13 / 仕様 [diff-summary](nimbus/docs/specs/diff-summary.md)
 
 - [x] T-111 段階的リファクタの進捗管理（`git grep -c` で残りを数え、続きを残りの多い順に頼む）
       — 2026-08-13 / 仕様 [refactor-progress](nimbus/docs/specs/refactor-progress.md)
