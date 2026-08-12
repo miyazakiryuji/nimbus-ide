@@ -84,7 +84,7 @@ Figma のカンプや実機のスクショを貼って「この通りに直し�
 - [x] `{file}` を出力先に差し替える（単体テスト）
 - [ ] 画面確認: スクショを貼って送り、Claude が内容に触れて答える
 - [ ] 画面確認: チップの ✕ で添付を外せる
-- [ ] 画面確認: `nimbus.hotReload` を設定して 1 周まわる
+- [ ] 画面確認: `nimbus.hotReload.enabled` と `nimbus.hotReload.screenshotCommand` を設定して 1 周まわる
 
 ## 決めなかったこと・やらないこと
 
