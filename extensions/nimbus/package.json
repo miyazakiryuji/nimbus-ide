@@ -235,6 +235,17 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.exportGif",
+        "title": "%command.exportGif%",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.exportToWiki",
+        "title": "%command.exportToWiki%",
+        "category": "Nimbus",
+        "icon": "$(export)"
+      },
+      {
         "command": "nimbus.captureSimulator",
         "title": "%command.captureSimulator%",
         "category": "Nimbus",
@@ -1526,6 +1537,11 @@
           "type": "boolean",
           "default": true,
           "description": "%config.clarifyVagueJapanese%"
+        },
+        "nimbus.gif.width": {
+          "type": "number",
+          "default": 800,
+          "description": "%config.gif.width%"
         }
       }
     },

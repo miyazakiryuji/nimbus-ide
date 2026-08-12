@@ -33,6 +33,7 @@
   "command.trackSchemaImpact": "型の変更が壊す場所を洗い出す",
   "command.investigateCi": "落ちた CI を調べる",
   "command.compareAgentWork": "別のツールの結果と並べて比べる",
+  "command.exportToWiki": "社内 Wiki に貼れる形にする",
   "command.captureSimulator": "シミュレータの画面を撮って渡す",
   "command.writeFlowTest": "確かめたい流れをテストに起こす",
   "command.importCpuProfile": "計測結果を渡して重い箇所を調べる",
@@ -229,5 +230,7 @@
   "config.generate.offerAfterSave": "生成物のある元ファイル（model.dart など）を保存したときに、生成物を作り直すか聞きます。既定は無効です。",
   "config.clarifyVagueJapanese": "指示が曖昧なとき（対象の無い指示語・基準の無い言い方など）に、送る前に一度だけ確認します。",
   "command.splitTerminals": "ターミナルを並べる",
-  "command.managePlugins": "プラグインを見る"
+  "command.managePlugins": "プラグインを見る",
+  "command.exportGif": "作業の様子を GIF にする",
+  "config.gif.width": "GIF の横幅（px）。縦は比率のままです。"
 }

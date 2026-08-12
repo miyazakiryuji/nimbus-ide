@@ -41,7 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-223 GIF エクスポート（作業の様子を共有する）— 実装中 @yua 2026-08-13
 
 
 
@@ -214,7 +213,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📄 コード以外の成果物
 
-- [ ] T-208 社内 Wiki / Notion 連携 [P3]
 
 ### 🎨 自分だけの相棒にする
 
@@ -263,7 +261,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🎮 続けたくなる
 
-- [ ] T-223 GIF / 動画エクスポート — 作業の様子をそのまま共有する [P3]
 
 ### 📦 依存・ビルド
 
@@ -307,6 +304,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-208 社内 Wiki / Notion へ出す（相対リンクを絶対 URL に。直せないときは書き換えない。
+      内部向けは伏せて跡を残す。貼るのは人）
+      — 2026-08-13 / 仕様 [wiki-export](nimbus/docs/specs/wiki-export.md)
 
 - [x] T-073 シミュレータ操作（座標では押さない。画面を撮って「何が見えるか」から言わせ、
       流れは integration_test に起こして資産にする）
@@ -525,6 +526,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-223 作業の様子を GIF にする（枚数を先に見積もる・ffmpeg が無ければ手順を出す）— 2026-08-13 / 仕様 [gif-export](nimbus/docs/specs/gif-export.md)
 - [x] T-032 プラグインを見る（有効／無効の切り替え・入れるのは別導線）— 2026-08-13 / 仕様 [plugins](nimbus/docs/specs/plugins.md)
 - [x] T-014 ターミナルを好きな数に並べる（読める枚数で頭打ち・フォルダごとに 1 枚）— 2026-08-13 / 仕様 [terminal-layout](nimbus/docs/specs/terminal-layout.md)
 - [x] T-128 計測結果を渡して重い箇所を調べる（直せる場所だけ出す）— 2026-08-13 / 仕様 [cpu-profile](nimbus/docs/specs/cpu-profile.md)
