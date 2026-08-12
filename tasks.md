@@ -39,9 +39,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-142 エラー監視ツールとの連携 — Sentry の JSON から件数・影響人数・足あとを取り出す。
-      再現は T-143（`core/reproTest.ts`）へ渡す。`core/errorMonitor.ts` を骨格＋テストで確保済み
-      @session-b 2026-08-13 [P2]
 
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
@@ -318,6 +315,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-142 監視ツールの障害を取り込む（影響の大きさを先に・足あとを再現の入力として渡す）
+      — 2026-08-13 / 仕様 [error-monitor](nimbus/docs/specs/error-monitor.md)
 
 - [x] T-093 ヘッドレス Nimbus — GUI 抜きで同じワークフローを CI から回す（`nimbus/scripts/headless.mjs`）。
       判断は `out/core/*.js` を読み込んで画面と共有する。確認のある段は `--yes` が無ければ実行を断り、
