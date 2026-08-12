@@ -8,7 +8,9 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 
 ## 一覧
 
-まだ書き起こしていません（`tasks.md` の T-003）。現時点の仕様は README の「できること」と
+- [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
+
+まだ全機能ぶんは書き起こせていません（`tasks.md` の T-003）。残りは README の「できること」と
 `../history/NIMBUS_SPEC.md`（旧実装向けの指示書）、`../testing/` の確認記録に散っています。
 
 ## テンプレート

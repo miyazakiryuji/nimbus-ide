@@ -9,7 +9,13 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 2. コアに入れる変更は `// --- Start Nimbus ---` / `// --- End Nimbus ---` で囲む
 3. 機械的に再適用できるものは `nimbus/branding/*.mjs` のスクリプトにして、手編集を残さない
 
-## 一覧（ベース: 1.132.0）
+## 一覧
+
+<!-- nimbus:base a3bf0c6b864ef0d5f6e486e0d44754ce5c879fb2 -->
+ベースは `upstream/release/1.132`（上の行のコミット）。この行は追従のたびに
+`nimbus/scripts/sync-upstream.sh` が書き換える。`doctor.mjs` はここを読んで
+「upstream から何を変えたか」を判定する。
+
 
 | # | ファイル | 変更 | 理由 | 再適用 |
 | --- | --- | --- | --- | --- |
@@ -25,6 +31,11 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 10 | `build/gulpfile.vscode.ts` | macOS のターミナル用コマンドを `bin/code` 固定から `bin/${product.applicationName}` に | 本物の VS Code の `code` と衝突する。製品名から決めるのが素直（upstream にも通る一般化） | 同上 |
 | 11 | `build/gulpfile.vscode.ts` | パッケージ出力先を `VSCode-<platform>-<arch>` から `${product.nameShort}-…` に | 利用者の作業ディレクトリの隣に "VSCode" という名前のフォルダが生えるのは紛らわしい | 同上 |
 | 12 | `src/vs/workbench/services/themes/common/workbenchThemeService.ts` | 既定テーマを `Dark 2026` / `Light 2026` から `Nimbus Dark` / `Nimbus Light` に | 配色を Claude の意匠に寄せた自前テーマを既定にするため。テーマ自体は組み込み拡張が提供する | 同上 |
+| 13 | `README.md` | Nimbus の README に差し替え | フォークの製品説明・出自・導入手順を載せるため（upstream の README は残さない） | 同上 |
+| 14 | `.gitignore` | `nimbus/branding/out/` を追加 | 生成したブランディング素材の中間物をコミットしないため | 同上 |
+| 15 | `build/gulpfile.extensions.ts` | `compilations` に `extensions/nimbus/tsconfig.json` を追加 | この一覧は手書きで、載せないと拡張がコンパイルされない（実測） | 同上 |
+| 16 | `build/lib/extensions.ts` | `packagedDependenciesByExtension` に `nimbus: ['@anthropic-ai/claude-agent-sdk']` | SDK は自パッケージ内の実行ファイルを子プロセスで起動するため、バンドルせず node_modules ごと同梱する | 同上 |
+| 17 | `src/vs/platform/extensionManagement/node/extensionManagementService.ts` | 署名検証のフォールバックを `true` → `false` | 設定の既定値だけでは CLI 経路で undefined になり true に戻る。Open VSX の拡張が入らない（実測） | 同上 |
 
 ## リポジトリ運用（push できない問題とその回避）
 

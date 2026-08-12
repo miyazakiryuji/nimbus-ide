@@ -6,6 +6,8 @@
  */
 import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
+import { renderWebviewPage } from '../webview/page';
+import { WebviewViewHost } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
 export type InboundMessage =
@@ -30,15 +32,6 @@ export interface CockpitHandlers {
 	log(message: string): void;
 }
 
-function nonce(): string {
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	let text = '';
-	for (let i = 0; i < 32; i++) {
-		text += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-	return text;
-}
-
 /** 会話ビューの見た目まわり。コックピットとヘルプ（ゆあ）で同じ実装を使い回す */
 export interface CockpitOptions {
 	/** 発言者のラベル */
@@ -51,24 +44,18 @@ const DEFAULT_OPTIONS: CockpitOptions = {
 	placeholder: 'Claude に指示を書く（Enter で送信 / Shift+Enter で改行）'
 };
 
-export class CockpitViewProvider implements vscode.WebviewViewProvider {
+export class CockpitViewProvider extends WebviewViewHost {
 	public static readonly viewType = 'nimbus.cockpit';
 
-	private view?: vscode.WebviewView;
-
 	constructor(
-		private readonly extensionUri: vscode.Uri,
+		extensionUri: vscode.Uri,
 		private readonly handlers: CockpitHandlers,
 		private readonly options: CockpitOptions = DEFAULT_OPTIONS
-	) { }
+	) {
+		super(extensionUri);
+	}
 
-	resolveWebviewView(webviewView: vscode.WebviewView): void {
-		this.view = webviewView;
-		webviewView.webview.options = {
-			enableScripts: true,
-			localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')]
-		};
-		webviewView.webview.html = this.render(webviewView.webview);
+	protected onResolved(webviewView: vscode.WebviewView): void {
 		this.handlers.log('[cockpit] Webview を生成しました');
 
 		webviewView.webview.onDidReceiveMessage(async (message: InboundMessage) => {
@@ -90,39 +77,24 @@ export class CockpitViewProvider implements vscode.WebviewViewProvider {
 					break;
 			}
 		});
-
-		webviewView.onDidDispose(() => {
-			if (this.view === webviewView) {
-				this.view = undefined;
-			}
-		});
 	}
 
 	post(message: OutboundMessage): void {
-		// Webview が閉じているときは捨ててよい（再表示時に history で復元する）
-		void this.view?.webview.postMessage(message);
+		this.postMessage(message);
 	}
 
 	reveal(): void {
 		void this.view?.show?.(true);
 	}
 
-	private render(webview: vscode.Webview): string {
-		const media = (name: string): vscode.Uri =>
-			webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', name));
-		const n = nonce();
-		return /* html */ `<!DOCTYPE html>
-<html lang="ja">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="Content-Security-Policy"
-		content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${n}';">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href="${media('cockpit.css')}" rel="stylesheet">
-	<title>Nimbus</title>
-</head>
-<body data-assistant="${this.options.assistantLabel}">
-	<header id="status" class="status">
+	protected render(webview: vscode.Webview): string {
+		return renderWebviewPage({
+			webview,
+			title: 'Nimbus',
+			stylesheet: this.mediaUri(webview, 'cockpit.css'),
+			script: this.mediaUri(webview, 'cockpit.js'),
+			bodyAttributes: `data-assistant="${this.options.assistantLabel}"`,
+			body: `	<header id="status" class="status">
 		<span id="statusText">セッション未開始</span>
 		<span id="statusMeta" class="meta"></span>
 	</header>
@@ -133,9 +105,7 @@ export class CockpitViewProvider implements vscode.WebviewViewProvider {
 			<button id="interrupt" class="secondary" disabled>中断</button>
 			<button id="send">送信</button>
 		</div>
-	</footer>
-	<script nonce="${n}" src="${media('cockpit.js')}"></script>
-</body>
-</html>`;
+	</footer>`
+		});
 	}
 }

@@ -1,0 +1,13 @@
+{
+  "name": "nimbus-gui-tests",
+  "private": true,
+  "description": "Nimbus の GUI を実際に操作して確かめるテスト",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs",
+    "list": "node run.mjs --list"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}
