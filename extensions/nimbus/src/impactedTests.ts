@@ -9,6 +9,7 @@ import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 import { displayPath } from './core/lsp';
 import { describeImpacted, selectImpactedTests } from './core/impactedTests';
+import { pickWorkspaceRoot } from './workspaceRoots';
 
 export interface ImpactedTestsDeps {
 	log: (message: string) => void;
@@ -66,9 +67,8 @@ async function dependentsOf(file: string): Promise<string[]> {
  * 走らせる前に必ず一覧を見せる — 何が走るのか分からないまま実行させない。
  */
 export async function runImpactedTests(deps: ImpactedTestsDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const root = folder.uri.fsPath;

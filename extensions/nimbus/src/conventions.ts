@@ -9,6 +9,7 @@
  */
 import * as vscode from 'vscode';
 import { buildConventionsPrompt, detectConventions, renderConventions, type FileSample } from './core/conventions';
+import { pickWorkspaceRoot } from './workspaceRoots';
 
 /** 見るファイル数。多く見ても結論は変わらない */
 const SAMPLE_LIMIT = 40;
@@ -25,9 +26,8 @@ export interface ConventionsDeps {
 
 /** 既存ファイルを数え、結果を見せてからセッションへ渡せるようにする */
 export async function showConventions(deps: ConventionsDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const root = folder.uri;

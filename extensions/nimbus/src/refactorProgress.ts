@@ -10,6 +10,7 @@
 import { execFile } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import {
 	buildRefactorPrompt,
 	parseGrepCounts,
@@ -74,9 +75,8 @@ export async function addRefactorTrack(
  * いまの件数を分母として控える — 途中から数え始めても「残り」は正しく出る。
  */
 export async function startRefactorTrack(deps: RefactorProgressDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const pattern = await vscode.window.showInputBox({
@@ -118,9 +118,8 @@ export async function startRefactorTrack(deps: RefactorProgressDeps): Promise<vo
 
 /** 追いかけている置き換えの進捗を出し、続きを頼む・やめるを選べる */
 export async function showRefactorProgress(deps: RefactorProgressDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const all = tracks(deps.storage);

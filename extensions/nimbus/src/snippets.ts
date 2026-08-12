@@ -9,6 +9,7 @@
  */
 import * as vscode from 'vscode';
 import { buildSnippet, mergeSnippets, snippetFileName } from './core/snippets';
+import { resolveWorkspaceRoot } from './workspaceRoots';
 
 export interface SnippetsDeps {
 	log: (message: string) => void;
@@ -17,7 +18,7 @@ export interface SnippetsDeps {
 /** いまの選択範囲をスニペットにする */
 export async function saveSelectionAsSnippet(deps: SnippetsDeps): Promise<void> {
 	const editor = vscode.window.activeTextEditor;
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = editor ? resolveWorkspaceRoot(editor.document.uri) : undefined;
 	if (!editor || !folder) {
 		void vscode.window.showInformationMessage('Nimbus: 保存したい範囲を選んでから実行してください。');
 		return;

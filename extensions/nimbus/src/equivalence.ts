@@ -9,6 +9,7 @@
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 import { displayPath } from './core/lsp';
+import { resolveWorkspaceRoot } from './workspaceRoots';
 import {
 	buildCharacterizationPrompt,
 	buildEquivalencePrompt,
@@ -38,7 +39,7 @@ function git(cwd: string, args: string[]): Promise<string> {
  */
 async function currentTarget(): Promise<BehaviorTarget | undefined> {
 	const editor = vscode.window.activeTextEditor;
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = editor ? resolveWorkspaceRoot(editor.document.uri) : undefined;
 	if (!editor || !folder) {
 		return undefined;
 	}

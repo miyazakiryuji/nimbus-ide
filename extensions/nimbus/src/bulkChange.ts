@@ -9,6 +9,7 @@
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 import { buildMigrationPrompt, describeMigration } from './core/bulkChange';
+import { pickWorkspaceRoot } from './workspaceRoots';
 
 export interface BulkChangeDeps {
 	send: (text: string) => void;
@@ -37,9 +38,8 @@ function gitGrepFiles(cwd: string, pattern: string): Promise<string[]> {
 
 /** 追従の段取りを作り、そのまま進捗の追跡も始められるようにする */
 export async function planBulkChange(deps: BulkChangeDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const target = await vscode.window.showInputBox({

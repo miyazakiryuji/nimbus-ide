@@ -9,6 +9,7 @@
 import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 import { displayPath } from './core/lsp';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import {
 	buildSnapshotPrompt,
 	changedSnapshotKeys,
@@ -38,9 +39,8 @@ function git(cwd: string, args: string[]): Promise<string> {
 
 /** 変わったスナップショットを集めて見せ、そのままレビューを頼めるようにする */
 export async function reviewSnapshots(deps: SnapshotReviewDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const root = folder.uri.fsPath;

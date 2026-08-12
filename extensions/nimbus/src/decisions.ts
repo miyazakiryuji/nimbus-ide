@@ -10,6 +10,7 @@
 import { writeFile } from 'fs/promises';
 import * as vscode from 'vscode';
 import { adrFileName, buildAdrPrompt, extractDecisions, nextAdrNumber, renderAdr } from './core/decisions';
+import { pickWorkspaceRoot } from './workspaceRoots';
 
 /** ADR の置き場所。仕様書（`specs/`）とは分ける — 判断の記録は時系列で積む */
 const ADR_DIR = ['nimbus', 'docs', 'decisions'];
@@ -27,9 +28,8 @@ export interface DecisionsDeps {
 
 /** 会話から ADR の下書きを作り、理由を埋めさせる */
 export async function writeAdr(deps: DecisionsDeps): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showErrorMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const title = await vscode.window.showInputBox({
