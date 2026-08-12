@@ -12,6 +12,8 @@
 import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import * as vscode from 'vscode';
+import { applyToProtectedPaths, enforceBlockProtectedReads } from './core/managedPolicy';
+import { readManagedPolicy } from './managedPolicySource';
 import type { CanUseTool, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { buildPreview, ProposedEditPreviewer } from './proposedEdit';
 import { describeTool } from './core/describe';
@@ -164,9 +166,20 @@ export function createPermissionBroker(deps: PermissionDeps): {
 
 			// 秘匿ファイルの読み取りは、承認を出す前に断る（T-164）。
 			// 「許可」を押し間違える余地を残さない。一度読まれたら取り消せないため。
-			if (config.get<boolean>('safety.blockProtectedReads') !== false) {
-				const globs = config.get<string[]>('safety.protectedPaths');
-				const blocked = findBlockedRead(toolName, input, globs?.length ? globs : DEFAULT_PROTECTED_GLOBS);
+			const managed = readManagedPolicy();
+			// 組織が「外させない」と決めていれば、設定で切られていても遮断する（T-212）
+			const blockReads = enforceBlockProtectedReads(
+				managed,
+				config.get<boolean>('safety.blockProtectedReads') !== false
+			).value;
+			if (blockReads) {
+				const configured = config.get<string[]>('safety.protectedPaths');
+				// 組織が挙げたパスは必ず入る（利用者は足せるが外せない）
+				const globs = applyToProtectedPaths(
+					managed,
+					configured?.length ? configured : DEFAULT_PROTECTED_GLOBS
+				).value;
+				const blocked = findBlockedRead(toolName, input, globs);
 				if (blocked) {
 					deps.log(`[permission] 遮断（秘匿ファイル）: ${blocked.path}`);
 					void vscode.window.showWarningMessage(

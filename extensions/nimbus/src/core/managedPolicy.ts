@@ -147,6 +147,20 @@ export function applyToProtectedPaths(
 		};
 }
 
+/**
+ * 秘匿ファイルの遮断を、組織の設定で強制する。
+ * プロファイルを通さない経路（`permissions.ts`）から使う。
+ */
+export function enforceBlockProtectedReads(
+	policy: ManagedPolicy | undefined,
+	requested: boolean
+): PolicyDecision<boolean> {
+	if (policy?.enforceBlockProtectedReads && !requested) {
+		return { value: true, overridden: true, reason: '秘匿ファイルの遮断は組織の設定で外せません' };
+	}
+	return { value: requested, overridden: false };
+}
+
 /** 監査ログを止めさせない */
 export function applyToAudit(policy: ManagedPolicy | undefined, requested: boolean): PolicyDecision<boolean> {
 	if (policy?.enforceAudit && !requested) {
