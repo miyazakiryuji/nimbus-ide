@@ -195,6 +195,12 @@
         "icon": "$(symbol-snippet)"
       },
       {
+        "command": "nimbus.writeAdr",
+        "title": "決めたことを残す（ADR）",
+        "category": "Nimbus",
+        "icon": "$(law)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
@@ -706,6 +712,12 @@
         "title": "意見の相違を残す",
         "category": "Nimbus",
         "icon": "$(git-compare)"
+      },
+      {
+        "command": "nimbus.openHighlights",
+        "title": "やり取りを切り出す（教材用）",
+        "category": "Nimbus",
+        "icon": "$(book)"
       }
     ],
     "menus": {

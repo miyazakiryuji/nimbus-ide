@@ -195,7 +195,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🎓 学習・教育
 
-- [ ] T-214 セッションのハイライト切り出し — 教材・登壇資料用 [P3]
 
 ### 👥 チーム・社会性
 
@@ -474,6 +473,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-214 やり取りの切り出し（切り出す時点で伏せる・保存しない）— 2026-08-13 / 仕様 [highlights](nimbus/docs/specs/highlights.md)
 - [x] T-202 危ない書き方の検出（断定しない・当てられても困らない用途は拾わない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-076 依存のライセンス（迷ったら分からないに倒す・合法判定はしない）— 2026-08-13 / 仕様 [licenses](nimbus/docs/specs/licenses.md)
 - [x] T-066 詰まりやすい場所（件数で足切り・理由は推測しない）— 2026-08-13 / 仕様 [prompt-stats](nimbus/docs/specs/prompt-stats.md)

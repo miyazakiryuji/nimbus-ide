@@ -39,6 +39,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`schedule.md`](schedule.md) — 寝る前に仕込む（予約実行）
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス
 - [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
+- [`highlights.md`](highlights.md) — やり取りの切り出し（教材用）
 - [`prompt-stats.md`](prompt-stats.md) — 指示の出しかた（言い直しの傾向）
 - [`digest.md`](digest.md) — ふりかえり（週次ダイジェスト・成長ログ）
 - [`usage.md`](usage.md) — 使用量（5 時間・週の枠／文脈の消費／費用と上限アラート）
