@@ -138,6 +138,12 @@
         "icon": "$(shield)"
       },
       {
+        "command": "nimbus.coverageDiff",
+        "title": "この変更のカバレッジを見る",
+        "category": "Nimbus",
+        "icon": "$(shield)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"

@@ -57,6 +57,7 @@ import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
+import { showCoverageDiff } from './coverageDiff';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1488,6 +1489,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// この変更で足した行がテストされているか（T-109）
+		vscode.commands.registerCommand('nimbus.coverageDiff', () =>
+			showCoverageDiff({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// この変更で足した行がテストされているか（T-109）
 		vscode.commands.registerCommand('nimbus.coverageDiff', () =>
 			showCoverageDiff({
