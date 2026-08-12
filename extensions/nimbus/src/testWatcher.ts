@@ -37,6 +37,8 @@ export class TestWatcher implements vscode.Disposable {
 	private lastPrompt?: string;
 	/** 前回の実行で通っていたテスト（T-108 回帰の検知の基準） */
 	private previouslyPassed = new Set<string>();
+	/** 直前の実行で落ちていたか（T-107 赤 → 緑の確認） */
+	private hadFailures = false;
 
 	constructor(private readonly deps: TestWatcherDeps) {
 		const tests = vscode.tests as Partial<typeof vscode.tests>;
@@ -94,8 +96,16 @@ export class TestWatcher implements vscode.Disposable {
 		// 次の実行と比べるための基準を更新する。落ちたぶんは基準から外れる
 		this.previouslyPassed = collectPassed(nodes);
 		if (total === 0) {
+			// 赤 → 緑になった瞬間だけ知らせる（T-107）。毎回「全部通りました」を出しても読まれない
+			if (this.hadFailures) {
+				this.hadFailures = false;
+				void vscode.window.showInformationMessage(
+					'Nimbus: 赤 → 緑になりました（落ちていたテストがすべて通りました）。'
+				);
+			}
 			return;
 		}
+		this.hadFailures = true;
 		this.lastPrompt = buildTestFailurePrompt(failures, total);
 		const headline = testFailureHeadline(total, regressions);
 		this.deps.log(`[test] ${headline}`);

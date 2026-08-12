@@ -177,8 +177,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 
 **動作確認**
 
-- [ ] T-107 失敗テスト起点の開発 — 先に落ちるテストを書かせて、赤 → 緑になるまで回す。
-      「動いた気がする」を排除する（T-081 の証跡つき完了報告と対）[P2]
 
 **リファクタ・移行**
 
@@ -296,8 +294,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-073 シミュレータ操作 — タップ操作を代行し、UI が実際に動くところまで確認させる [P2]
 - [ ] T-074 実機ログの取り込み — クラッシュログをドロップしたら該当箇所まで一直線 [P2]
-- [ ] T-194 i18n 文言の抽出と追加 [P2]
-- [ ] T-195 アクセシビリティチェック [P2]
 - [ ] T-198 Podfile / SPM / Gradle の依存整合性 [P2]
 - [ ] T-199 Xcode プロジェクトファイルの競合解消 [P2]
 - [ ] T-200 Platform Channel（ネイティブ ⇄ Dart）の橋渡し支援 [P2]
@@ -430,6 +426,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-107 失敗テスト起点の開発（先に落ちるテストを書かせる指示と、赤 → 緑になった瞬間の確認）
+      — 2026-08-13 / 仕様 [test-runner](nimbus/docs/specs/test-runner.md)
+
 - [x] T-106 ビルドエラーの自動リトライ（利用者が打ったビルド／型チェックだけを、直させてから
       同じ端末で走らせ直す。既定は無効・上限つき）— 2026-08-13 / 仕様 [terminal-capture](nimbus/docs/specs/terminal-capture.md)
 
@@ -495,6 +494,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-194 / T-195 Flutter の確認（直書きの文言・読み上げに渡らない画像・名前の無いボタン）— 2026-08-13 / 仕様 [flutter-lint](nimbus/docs/specs/flutter-lint.md)
 - [x] T-196 / T-197 / T-201 提出前の確認（権限の差分・プライバシーマニフェスト・版）— 2026-08-13 / 仕様 [mobile-checks](nimbus/docs/specs/mobile-checks.md)
 - [x] T-183 どこで壊れたかを絞り込む（残り回数を出す・git は勝手に動かさない）— 2026-08-13 / 仕様 [bisect](nimbus/docs/specs/bisect.md)
 - [x] T-220 PR の説明文の下書き（意図は人が書く・テスト無しは警告）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)

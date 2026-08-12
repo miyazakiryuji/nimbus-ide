@@ -62,6 +62,7 @@ import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
+import { buildFailingTestPrompt } from './core/testFailures';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1586,6 +1587,19 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!verifier.sendLast()) {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
+		}),
+		// 先に落ちるテストを書かせて、赤 → 緑になるまで回す（T-107）
+		vscode.commands.registerCommand('nimbus.startFromFailingTest', async () => {
+			const goal = await vscode.window.showInputBox({
+				title: 'Nimbus: 失敗するテストから始める',
+				prompt: '何を作りますか（先にテストを書かせます）',
+				placeHolder: '例: 期限切れのトークンを弾く'
+			});
+			if (!goal) {
+				return;
+			}
+			cockpit.reveal();
+			await send(buildFailingTestPrompt(goal));
 		}),
 		// この変更で足した行がテストされているか（T-109）
 		vscode.commands.registerCommand('nimbus.coverageDiff', () =>

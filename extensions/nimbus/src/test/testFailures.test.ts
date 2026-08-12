@@ -8,6 +8,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import {
+	buildFailingTestPrompt,
 	buildTestFailurePrompt,
 	collectFailures,
 	collectPassed,
@@ -105,6 +106,15 @@ test('長いメッセージは切り、1 件あたり 3 つまでにする', () 
 		[failures[0].messages.length, failures[0].messages[0].endsWith('…（省略）')],
 		[3, true]
 	);
+});
+
+test('先に落ちるテストを書かせる文は、順序と禁止事項を明示する（T-107）', () => {
+	const prompt = buildFailingTestPrompt('  期限切れのトークンを弾く  ');
+	assert.ok(prompt.startsWith('次のものを作ります: 期限切れのトークンを弾く\n'), prompt);
+	assert.ok(prompt.includes('**先に落ちるテストを書いてください。**'), prompt);
+	assert.ok(prompt.includes('**テストを実装に合わせて書き換えないでください。**'), prompt);
+	assert.ok(!prompt.includes('対象:'), prompt);
+	assert.ok(buildFailingTestPrompt('x', 'const a = 1;').includes('````\nconst a = 1;\n````'));
 });
 
 test('見出しは件数を言う。回帰があるならそれを先に言う', () => {

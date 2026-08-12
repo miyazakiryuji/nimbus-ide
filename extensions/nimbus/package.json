@@ -138,6 +138,12 @@
         "icon": "$(shield)"
       },
       {
+        "command": "nimbus.startFromFailingTest",
+        "title": "失敗するテストから始める",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
