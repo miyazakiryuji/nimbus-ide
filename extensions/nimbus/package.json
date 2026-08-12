@@ -569,6 +569,19 @@
           "default": "errors",
           "description": "編集後の確認で、どこまでを差し戻すか。"
         },
+        "nimbus.lsp.verifyIncludes": {
+          "type": "string",
+          "enum": [
+            "errors",
+            "warnings"
+          ],
+          "enumDescriptions": [
+            "型エラーだけを差し戻します。",
+            "lint / analyzer の警告も差し戻します（自動ループ向け）。"
+          ],
+          "default": "errors",
+          "description": "編集後の確認で、どこまでを差し戻すか。"
+        },
         "nimbus.lsp.maxAutoFixes": {
           "type": "number",
           "default": 2,

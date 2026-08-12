@@ -46,9 +46,18 @@ test('同じ文言が複数あっても、増えた分だけを数える', () =>
 	assert.strictEqual(newErrors(before, after).length, 1);
 });
 
-test('警告・情報は対象にしない（直す根拠が弱いものでループを回さない）', () => {
+test('警告・情報は既定では対象にしない（直す根拠が弱いものでループを回さない）', () => {
 	const after = [diagnostic({ message: '警告', severity: 1 }), diagnostic({ message: '情報', severity: 2 })];
 	assert.deepStrictEqual(newErrors([], after), []);
+});
+
+test('警告まで回す設定では、警告だけを足す（情報とヒントは入れない・T-102）', () => {
+	const after = [
+		diagnostic({ message: 'エラー', severity: 0 }),
+		diagnostic({ message: '警告', severity: 1 }),
+		diagnostic({ message: '情報', severity: 2 })
+	];
+	assert.deepStrictEqual(newErrors([], after, 1).map((entry) => entry.message), ['エラー', '警告']);
 });
 
 test('別ファイルの同じ文言は別物として扱う', () => {
@@ -65,12 +74,12 @@ test('差し戻す文は場所を 1 起点で出し、出どころを添える',
 	assert.strictEqual(
 		prompt,
 		[
-			'いまの編集で、次の型エラーが増えました（言語サーバーの診断です）。',
+			'いまの編集で、次の指摘が増えました（言語サーバー・lint の診断です）。',
 			'',
 			"- src/a.ts:12:5 (ts) Property 'foo' does not exist",
 			'',
 			'存在しない API・引数の数の違い・import 漏れが無いか確かめて直してください。',
-			'元から出ていたエラーは含めていません。'
+			'元から出ていたものは含めていません。'
 		].join('\n')
 	);
 });
@@ -82,6 +91,7 @@ test('多すぎる指摘は切って「他 N 件」を添える。無ければ�
 	assert.strictEqual(buildVerifyPrompt([], (file) => file), '');
 });
 
-test('見出しは件数とファイル数を言う', () => {
+test('見出しは件数とファイル数を言う。警告まで回すときは言い方を変える', () => {
 	assert.strictEqual(verifyHeadline(3, 2), 'いま書いたコードに型エラーが 3 件あります（2 ファイル）');
+	assert.strictEqual(verifyHeadline(3, 2, true), 'いま書いたコードに型エラー・警告が 3 件あります（2 ファイル）');
 });

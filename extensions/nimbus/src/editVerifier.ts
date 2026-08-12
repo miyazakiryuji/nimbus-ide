@@ -78,9 +78,13 @@ export class EditVerifier {
 		this.baseline.clear();
 
 		const after = await this.waitForDiagnostics(files);
+		// lint / analyzer の警告まで回すかどうか（T-102）
+		const includesWarnings =
+			vscode.workspace.getConfiguration('nimbus').get<string>('lsp.verifyIncludes') === 'warnings';
 		const errors = newErrors(
 			files.flatMap((file) => before.get(file) ?? []),
-			after
+			after,
+			includesWarnings ? 1 : 0
 		);
 		if (errors.length === 0) {
 			return;
@@ -89,7 +93,7 @@ export class EditVerifier {
 		const roots = (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath);
 		this.lastPrompt = buildVerifyPrompt(errors, (file) => displayPath(roots, file));
 		const touched = new Set(errors.map((error) => error.file)).size;
-		const headline = verifyHeadline(errors.length, touched);
+		const headline = verifyHeadline(errors.length, touched, includesWarnings);
 		this.deps.log(`[verify] ${headline}`);
 
 		if (mode === 'auto') {
