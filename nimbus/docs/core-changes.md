@@ -24,6 +24,26 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 9 | `src/.../extensions/browser/extensions.contribution.ts` | `extensions.verifySignature` の既定値を `true` → `false` | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無いため、既定のままだと**拡張を 1 つもインストールできない**（実測） | 同上 |
 | 10 | `build/gulpfile.vscode.ts` | macOS のターミナル用コマンドを `bin/code` 固定から `bin/${product.applicationName}` に | 本物の VS Code の `code` と衝突する。製品名から決めるのが素直（upstream にも通る一般化） | 同上 |
 
+## リポジトリ運用（push できない問題とその回避）
+
+GitHub は「このプッシュが workflow ファイルを作成・更新するか」を判定する。トークンに `workflow`
+スコープが無い場合、判定できないとプッシュを拒否する。**新規ブランチの作成**では upstream 全体との
+差分計算になり、この規模のリポジトリでは判定がタイムアウトして必ず失敗する:
+
+```
+! [remote rejected] nimbus -> nimbus
+  (Unable to determine if workflow can be created or updated due to timeout; `workflows` scope may be required.)
+```
+
+**回避策（実証済み）**: 既存ブランチへの**早送りプッシュ**なら差分が小さく、判定が通る。
+
+1. 手元のコミットを、フォークに既にあるブランチ（例 `release/1.132`）の先端へ rebase する
+2. そのブランチへ push する（早送りになる）
+3. GitHub API でブランチ名を変える: `gh api -X POST repos/<owner>/<repo>/branches/<old>/rename -f new_name=nimbus`
+
+以後は `nimbus` ブランチへの早送り push なので問題なく続けられる。
+**そのため Nimbus のベースはタグ 1.132.0 ではなく `release/1.132`（1.132.0＋リリース後の修正）**になっている。
+
 ## 実測でわかったこと（重要）
 
 - **`product.json` の `defaultChatAgent` は削除できない。** 消すとワークベンチが
