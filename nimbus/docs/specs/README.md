@@ -8,11 +8,27 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 
 ## 一覧
 
-- [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
-- [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
+エージェントの操縦（Nimbus 本体）:
 
-まだ全機能ぶんは書き起こせていません（`tasks.md` の T-003）。残りは README の「できること」と
-`../history/NIMBUS_SPEC.md`（旧実装向けの指示書）、`../testing/` の確認記録に散っています。
+- [`sessions.md`](sessions.md) — セッション実行エンジン・状態・コスト・課金モード・実行ファイル解決
+- [`approvals-and-diff.md`](approvals-and-diff.md) — 承認（`canUseTool`）と、承認前の差分
+- [`context-view.md`](context-view.md) — いま Claude に渡っている前提の一覧
+- [`parallel-tasks.md`](parallel-tasks.md) — 並列タスク（worktree × カンバン）
+- [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
+- [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
+- [`usage.md`](usage.md) — 使用量（5 時間・週の枠／文脈の消費／費用と上限アラート）
+
+IDE 基礎機能:
+
+- [`scratch-files.md`](scratch-files.md) — スクラッチファイル（IntelliJ 由来）
+
+見た目と運用:
+
+- [`themes.md`](themes.md) — Nimbus Dark / Nimbus Light
+- [`distribution.md`](distribution.md) — 配布（dmg・ad-hoc 署名）と upstream 追従
+- [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
+
+旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 
 ## テンプレート
 

@@ -1,7 +1,14 @@
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
 import { query } from '@anthropic-ai/claude-agent-sdk'
-import type { CanUseTool, Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
+import type {
+  CanUseTool,
+  Options,
+  Query,
+  SDKControlGetContextUsageResponse,
+  SDKControlGetUsageResponse,
+  SDKUserMessage
+} from '@anthropic-ai/claude-agent-sdk'
 import type { NimbusEvent, SessionStatus, SessionSummary } from '../events'
 import { AsyncMessageQueue } from './AsyncMessageQueue'
 import { normalizeSdkMessage } from './normalize'
@@ -202,6 +209,35 @@ export class SessionManager extends EventEmitter {
       session.queue.close()
     }
     return targets.length
+  }
+
+  /**
+   * 枠の消費（5 時間・週）とセッションの累積コスト（T-017 / T-037）。
+   *
+   * SDK 側で **EXPERIMENTAL** と明記されている API なので、名前の変更・削除に備えて
+   * ここ 1 箇所に閉じ込め、失敗しても undefined を返すだけにする
+   * （使用量が取れないことを、セッションが動かない理由にしない）。
+   * API キー利用・Bedrock・Vertex では枠の概念が無く `rate_limits` は null で返る。
+   */
+  async getUsage(sessionId: string): Promise<SDKControlGetUsageResponse | undefined> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return undefined
+    try {
+      return await session.handle.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET()
+    } catch {
+      return undefined
+    }
+  }
+
+  /** いま文脈をどれだけ使っているか（T-020）。取れなければ undefined */
+  async getContextUsage(sessionId: string): Promise<SDKControlGetContextUsageResponse | undefined> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return undefined
+    try {
+      return await session.handle.getContextUsage()
+    } catch {
+      return undefined
+    }
   }
 
   list(): SessionSummary[] {

@@ -54,6 +54,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.usage",
+          "name": "使用量",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.help",
           "name": "ヘルプ（ゆあ）",
           "type": "webview",
@@ -109,6 +114,12 @@
         "title": "コックピットで使う",
         "category": "Nimbus",
         "icon": "$(play)"
+      },
+      {
+        "command": "nimbus.refreshUsage",
+        "title": "使用量を取得し直す",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -123,6 +134,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "nimbus.refreshUsage",
+          "when": "view == nimbus.usage",
+          "group": "navigation"
+        },
         {
           "command": "nimbus.refreshSkills",
           "when": "view == nimbus.skills",
@@ -159,6 +175,19 @@
           "type": "boolean",
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+        },
+        "nimbus.usage.costLimitUsd": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "1 セッションあたりの費用の上限（USD）。超える前に警告し、超えたら停止を促します。0 は上限なし。"
+        },
+        "nimbus.usage.warnAtPercent": {
+          "type": "number",
+          "default": 80,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "費用の上限に対して何 % で最初の警告を出すか。"
         },
         "nimbus.safety.blockProtectedReads": {
           "type": "boolean",

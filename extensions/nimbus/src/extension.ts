@@ -22,6 +22,8 @@ import { BoardViewProvider } from './tasks/BoardViewProvider';
 import { buildYuaSystemPrompt } from './help/yua';
 import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
+import { UsageViewProvider } from './usageView';
+import { bar, costAlertLevel, formatCost } from './core/usage';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -36,7 +38,12 @@ export function activate(context: vscode.ExtensionContext): void {
 	const previewer = new ProposedEditPreviewer();
 	const contextView = new ContextViewProvider();
 	const skillsView = new SkillsViewProvider();
+	const usageView = new UsageViewProvider();
 	let pendingApprovals = 0;
+	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
+	let contextPercent: number | undefined;
+	/** コスト警告を出したセッション。同じ段階で何度も出さない（T-059） */
+	const costAlerted = new Map<string, 'warn' | 'over'>();
 
 	const broker = createPermissionBroker({
 		sessionAllowAll,
@@ -116,7 +123,57 @@ export function activate(context: vscode.ExtensionContext): void {
 		cockpit.post({ type: 'event', event });
 		updateStatus(sessions.get(event.sessionId));
 		logEvent(event);
+		if (event.kind === 'turn-result') {
+			// ターンが終わるたびに取り直す。走っている最中に見えないと意味がない（T-017 / T-020）
+			void refreshUsage(event.sessionId);
+			checkCostLimit(event.sessionId, sessions.get(event.sessionId)?.totalCostUsd);
+		}
 	});
+
+	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
+	async function refreshUsage(sessionId: string): Promise<void> {
+		if (sessionId !== activeSessionId) {
+			return;
+		}
+		const [usage, context] = await Promise.all([sessions.getUsage(sessionId), sessions.getContextUsage(sessionId)]);
+		contextPercent = context && context.maxTokens > 0 ? (context.totalTokens / context.maxTokens) * 100 : undefined;
+		usageView.update(usage, context);
+		updateStatus(sessions.get(sessionId));
+	}
+
+	/**
+	 * コスト上限アラート（T-059）。使いすぎてから請求で気づくのでは遅い。
+	 * 段階ごとに一度だけ出す（毎ターン出すと読み飛ばされる）。
+	 */
+	function checkCostLimit(sessionId: string, costUsd: number | undefined): void {
+		if (costUsd === undefined) {
+			return;
+		}
+		const config = vscode.workspace.getConfiguration('nimbus');
+		const limit = config.get<number>('usage.costLimitUsd') ?? 0;
+		const level = costAlertLevel(costUsd, limit, config.get<number>('usage.warnAtPercent') ?? 80);
+		if (level === 'none' || costAlerted.get(sessionId) === level) {
+			return;
+		}
+		costAlerted.set(sessionId, level);
+		if (level === 'warn') {
+			void vscode.window.showWarningMessage(
+				`Nimbus: このセッションの費用が ${formatCost(costUsd)} になりました（上限 ${formatCost(limit)}）。`
+			);
+			return;
+		}
+		const STOP = 'すべて停止';
+		void vscode.window
+			.showWarningMessage(
+				`Nimbus: 費用が上限 ${formatCost(limit)} を超えました（現在 ${formatCost(costUsd)}）。`,
+				STOP
+			)
+			.then((choice) => {
+				if (choice === STOP) {
+					void vscode.commands.executeCommand('nimbus.stopAll');
+				}
+			});
+	}
 
 	function logEvent(event: NimbusEvent): void {
 		switch (event.kind) {
@@ -154,11 +211,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		const busy = summary.status === 'running' || summary.status === 'starting';
 		const cost = summary.totalCostUsd !== undefined ? ` · $${summary.totalCostUsd.toFixed(4)}` : '';
-		status.text = `${waiting}${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${cost}`;
+		// 文脈をどれだけ使っているかは常に見えていてほしい（T-020）
+		const context = contextPercent !== undefined ? ` · ${bar(contextPercent, 5)} ${Math.round(contextPercent)}%` : '';
+		status.text = `${waiting}${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${context}${cost}`;
 		status.tooltip = [
 			`Nimbus — ${summary.status}`,
 			billingModeLabel(lastApiKeySource),
 			summary.model ?? '',
+			contextPercent !== undefined ? `文脈 ${Math.round(contextPercent)}%（クリックでログ／使用量ビューに内訳）` : '',
 			summary.cwd
 		].filter(Boolean).join('\n');
 		void vscode.commands.executeCommand('setContext', 'nimbus.hasRunningSession', busy);
@@ -289,6 +349,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		retained.length = 0;
 		contextView.update(undefined);
 		skillsView.setSessionSkills([]);
+		usageView.clear();
+		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
 		cockpit.reveal();
@@ -505,6 +567,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		previewer,
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
 		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
+		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
+		vscode.commands.registerCommand('nimbus.refreshUsage', async () => {
+			if (!activeSessionId) {
+				void vscode.window.showInformationMessage('Nimbus: セッションを開始すると使用量を取得できます。');
+				return;
+			}
+			await refreshUsage(activeSessionId);
+		}),
 		vscode.window.registerWebviewViewProvider(BoardViewProvider.viewType, board, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),
