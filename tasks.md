@@ -40,6 +40,9 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-141 生成物の作り直し — 元を直したら生成コマンドまで回す。T-139 / T-140 の続きで
+      `core/generated.ts` は承認・レビュー層のもの。`regenerate.ts` を確保済み @session-b 2026-08-13 [P2]
+
       `core/ambiguity.ts` `core/settingsHistory.ts` `core/highlights.ts` を確保済み @session-a 2026-08-13 [P2]
 
 
@@ -308,7 +311,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🧬 型・生成コード
 
-- [ ] T-141 freezed / json_serializable の追従 — モデル変更時に生成コマンドまで自動で回す [P2]
 
 ### 🧯 運用・障害対応
 
