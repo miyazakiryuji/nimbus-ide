@@ -56,6 +56,7 @@ import { openExplanation } from './explain';
 import { importReviewComments } from './reviewComments';
 import { shareSession } from './shareSession';
 import { openReplay } from './replay';
+import { checkMermaidDiagrams } from './mermaid';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -63,6 +64,7 @@ import { showDiffSummary } from './diffSummary';
 import { showImpact } from './impact';
 import { editPermissionRules } from './permissionRules';
 import { importPrReview } from './prReview';
+import { findFlakyTests } from './flaky';
 import { ReviewViewProvider } from './reviewView';
 import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
@@ -2340,6 +2342,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.importReviewComments', () => importReviewComments((text) => void send(text))),
 		vscode.commands.registerCommand('nimbus.shareSession', () => shareSession()),
 		vscode.commands.registerCommand('nimbus.openReplay', () => openReplay()),
+		vscode.commands.registerCommand('nimbus.checkMermaid', () => checkMermaidDiagrams()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2390,6 +2393,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
+		// テストを何度か回して揺れているものを見つける（T-133）
+		vscode.commands.registerCommand('nimbus.findFlakyTests', () => findFlakyTests()),
 		// PR のレビュー指摘をセッションへ（T-116）
 		vscode.commands.registerCommand('nimbus.importPrReview', () =>
 			importPrReview((text) => {

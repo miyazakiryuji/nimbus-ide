@@ -42,8 +42,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
       `core/recovery.ts` を確保済み @session-a 2026-08-13 [P2]
 
-- [ ] T-133 flaky テストの検出 — 何度か回して不安定なテストを見つける。
-      `core/flaky.ts` を先に作って確保済み @session-b 2026-08-13 [P2]
 
 
 
@@ -339,6 +337,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-133 不安定なテストの検出（1 回でも結果が変われば flaky・回によって現れないものも別に出す）
+      — 2026-08-13 / 仕様 [flaky-tests](nimbus/docs/specs/flaky-tests.md)
 
 - [x] T-174 ノートブック対応（セルを「ファイル名（セル N）」で扱い、git に渡せない機能は理由つきで断る）
       — 2026-08-13 / 仕様 [notebooks](nimbus/docs/specs/notebooks.md)
