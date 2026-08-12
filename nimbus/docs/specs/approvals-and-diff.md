@@ -17,12 +17,13 @@ Nimbus は SDK の `canUseTool` を握り、**判断が終わるまでセッシ�
    「許可」を押し間違える余地を残さない（[safety](safety.md)）
 2. **危険度を判定する** — 自動許可より先。`normal` / `caution` / `danger` の 3 段階
    （判定の中身は [safety](safety.md)）。「常に許可」で `rm -rf` まで素通りさせない
-3. 危険でなく、設定 `nimbus.permissions.autoApproveReadOnly` が有効で、読み取り専用ツール
+3. **生成物への書き込みなら止めて聞く** — これも自動許可より先（T-139）
+4. 危険でなく、設定 `nimbus.permissions.autoApproveReadOnly` が有効で、読み取り専用ツール
    （`Read` / `Glob` / `Grep` / `NotebookRead` / `TodoWrite`）なら自動許可
-4. 危険でなく、そのセッションで「常に許可」済みなら自動許可
-5. 危険でなく、保存済みの**承認ルール**（`nimbus.permissions.alwaysAllow`）に当たれば自動許可
-6. 書き換え系（`Edit` / `Write` / `MultiEdit`）なら**差分を開く**
-7. モーダルで聞く（キューモードでは積んで待つ）
+5. 危険でなく、そのセッションで「常に許可」済みなら自動許可
+6. 危険でなく、保存済みの**承認ルール**（`nimbus.permissions.alwaysAllow`）に当たれば自動許可
+7. 書き換え系（`Edit` / `Write` / `MultiEdit`）なら**差分を開く**
+8. モーダルで聞く（キューモードでは積んで待つ）
 
 ### モーダル
 
@@ -146,6 +147,8 @@ VS Code のモーダルは 1 枚ずつしか出ないため、後ろで何本の
 - `extensions/nimbus/src/core/approvalRules.ts` — 承認ルールの表現と一致判定（T-038）
 - `extensions/nimbus/src/core/approvalQueue.ts` / `approvalsView.ts` — 横断キューの並びと表示（T-010）
 - `extensions/nimbus/src/core/hunks.ts` / `core/partialEdit.ts` — 行差分と部分採用（T-113）
+- `extensions/nimbus/src/core/generated.ts` — 生成物の判定と「代わりに直す先」（T-139 / T-140）
+- `extensions/nimbus/src/core/permissionRules.ts` / `permissionRules.ts` — ルールの言い換えと画面編集（T-028）
 
 設定:
 
@@ -185,8 +188,8 @@ VS Code のモーダルは 1 枚ずつしか出ないため、後ろで何本の
   判断を求める瞬間に前面へ出るぶん、見落としが起きにくい。
   複数セッションを跨いだ承認キューは T-010 で足したが、**既定は今までどおりモーダル**で、
   キューに積むのは設定を有効にしたときだけ（並列に走らせる人にだけ要る機能なので）
-- **「常に許可」の永続化** — T-038 で `nimbus.permissions.alwaysAllow` として入れた。
-  画面からのルール編集（一覧・削除）は T-028 に残っている
+- **「常に許可」の永続化** — T-038 で `nimbus.permissions.alwaysAllow` として入れ、
+  画面からのルール編集（一覧・追加・削除）は T-028 で入れた（[permission-rules](permission-rules.md)）
 - **部分採用の差分プレビュー** — 選んでいる最中に「採用後の全文」を差分エディタへ反映することは
   していない。QuickPick で選ぶあいだ差分を描き替えると、どちらを見ているのか分からなくなるため。
   各変更のプレビューは選択肢の説明文に出す
