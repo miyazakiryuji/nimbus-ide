@@ -238,7 +238,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📊 自分を観測する
 
-- [ ] T-066 失敗パターンの蓄積 — 詰まりがちな箇所を学習して、先回りで警告する [P3]
 - [ ] T-206 セッションのリプレイ再生 [P3]
 
 ### 🔀 乗り換え・共存
@@ -481,6 +480,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-066 詰まりやすい場所（件数で足切り・理由は推測しない）— 2026-08-13 / 仕様 [prompt-stats](nimbus/docs/specs/prompt-stats.md)
 - [x] T-065 / T-067 指示の出しかた（言い直しの傾向・数が少ないうちは出さない）— 2026-08-13 / 仕様 [prompt-stats](nimbus/docs/specs/prompt-stats.md)
 - [x] T-051 寝る前に仕込む（過ぎた時刻は翌日・承認で止まることを黙らない・常駐しない）— 2026-08-13 / 仕様 [schedule](nimbus/docs/specs/schedule.md)
 - [x] T-046 / T-213 練習用サンドボックス（直すところがある状態で置く）— 2026-08-13 / 仕様 [sandbox](nimbus/docs/specs/sandbox.md)

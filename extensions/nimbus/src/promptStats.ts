@@ -6,6 +6,7 @@
 import { homedir } from 'os';
 import * as vscode from 'vscode';
 import { collectPrompts, renderPromptStats, summarizePrompts } from './core/promptStats';
+import { findFrictionSpots, renderFrictionSpots } from './core/frictionSpots';
 import { readRecentTranscripts } from './core/transcriptFiles';
 
 /** 傾向を見るので、ふりかえりより多めに読む */
@@ -24,9 +25,9 @@ export async function openPromptStats(home: string = homedir()): Promise<void> {
 		async () => readRecentTranscripts(root, home, { limit: MAX_TRANSCRIPTS, maxBytes: MAX_BYTES })
 	);
 
-	const document = await vscode.workspace.openTextDocument({
-		content: renderPromptStats(summarizePrompts(collectPrompts(entries))),
-		language: 'markdown'
-	});
+	// 詰まりやすい場所も同じ面に出す（T-066）。傾向と場所は一緒に見たほうが手が動く
+	const samples = collectPrompts(entries);
+	const content = renderPromptStats(summarizePrompts(samples)) + '\n' + renderFrictionSpots(findFrictionSpots(samples));
+	const document = await vscode.workspace.openTextDocument({ content, language: 'markdown' });
 	await vscode.window.showTextDocument(document, { preview: false });
 }
