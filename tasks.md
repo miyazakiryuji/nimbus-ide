@@ -192,7 +192,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 - [ ] T-180 影響を受けるテストだけを自動選択して実行する [P2]
 - [ ] T-181 スナップショット／ゴールデンテストの更新レビュー [P2]
 - [ ] T-182 ミューテーションテストによるテストの質評価 [P3]
-- [ ] T-183 二分探索デバッグの支援 — どのコミットで壊れたかを絞り込む [P2]
 - [ ] T-184 ログの時系列ビューア（Inbox の T-015 デバッグモードと同じ面になりそう）[P2]
 
 ### ⑧ 対話の質（人間とエージェントの間）
@@ -496,6 +495,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-183 どこで壊れたかを絞り込む（残り回数を出す・git は勝手に動かさない）— 2026-08-13 / 仕様 [bisect](nimbus/docs/specs/bisect.md)
 - [x] T-220 PR の説明文の下書き（意図は人が書く・テスト無しは警告）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-052 朝のダイジェスト（ふりかえりに「昨夜から」を追加）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-134 / T-219 ブランチの離れ具合と衝突の予告、命名規則の判定 — 2026-08-13 / 仕様 [branch-health](nimbus/docs/specs/branch-health.md)
