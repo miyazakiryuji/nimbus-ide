@@ -332,8 +332,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🌐 API・スキーマ
 
 - [ ] T-123 スキーマ変更の影響追跡 — バックエンドの型が変わったときに、フロント側の壊れる箇所を洗い出す [P2]
-- [ ] T-124 モックサーバー自動生成 — API がまだ無い段階でも先に実装を進められる [P3]
-- [ ] T-218 API レスポンスの実データを型定義と突き合わせる — 「仕様と実物が違う」を見つける [P2]
 
 ### 🗄 データ・DB
 
@@ -486,6 +484,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-218 / T-124 実物とスキーマの突き合わせと、仮の応答 — 2026-08-13 / 仕様 [api-check](nimbus/docs/specs/api-check.md)
 - [x] T-122 スキーマから型を起こす（Dart / TypeScript・扱えないものは扱えないと書く）— 2026-08-13 / 仕様 [openapi](nimbus/docs/specs/openapi.md)
 - [x] T-200 Platform Channel の突き合わせ（受け口の無い呼び出しを実機の前に見つける）— 2026-08-13 / 仕様 [platform-channel](nimbus/docs/specs/platform-channel.md)
 - [x] T-089 / T-053 いまのようす（続けすぎの区切り・待ち時間の使い道）— 2026-08-13 / 仕様 [rhythm](nimbus/docs/specs/rhythm.md)

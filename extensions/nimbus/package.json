@@ -594,6 +594,18 @@
         "title": "スキーマから型を起こす",
         "category": "Nimbus",
         "icon": "$(symbol-interface)"
+      },
+      {
+        "command": "nimbus.checkApiResponse",
+        "title": "実物とスキーマを突き合わせる",
+        "category": "Nimbus",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "nimbus.generateMockResponse",
+        "title": "仮の応答を作る",
+        "category": "Nimbus",
+        "icon": "$(json)"
       }
     ],
     "menus": {
