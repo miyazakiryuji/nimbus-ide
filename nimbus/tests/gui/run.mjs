@@ -6,6 +6,7 @@
  *   node nimbus/tests/gui/run.mjs --with-claude  # 実セッションの往復も確認する（課金が発生する）
  *   node nimbus/tests/gui/run.mjs --list         # ケース一覧だけ出す（起動しない）
  *   node nimbus/tests/gui/run.mjs --only theme   # 名前に一致するケースだけ
+ *   node nimbus/tests/gui/run.mjs --untrusted    # 信頼していないフォルダでの見え方だけ
  *
  * ケースの足しかた: `cases/` に 1 ファイル増やすだけ。
  *   export default { name: '...', async run(page, ctx) { ... } }
@@ -75,7 +76,11 @@ function makeWorkspace() {
 async function main() {
 	const cases = await loadCases();
 	const only = value('only');
-	const selected = only ? cases.filter((c) => c.name.includes(only) || c.file.includes(only)) : cases;
+	// 信頼を確かめるケースは起動のしかたが違うので、既定の一覧からは外す
+	const forThisRun = cases.filter((c) => Boolean(c.untrusted) === flag('untrusted'));
+	const selected = only
+		? forThisRun.filter((c) => c.name.includes(only) || c.file.includes(only))
+		: forThisRun;
 
 	if (flag('list')) {
 		for (const c of cases) {
@@ -100,11 +105,15 @@ async function main() {
 	const workspace = makeWorkspace();
 	mkdirSync(OUT, { recursive: true });
 
+	// 既定では信頼の確認を切る。切らないと 21 件すべてがモーダル待ちになって不安定になる。
+	// ただしそれだと「信頼していないときの見え方」を一度も通らないので、
+	// `--untrusted` のときだけフラグを外し、そこを見るケースだけを走らせる
+	const untrusted = flag('untrusted');
 	const launchArgs = [
 		...(devMain ? [devMain] : []),
 		`--user-data-dir=${userDataDir}`,
 		`--extensions-dir=${extensionsDir}`,
-		'--disable-workspace-trust',
+		...(untrusted ? [] : ['--disable-workspace-trust']),
 		'--skip-release-notes',
 		'--skip-welcome',
 		'--disable-updates',
@@ -112,7 +121,7 @@ async function main() {
 		workspace
 	];
 
-	console.log(`起動: ${label}`);
+	console.log(`起動: ${label}${untrusted ? '（信頼していない状態）' : ''}`);
 	console.log(`  ${executablePath}`);
 	console.log(`  ワークスペース: ${workspace}`);
 
