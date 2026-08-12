@@ -34,6 +34,7 @@ import { buildCheckpoints, checkpointLabel, describeRewind } from './core/checkp
 import { searchTranscripts } from './transcriptSearch';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
+import { TerminalWatcher } from './terminalWatcher';
 import { ApprovalsViewProvider } from './approvalsView';
 import type { ApprovalDecision, PendingApproval } from './permissions';
 
@@ -795,11 +796,22 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	}
 
+	// ターミナルで落ちたコマンドを拾ってセッションへ渡す（T-169）。
+	// 「出力を選んでコピーして貼る」を通知のボタン 1 つに畳む
+	const terminals = new TerminalWatcher({
+		send: (text) => {
+			cockpit.reveal();
+			void send(text);
+		},
+		log
+	});
+
 	context.subscriptions.push(
 		output,
 		status,
 		stopButton,
 		previewer,
+		terminals,
 		approvals,
 		approvalsView,
 		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは
@@ -902,6 +914,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
 		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
+		// 通知を閉じてしまっても、あとから同じものを投入できる（T-169）
+		vscode.commands.registerCommand('nimbus.sendLastTerminalFailure', () => {
+			if (!terminals.sendLastFailure()) {
+				void vscode.window.showInformationMessage('Nimbus: 直近に失敗したコマンドはありません。');
+			}
+		}),
 		new vscode.Disposable(() => sessions.closeAll())
 	);
 

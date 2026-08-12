@@ -108,6 +108,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.sendLastTerminalFailure",
+        "title": "直近に失敗したコマンドをセッションに投入",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
@@ -312,6 +317,11 @@
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
         },
+        "nimbus.permissions.offerPartialAccept": {
+          "type": "boolean",
+          "default": true,
+          "description": "書き換えの提案に変更が 2 か所以上あるとき、承認の選択肢に「一部だけ採用」を出します。外した変更は元のまま残ります。"
+        },
         "nimbus.permissions.queueApprovals": {
           "type": "boolean",
           "default": false,
@@ -377,6 +387,18 @@
           "type": "boolean",
           "default": true,
           "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+        },
+        "nimbus.terminal.captureFailures": {
+          "type": "boolean",
+          "default": true,
+          "description": "ターミナルでコマンドが失敗したら、その出力をセッションに投入できる通知を出します。"
+        },
+        "nimbus.terminal.maxOutputLines": {
+          "type": "number",
+          "default": 200,
+          "minimum": 10,
+          "maximum": 2000,
+          "description": "セッションに投入するターミナル出力の行数の上限（末尾から数えます）。"
         },
         "nimbus.dialogue.confirmVaguePrompt": {
           "type": "boolean",

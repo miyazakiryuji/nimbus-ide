@@ -43,10 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 - [ ] T-113 **hunk 単位の部分採用** — 提案を丸呑みにせず、いい部分だけ取り込む @session-b 2026-08-13 [P1]
 
-- [ ] T-098 **LSP をエージェントのツールにする** — 実装と単体テスト（15 件）まで完了。定義・参照・型・
-      アウトライン・シンボル検索・呼び出し階層・診断を `mcp__nimbus_lsp__*` として渡す。残るは画面確認
-      （`nimbus/docs/testing/lsp-tools.md`）→ 仕様 `nimbus/docs/specs/lsp-tools.md` @session-lsp 2026-08-13 [P1]
-
 
 
 
@@ -173,7 +169,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 - [ ] T-044 ターミナルで **Shift+Enter を改行**にする（出荷時から）— Claude Code の `/terminal-setup` に
       相当する設定を最初から入れておき、利用者にやらせない（キーバインドで Esc+Enter を送るのが定石）[P2]
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
-- [ ] T-169 **ターミナル出力の自動キャプチャ** — 落ちた出力をワンクリックでセッションに投入する [P1]
 - [ ] T-170 エラー文をコピーした瞬間に「調べます？」と提案する（オフにできること）[P3]
 - [ ] T-171 選択範囲へのクイックアクション — 右クリックで「これをリファクタ」 [P2]
 - [ ] T-172 コードレンズによる関数単位のアクション提示 [P2]
@@ -503,6 +498,12 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-169 ターミナル出力の自動キャプチャ（落ちたコマンドの出力を通知のボタン 1 つでセッションへ）
+      — 2026-08-13 / 仕様 [terminal-capture](nimbus/docs/specs/terminal-capture.md)
+- [x] T-098 LSP をエージェントのツールにする（定義・参照・型・アウトライン・シンボル検索・呼び出し階層・
+      診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
+      確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-021 文脈ビューの CLAUDE.md に出どころを添える（プロジェクト／親フォルダから継承／ユーザー設定）— 2026-08-13 / 仕様 [context-view](nimbus/docs/specs/context-view.md)
 - [x] T-041（リンター部分）CLAUDE.md の重複・空の節・長さの指摘とトークン数表示 — 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
