@@ -278,6 +278,9 @@ import './contrib/commandCompletion/browser/commandCompletion.contribution.js';
 // Productivity Guide
 import './contrib/productivityGuide/browser/productivityGuide.contribution.js';
 
+// Structural search and replace
+import './contrib/structuralSearch/browser/structuralSearch.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
