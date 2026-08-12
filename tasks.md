@@ -542,3 +542,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] F0 調査と方針決定（ライセンス・商標・Marketplace・ビルド前提）— 2026-08-12 / `nimbus/docs/history/vscode-fork-migration.md`
 - [x] T-145 ドクター（不要ファイル・宣言と実装のズレ・台帳の記載漏れを機械で洗い出す）— 2026-08-13 / `node nimbus/scripts/doctor.mjs` / 仕様 [quality-commands](nimbus/docs/specs/quality-commands.md)
 - [x] T-146 テストコマンド（モジュールテスト＋GUI 操作テスト）— 2026-08-13 / `bash nimbus/scripts/test.sh` / スキル `nimbus-doctor` `spec-drift` `nimbus-test`
+- [x] T-234 重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
