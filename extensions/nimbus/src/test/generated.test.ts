@@ -8,7 +8,14 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { hasGeneratedHeader, isGenerated, isGeneratedPath, summarizeGenerated } from '../core/generated';
+import {
+	hasGeneratedHeader,
+	isGenerated,
+	isGeneratedPath,
+	regenerationAdvice,
+	sourceFileFor,
+	summarizeGenerated
+} from '../core/generated';
 import { formatSummary, summarizeDiff } from '../core/diffSummary';
 
 test('名前で分かる生成物を拾う', () => {
@@ -92,4 +99,35 @@ test('差分の要約では生成物を畳み、手書きだけを展開する',
 	assert.ok(out.includes('lib/model.g.dart'), out);
 	// 合計の行数には生成物も含める（変更全体の大きさは正しく伝える）
 	assert.ok(out.includes('2 ファイル・+2 −0'), out);
+});
+
+test('代わりに直すファイルを名指しする（T-139）', () => {
+	assert.deepStrictEqual(
+		['lib/model.g.dart', 'lib/model.freezed.dart', 'api/svc.pb.go', 'api/svc_pb2.py', 'src/types.gen.ts'].map(
+			sourceFileFor
+		),
+		['lib/model.dart', 'lib/model.dart', 'api/svc.proto', 'api/svc.proto', 'src/types.ts']
+	);
+});
+
+test('直す先が分からないものは推測しない（間違った場所を直させない）', () => {
+	assert.deepStrictEqual(
+		['node_modules/x/index.js', 'build/out.js', 'pubspec.lock'].map(sourceFileFor),
+		[undefined, undefined, undefined]
+	);
+});
+
+test('ロックファイルは、ファイルではなくコマンドを教える', () => {
+	assert.deepStrictEqual(
+		['pubspec.lock', 'package-lock.json', 'go.sum'].map(regenerationAdvice),
+		['flutter pub get で作り直します', 'npm install で作り直します', 'go mod tidy で作り直します']
+	);
+});
+
+test('生成元があるものは「直してから回し直す」と伝える', () => {
+	assert.strictEqual(
+		regenerationAdvice('lib/model.g.dart'),
+		'lib/model.dart を直してから、生成ツールを回し直します'
+	);
+	assert.strictEqual(regenerationAdvice('src/handwritten.ts'), undefined);
 });

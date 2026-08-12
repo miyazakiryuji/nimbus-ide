@@ -58,6 +58,60 @@ export function isGenerated(filePath: string, head?: string): boolean {
 	return isGeneratedPath(filePath) || (head !== undefined && hasGeneratedHeader(head));
 }
 
+/**
+ * 生成物に対して「代わりにどれを直すのか」（tasks.md T-139）。
+ *
+ * 生成物を直接書き換えても、次に生成ツールを回した瞬間に消える。
+ * **消えることより、消えたと気づかないまま先に進むほうが損害が大きい。**
+ * だから「直しても無駄です」ではなく、**代わりに直す先を名指しする**。
+ */
+const SOURCE_OF: { pattern: RegExp; replacement: string }[] = [
+	// build_runner（Flutter / Dart）: model.g.dart / model.freezed.dart → model.dart
+	{ pattern: /\.(g|freezed|gr|config)\.dart$/, replacement: '.dart' },
+	// protobuf: api.pb.go / api.pb.ts → api.proto
+	{ pattern: /\.pb\.(go|ts|js|dart)$/, replacement: '.proto' },
+	{ pattern: /_pb2(_grpc)?\.py$/, replacement: '.proto' },
+	// 生成された型定義: x.gen.ts / x.generated.ts → x.ts
+	{ pattern: /\.(gen|generated)\.([jt]sx?)$/, replacement: '.$2' }
+];
+
+/** ロックファイルは「直す先」がファイルではなくコマンドなので、別に扱う */
+const LOCK_ADVICE: { pattern: RegExp; advice: string }[] = [
+	{ pattern: /(^|\/)package-lock\.json$/, advice: 'npm install で作り直します' },
+	{ pattern: /(^|\/)pnpm-lock\.yaml$/, advice: 'pnpm install で作り直します' },
+	{ pattern: /(^|\/)yarn\.lock$/, advice: 'yarn install で作り直します' },
+	{ pattern: /(^|\/)pubspec\.lock$/, advice: 'flutter pub get で作り直します' },
+	{ pattern: /(^|\/)Cargo\.lock$/, advice: 'cargo build で作り直します' },
+	{ pattern: /(^|\/)go\.sum$/, advice: 'go mod tidy で作り直します' },
+	{ pattern: /(^|\/)Gemfile\.lock$/, advice: 'bundle install で作り直します' },
+	{ pattern: /(^|\/)(poetry|composer)\.lock$/, advice: '依存の管理コマンドで作り直します' }
+];
+
+/**
+ * 代わりに直すべきファイル。分からなければ undefined。
+ * **推測で別のファイルを名指ししない** — 間違った場所を直させるほうが害になる。
+ */
+export function sourceFileFor(generatedPath: string): string | undefined {
+	const path = generatedPath.replace(/\\/g, '/');
+	for (const { pattern, replacement } of SOURCE_OF) {
+		if (pattern.test(path)) {
+			return path.replace(pattern, replacement);
+		}
+	}
+	return undefined;
+}
+
+/** そのファイルを作り直す手立て。ファイルなら名前、コマンドなら言い回し */
+export function regenerationAdvice(generatedPath: string): string | undefined {
+	const path = generatedPath.replace(/\\/g, '/');
+	const lock = LOCK_ADVICE.find((entry) => entry.pattern.test(path));
+	if (lock) {
+		return lock.advice;
+	}
+	const source = sourceFileFor(path);
+	return source ? `${source} を直してから、生成ツールを回し直します` : undefined;
+}
+
 /** 畳んだときに出す 1 行。件数と行数だけは必ず見せる */
 export function summarizeGenerated(files: readonly { path: string; added: number; removed: number }[]): string {
 	if (files.length === 0) {

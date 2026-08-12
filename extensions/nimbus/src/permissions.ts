@@ -19,12 +19,28 @@ import { assessToolRisk, type RiskLevel } from './core/risk';
 import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, isNimbusReadOnlyTool } from './core/secrets';
 import { formatRule, matchesAnyRule, suggestRule } from './core/approvalRules';
 import { planPartialEdit, type PartialEditPlan } from './core/partialEdit';
+import { isGeneratedPath, regenerationAdvice } from './core/generated';
 
 /** 読み取りだけで副作用が無いツール。設定で自動許可できる */
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead', 'TodoWrite']);
 
 /** 承認前に差分を出せるツール */
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
+
+/** 書き換え先のパス。取り出せなければ undefined（生成物の判定はパスが要る） */
+function editTargetPath(input: unknown): string | undefined {
+	if (!input || typeof input !== 'object') {
+		return undefined;
+	}
+	const record = input as Record<string, unknown>;
+	for (const key of ['file_path', 'path', 'notebook_path']) {
+		const value = record[key];
+		if (typeof value === 'string' && value) {
+			return value;
+		}
+	}
+	return undefined;
+}
 
 export interface PendingApproval {
 	/** 横断キュー（T-010）から名指しで答えるための ID */
@@ -173,6 +189,36 @@ export function createPermissionBroker(deps: PermissionDeps): {
 
 			// 危険度は自動許可より先に決める。「常に許可」で `rm -rf` まで素通りさせない（T-058）
 			const risk = assessToolRisk(toolName, input);
+
+			// 生成物への書き込みは、自動許可より先に止める（T-139）。
+			// 次に生成ツールを回した瞬間に消えるので、**消えたと気づかないまま先に進む**のがいちばん損。
+			// 自動許可の後ろに置くと黙って通ってしまうため、ここで聞く
+			if (EDIT_TOOLS.has(toolName) && config.get<boolean>('safety.warnOnGeneratedEdit') !== false) {
+				const target = editTargetPath(input);
+				if (target && isGeneratedPath(target)) {
+					const advice = regenerationAdvice(target);
+					const EDIT = 'それでも直接書き換える';
+					const choice = await vscode.window.showWarningMessage(
+						`生成物を直接書き換えようとしています — ${target}`,
+						{
+							modal: true,
+							detail: [
+								'このファイルは生成ツールが作ります。直接書き換えても、次に生成し直したときに消えます。',
+								advice ? `代わりに: ${advice}` : '元になっているファイルを直してください。'
+							].join('\n\n')
+						},
+						EDIT
+					);
+					if (choice !== EDIT) {
+						deps.log(`[permission] 拒否（生成物への書き込み）: ${target}`);
+						return {
+							behavior: 'deny',
+							message: `${target} は生成物です。直接編集せず、${advice ?? '元になっているファイル'}を直してください。`
+						};
+					}
+					deps.log(`[permission] 生成物への書き込みを利用者の判断で許可: ${target}`);
+				}
+			}
 
 			if (
 				risk.level !== 'danger' &&

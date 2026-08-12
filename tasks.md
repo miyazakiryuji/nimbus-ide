@@ -40,8 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-139 生成物への直接編集をガードする — `core/generated.ts`（T-140）と `permissions.ts` は
-      どちらも承認・レビュー層のもの。新規ファイルは作らない @session-b 2026-08-13 [P2]
 
       ※T-068 は別セッションが先に実装済み（`core/importRules.ts`）@session-a 2026-08-13 [P2]
 
@@ -330,6 +328,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-139 生成物への直接編集をガードする（自動許可より先に止め、代わりに直す先を名指しする）
+      — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
 
 - [x] T-123 型の変更が壊す場所を洗い出す（変わった型を参照検索で追い、壊れていないかを確かめさせる）
       — 2026-08-13 / 仕様 [schema-impact](nimbus/docs/specs/schema-impact.md)
