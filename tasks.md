@@ -42,7 +42,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
 
-- [ ] T-132 ローカルで CI を再現（ワークフローから手順を起こす）— 実装中 @yua 2026-08-13
 
 
 
@@ -290,7 +289,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🔁 CI/CD
 
 - [ ] T-131 CI 失敗の自動調査 — 赤くなった瞬間にログを取りに行って、原因の当たりをつけておく（T-039 の延長）[P2]
-- [ ] T-132 ローカルで CI を再現 — 「CI だけ落ちる」問題の切り分け [P2]
 - [ ] T-215 デプロイ前チェックリストの自動実行 [P2]
 - [ ] T-216 ロールバックスクリプトの用意（T-144 のホットフィックスと対）[P3]
 
@@ -488,6 +486,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-132 CI を手元で再現する（環境の版を突き合わせ・CI 専用の行は落とす）— 2026-08-13 / 仕様 [ci-repro](nimbus/docs/specs/ci-repro.md)
 - [x] T-126 / T-127 SQL を流す前に見る（何が起きるかを書く・DB には繋がない）— 2026-08-13 / 仕様 [sql-safety](nimbus/docs/specs/sql-safety.md)
 - [x] T-121 脆弱性の警告を直す順に並べる（今日できるものを先に・--force は使わせない）— 2026-08-13 / 仕様 [vuln-fix](nimbus/docs/specs/vuln-fix.md)
 - [x] T-118 依存を足す前に見る（良し悪しは決めない・事実だけ）— 2026-08-13 / 仕様 [dep-audit](nimbus/docs/specs/dep-audit.md)

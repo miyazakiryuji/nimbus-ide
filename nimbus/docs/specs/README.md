@@ -41,6 +41,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`stack-trace.md`](stack-trace.md) — スタックトレースから該当箇所を開く
 - [`lock-diff.md`](lock-diff.md) — ロックファイルの変更を読む
 - [`schedule.md`](schedule.md) — 寝る前に仕込む（予約実行）
+- [`ci-repro.md`](ci-repro.md) — CI を手元で再現する
 - [`env-check.md`](env-check.md) — 環境の食い違い
 - [`setup.md`](setup.md) — 使い始めの設定（言語別プリセット）
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス

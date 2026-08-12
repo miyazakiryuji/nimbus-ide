@@ -928,6 +928,12 @@
         "title": "改善前後のベンチを比べる",
         "category": "Nimbus",
         "icon": "$(dashboard)"
+      },
+      {
+        "command": "nimbus.openCiRepro",
+        "title": "CI を手元で再現する",
+        "category": "Nimbus",
+        "icon": "$(server-process)"
       }
     ],
     "menus": {
@@ -1216,6 +1222,11 @@
           "minimum": 1,
           "maximum": 10,
           "description": "型エラーを自動で差し戻す回数の上限（1 セッションあたり）。直らないまま回り続けるのを止めます。"
+        },
+        "nimbus.claudeMd.suggestRepeats": {
+          "type": "boolean",
+          "default": true,
+          "description": "同じ指示を何度も書いていることに気づいたら、CLAUDE.md に足すかを聞きます。"
         },
         "nimbus.clipboard.suggestOnError": {
           "type": "boolean",
