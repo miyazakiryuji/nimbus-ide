@@ -629,6 +629,12 @@
         "title": "配られた設定を読み込む",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "nimbus.createSandbox",
+        "title": "練習用のフォルダを作る",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
       }
     ],
     "menus": {

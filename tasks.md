@@ -42,8 +42,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-016 アクティビティバーに設定タブ。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-043 設定のパッケージ配布。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -205,8 +203,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-045 **解説モード** — Claude の判断（なぜこのファイルを読んだか／なぜこの設計にしたか）を横に
       出しながら進む。画面共有すればそのまま教材になる [P2]
-- [ ] T-046 練習用サンドボックス — 壊してもいいダミーリポジトリを同梱し、初学者が安心して素振りできる [P3]
-- [ ] T-213 サンプルプロジェクト同梱 — インストール直後に「動いた」体験を作る [P2]
 - [ ] T-214 セッションのハイライト切り出し — 教材・登壇資料用 [P3]
 
 ### 👥 チーム・社会性
@@ -485,6 +481,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-046 / T-213 練習用サンドボックス（直すところがある状態で置く）— 2026-08-13 / 仕様 [sandbox](nimbus/docs/specs/sandbox.md)
 - [x] T-218 / T-124 実物とスキーマの突き合わせと、仮の応答 — 2026-08-13 / 仕様 [api-check](nimbus/docs/specs/api-check.md)
 - [x] T-122 スキーマから型を起こす（Dart / TypeScript・扱えないものは扱えないと書く）— 2026-08-13 / 仕様 [openapi](nimbus/docs/specs/openapi.md)
 - [x] T-200 Platform Channel の突き合わせ（受け口の無い呼び出しを実機の前に見つける）— 2026-08-13 / 仕様 [platform-channel](nimbus/docs/specs/platform-channel.md)
@@ -525,6 +522,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-016 アクティビティバーに設定タブ（いま効いている値を 1 か所に）— 2026-08-13 / 仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)
+- [x] T-043 設定のパッケージ配布（JSON 1 枚・秘匿を弾き、上書きは必ず聞く）— 2026-08-13 / 仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)
 - [x] T-162 承認ポリシーのプロファイル切り替え（広げるときだけ確認する）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
 - [x] T-163 実行サンドボックス・ネットワーク遮断（SDK の sandbox で外に出さない）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
 - [x] T-026 Hooks の GUI ビルダー（イベントは 31 種類・よく使う 5 つを前面に）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
