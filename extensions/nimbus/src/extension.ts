@@ -9,7 +9,7 @@ import { spawn } from 'child_process';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
-import type { NimbusEvent, SessionSummary } from './events';
+import type { NimbusEvent, SessionInitEvent, SessionSummary } from './events';
 import { SessionManager } from './session/SessionManager';
 import { createPermissionBroker } from './permissions';
 import { CockpitViewProvider } from './cockpit/CockpitViewProvider';
@@ -38,9 +38,13 @@ import { draftPrDescription } from './prDescription';
 import { bisect } from './bisect';
 import { openMobileChecks } from './mobileChecks';
 import { openFlutterLint } from './flutterLint';
+import { measureBuild } from './buildMetrics';
+import { resolveXcodeConflict } from './pbxprojConflict';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
+import { ReviewViewProvider } from './reviewView';
+import type { ReviewEntry } from './core/reviewState';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -58,6 +62,17 @@ import { managePresets, pickPreset, pickRestorable, planBranch } from './session
 import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
 import { buildCompactCommand, compactCandidates } from './core/compactSelection';
 import { buildAgentOverrides, describeAgent, parseAgentFile, type AgentFile } from './core/agentDefs';
+import {
+	BUILTIN_TEMPLATES,
+	describeTemplate,
+	extractVariables,
+	fillTemplate,
+	missingVariables,
+	removeTemplate,
+	upsertTemplate,
+	type PromptTemplate
+} from './core/promptLibrary';
+import { describeFindable, searchFindables, toPrompt, type Findable } from './core/findAnything';
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
@@ -68,6 +83,7 @@ import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
+import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -96,6 +112,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	const mcpView = new McpViewProvider();
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
+	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
+	const reviewView = new ReviewViewProvider(context.workspaceState, () => workspaceCwd(), log);
+	const reviewTree = vscode.window.createTreeView('nimbus.review', { treeDataProvider: reviewView });
 	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
 	const approvalsView = new ApprovalsViewProvider();
 	const approvals = vscode.window.createTreeView('nimbus.approvals', { treeDataProvider: approvalsView });
@@ -152,6 +171,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	/** 現在前面で操作しているセッション。並列セッションは F4 で本格対応する */
 	let activeSessionId: string | undefined;
 	let lastApiKeySource: string | undefined;
+	/** 直近の init。探す対象（コマンド・サブエージェント・MCP ツール）の出どころ（T-117） */
+	let lastInit: SessionInitEvent | undefined;
 	const retained: NimbusEvent[] = [];
 
 	const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -195,6 +216,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			retained.splice(0, retained.length - MAX_RETAINED_EVENTS);
 		}
 		if (event.kind === 'session-init') {
+			lastInit = event;
 			void refreshMcp();
 			contextView.update(event);
 			skillsView.setSessionSkills(event.skills);
@@ -453,6 +475,177 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeSessionConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	const PROMPT_KEY = 'nimbus.promptTemplates';
+
+	function loadTemplates(): PromptTemplate[] {
+		const saved = context.globalState.get<PromptTemplate[]>(PROMPT_KEY, []);
+		const names = new Set(saved.map((template) => template.name));
+		// 出荷時のものは常に出す。同名で保存されていたら、そちらが勝つ
+		return [...saved, ...BUILTIN_TEMPLATES.filter((template) => !names.has(template.name))];
+	}
+
+	/**
+	 * プロンプトライブラリ（tasks.md T-035）。
+	 * 変数を空けた定型を選び、**フォームで埋めてから**送る。
+	 */
+	async function usePromptTemplate(): Promise<void> {
+		const templates = loadTemplates();
+		const chosen = await vscode.window.showQuickPick(
+			templates.map((template) => ({
+				label: template.name,
+				description: describeTemplate(template),
+				template
+			})),
+			{ title: 'Nimbus: 定型プロンプトを使う', matchOnDescription: true }
+		);
+		if (!chosen) {
+			return;
+		}
+		const values: Record<string, string> = {};
+		for (const name of extractVariables(chosen.template.body)) {
+			const value = await vscode.window.showInputBox({
+				title: `Nimbus: ${chosen.template.name}`,
+				prompt: name,
+				placeHolder: `{{${name}}} に入ります`
+			});
+			if (value === undefined) {
+				// 途中でやめたら送らない（半端に埋まったものを送るほうが困る）
+				return;
+			}
+			values[name] = value;
+		}
+		const filled = fillTemplate(chosen.template.body, values);
+		const missing = missingVariables(chosen.template.body, values);
+		if (missing.length > 0) {
+			const SEND = 'このまま送る';
+			const answer = await vscode.window.showWarningMessage(
+				`Nimbus: 埋まっていない変数があります（${missing.join(' / ')}）。`,
+				{ modal: true, detail: '埋まらなかったところは {{名前}} のまま送られます。' },
+				SEND
+			);
+			if (answer !== SEND) {
+				return;
+			}
+		}
+		cockpit.reveal();
+		await send(filled);
+	}
+
+	/** 定型の追加・削除。出荷時のものは消せない */
+	async function managePromptTemplates(): Promise<void> {
+		const saved = context.globalState.get<PromptTemplate[]>(PROMPT_KEY, []);
+		const ADD = '$(add) 新しい定型';
+		const chosen = await vscode.window.showQuickPick([ADD, ...saved.map((t) => t.name)].map((label) => ({ label })), {
+			title: 'Nimbus: 定型プロンプトの管理（選ぶと削除）'
+		});
+		if (!chosen) {
+			return;
+		}
+		if (chosen.label !== ADD) {
+			await context.globalState.update(PROMPT_KEY, removeTemplate(saved, chosen.label));
+			return;
+		}
+		const name = await vscode.window.showInputBox({ title: '名前', placeHolder: '例: レビューを頼む' });
+		if (!name) {
+			return;
+		}
+		const body = await vscode.window.showInputBox({
+			title: '本文',
+			prompt: '{{名前}} と書いたところが、呼び出し時に聞かれます',
+			placeHolder: '{{対象ファイル}} をレビューしてください'
+		});
+		if (!body) {
+			return;
+		}
+		await context.globalState.update(PROMPT_KEY, upsertTemplate(saved, { name, body }));
+		log(`[prompt] 定型を保存しました: ${name}`);
+	}
+
+	/**
+	 * スキル以外も同じ場所から探す（tasks.md T-117）。
+	 * サブエージェント・スラッシュコマンド・MCP ツールは、名前を覚えている人しか使えなかった。
+	 */
+	async function findAnything(): Promise<void> {
+		const init = lastInit;
+		const roots = (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath);
+		const items: Findable[] = [
+			...discoverSkills(roots).map((skill) => ({
+				kind: 'skill' as const,
+				name: skill.name,
+				description: skill.description,
+				origin: skill.origin,
+				path: skill.path
+			})),
+			...(init?.slashCommands ?? []).map((name) => ({
+				kind: 'command' as const,
+				name,
+				description: 'スラッシュコマンド'
+			})),
+			...(init?.agents ?? []).map((name) => ({
+				kind: 'agent' as const,
+				name,
+				description: 'サブエージェント'
+			})),
+			...(init?.tools ?? [])
+				.filter((name) => name.startsWith('mcp__'))
+				.map((name) => ({ kind: 'tool' as const, name, description: 'MCP ツール' })),
+			...loadTemplates().map((template) => ({
+				kind: 'prompt' as const,
+				name: template.name,
+				description: template.body
+			}))
+		];
+		if (items.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 探せるものがまだありません（セッションを開始すると増えます）。');
+			return;
+		}
+
+		const picker = vscode.window.createQuickPick<vscode.QuickPickItem & { item: Findable }>();
+		picker.title = 'Nimbus: 探す（スキル・コマンド・サブエージェント・MCP ツール・定型）';
+		picker.placeholder = 'したいことを書く（例: レビュー、PDF、テスト）';
+		picker.matchOnDescription = true;
+		picker.matchOnDetail = true;
+		const toItem = (item: Findable): vscode.QuickPickItem & { item: Findable } => ({
+			label: item.name,
+			description: describeFindable(item),
+			detail: item.description.replace(/\s+/g, ' ').slice(0, 120),
+			item
+		});
+		picker.items = items.map(toItem);
+		// 入力のたびに自前の採点で並べ替える（説明文への当たりを効かせるため）
+		picker.onDidChangeValue((value) => {
+			picker.items = searchFindables(items, value).map(toItem);
+		});
+		const chosen = await new Promise<Findable | undefined>((resolvePick) => {
+			picker.onDidAccept(() => {
+				resolvePick(picker.selectedItems[0]?.item);
+				picker.hide();
+			});
+			picker.onDidHide(() => resolvePick(undefined));
+			picker.show();
+		});
+		picker.dispose();
+		if (!chosen) {
+			return;
+		}
+		if (chosen.kind === 'prompt') {
+			await usePromptTemplate();
+			return;
+		}
+		const USE = 'コックピットで使う';
+		const OPEN = 'ファイルを開く';
+		const action = await vscode.window.showInformationMessage(
+			`${chosen.name} — ${chosen.description || '（説明なし）'}`,
+			...(chosen.path ? [USE, OPEN] : [USE])
+		);
+		if (action === OPEN && chosen.path) {
+			await vscode.window.showTextDocument(vscode.Uri.file(chosen.path));
+		} else if (action === USE) {
+			cockpit.reveal();
+			await send(toPrompt(chosen));
+		}
 	}
 
 	/**
@@ -1472,6 +1665,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		// tasks.md から板へ（T-013）
 		// 圧縮前に残すものを選ぶ（T-154）
 		// サブエージェントごとのモデル指定（T-232）
+		// プロンプトライブラリ（T-035）
+		vscode.commands.registerCommand('nimbus.prompts', () => usePromptTemplate()),
+		vscode.commands.registerCommand('nimbus.managePrompts', () => managePromptTemplates()),
+		// スキル以外も同じ場所から探す（T-117）
+		vscode.commands.registerCommand('nimbus.findAnything', () => findAnything()),
 		vscode.commands.registerCommand('nimbus.agentModels', () => assignAgentModels()),
 		vscode.commands.registerCommand('nimbus.compactWithSelection', () => compactWithSelection()),
 		vscode.commands.registerCommand('nimbus.taskFromFile', () => taskFromTasksFile()),
@@ -1535,6 +1733,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.bisect', () => bisect(context)),
 		vscode.commands.registerCommand('nimbus.openMobileChecks', () => openMobileChecks()),
 		vscode.commands.registerCommand('nimbus.openFlutterLint', () => openFlutterLint()),
+		vscode.commands.registerCommand('nimbus.measureBuild', () => measureBuild(context)),
+		vscode.commands.registerCommand('nimbus.resolveXcodeConflict', () => resolveXcodeConflict()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1570,6 +1770,44 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 作業ツリーの変更を意図ごとに束ねて見せる（T-114）
 		vscode.commands.registerCommand('nimbus.proposeCommitSplit', () => proposeCommitSplit()),
 		// 競合を 1 件ずつ解決する。判断がつかないものは Claude に相談文を投げる（T-115）
+		reviewTree,
+		reviewView,
+		// どこまで見たか（T-160）
+		vscode.commands.registerCommand('nimbus.refreshReview', async () => {
+			await reviewView.refresh();
+			reviewTree.description = reviewView.progressLabel();
+		}),
+		vscode.commands.registerCommand('nimbus.markReviewed', async (entry?: ReviewEntry) => {
+			if (entry) {
+				await reviewView.setReviewed(entry, true);
+				reviewTree.description = reviewView.progressLabel();
+			}
+		}),
+		vscode.commands.registerCommand('nimbus.markUnreviewed', async (entry?: ReviewEntry) => {
+			if (entry) {
+				await reviewView.setReviewed(entry, false);
+				reviewTree.description = reviewView.progressLabel();
+			}
+		}),
+		vscode.commands.registerCommand('nimbus.clearReviewMarks', async () => {
+			await reviewView.clearAll();
+			reviewTree.description = reviewView.progressLabel();
+		}),
+		// 行をクリックしたら差分を開く。印だけの画面にしないため
+		vscode.commands.registerCommand('nimbus.openReviewDiff', async (entry?: ReviewEntry) => {
+			const cwd = workspaceCwd();
+			if (!entry || !cwd) {
+				return;
+			}
+			const uri = vscode.Uri.file(`${cwd}/${entry.path}`);
+			try {
+				// git 側（HEAD）と作業ツリーを並べる。SCM 拡張の gitScheme を使う
+				await vscode.commands.executeCommand('git.openChange', uri);
+			} catch {
+				// git 拡張が無い場合はファイルを開くだけにする（見られないよりよい）
+				await vscode.window.showTextDocument(uri, { preview: true });
+			}
+		}),
 		vscode.commands.registerCommand('nimbus.assistConflicts', () =>
 			assistConflicts((text) => {
 				cockpit.reveal();
@@ -1613,6 +1851,20 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 段階的リファクタの進捗（T-111）。残りの数が見えないと、大きな置き換えは途中で止まる
+		vscode.commands.registerCommand('nimbus.trackRefactor', () =>
+			startRefactorTrack({ storage: context.workspaceState, send: (text) => void send(text), log })
+		),
+		vscode.commands.registerCommand('nimbus.refactorProgress', () =>
+			showRefactorProgress({
+				storage: context.workspaceState,
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 変更に関係するテストだけを走らせる（T-180）
 		vscode.commands.registerCommand('nimbus.runImpactedTests', () => runImpactedTests({ log })),
 		// 先に落ちるテストを書かせて、赤 → 緑になるまで回す（T-107）
