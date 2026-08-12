@@ -259,6 +259,12 @@
         "title": "ロックファイルの変更を読む",
         "category": "Nimbus",
         "icon": "$(package)"
+      },
+      {
+        "command": "nimbus.openFromStackTrace",
+        "title": "スタックトレースから開く",
+        "category": "Nimbus",
+        "icon": "$(debug-stackframe)"
       }
     ],
     "menus": {
@@ -439,6 +445,11 @@
           "type": "boolean",
           "default": true,
           "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+        },
+        "nimbus.debug.exposeState": {
+          "type": "boolean",
+          "default": true,
+          "description": "デバッグセッションが停止しているとき、コールスタックと変数の値を Claude が読めるツールとして渡します（読み取りのみ。式の評価はできません）。"
         },
         "nimbus.lsp.verifyEdits": {
           "type": "string",

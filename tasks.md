@@ -187,7 +187,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 
 - [ ] T-104 **デバッガ連携** — ブレークポイントで止めたときの変数の値とコールスタックを渡す。
       「実行時の実際の値」が見えるかどうかで原因特定の精度が変わる [P1]
-- [ ] T-105 スタックトレースの自動解決 — 例外ログを貼るだけで、該当行を開いて周辺まで読んだ状態から始まる [P2]
 - [ ] T-106 ビルドエラーの自動リトライ — コンパイル失敗 → 修正 → 再ビルドを人間の介入なしで回す（回数上限つき）[P2]
 
 **動作確認**
@@ -504,6 +503,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-105 スタックトレースから該当箇所を開く（Dart / JS・自分のコードの一番上を優先）— 2026-08-13 / 仕様 [stack-trace](nimbus/docs/specs/stack-trace.md)
 - [x] T-119 ロックファイルの変更を読む（pubspec.lock / package-lock.json・メジャーを先頭に）— 2026-08-13 / 仕様 [lock-diff](nimbus/docs/specs/lock-diff.md)
 - [x] T-207 / T-047 ふりかえり（週次ダイジェスト・成長ログ）— 2026-08-13 / 仕様 [digest](nimbus/docs/specs/digest.md)
 - [x] T-155 読ませたくないファイルを画面から指定する（既定の可視化・取り込み・外すときの確認）— 2026-08-13 / 仕様 [protected-paths](nimbus/docs/specs/protected-paths.md)
