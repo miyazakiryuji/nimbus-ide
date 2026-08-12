@@ -40,6 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
 - [ ] T-215 デプロイ前チェックリストの自動実行 — 実装中 @yua 2026-08-13
+- [ ] T-216 ロールバックスクリプトの用意 / T-144 ホットフィックスの最短経路 — 対で実装中
+      `core/rollback.ts` `src/rollback.ts` を確保 @session-c 2026-08-13
 
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
@@ -263,7 +265,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🧩 拡張性
 
 - [ ] T-092 Nimbus 自体のプラグイン API — 他の人が機能を足せる。OSS 化と噛み合う [P3]
-- [ ] T-093 ヘッドレス Nimbus — GUI 抜きで同じワークフローを CI から呼べる（T-037 の週次プールの話と繋がる）[P2]
 
 ### 🔄 バージョン追従
 
@@ -290,7 +291,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🔁 CI/CD
 
 - [ ] T-215 デプロイ前チェックリストの自動実行 [P2]
-- [ ] T-216 ロールバックスクリプトの用意（T-144 のホットフィックスと対）[P3]
 
 ### 🌿 ブランチ運用
 
@@ -308,7 +308,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ### 🧯 運用・障害対応
 
 - [ ] T-142 エラー監視ツールとの連携 — Sentry などのエラーをそのままセッションに投入する [P2]
-- [ ] T-144 ホットフィックスの最短経路 — 緊急時だけ手順を簡略化するモード [P3]
 
 ## 保留・やらないと決めたこと
 
@@ -322,6 +321,14 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-093 ヘッドレス Nimbus — GUI 抜きで同じワークフローを CI から回す（`nimbus/scripts/headless.mjs`）。
+      判断は `out/core/*.js` を読み込んで画面と共有する。確認のある段は `--yes` が無ければ実行を断り、
+      危険なツールは承認待ちにせず落とす（CI には承認する人がいない）
+      — 2026-08-13 / 仕様 [headless-and-mcp-tools](nimbus/docs/specs/headless-and-mcp-tools.md)
+- [x] T-235 MCP ツールの単体実行 — エージェント抜きでツールを 1 回だけ呼ぶ（`nimbus.runMcpTool`）。
+      プロセス内のサーバーへ `InMemoryTransport` で繋ぐので API も課金も発生しない。
+      引数はスキーマから型どおりに組み立てる
+      — 2026-08-13 / 仕様 [headless-and-mcp-tools](nimbus/docs/specs/headless-and-mcp-tools.md)
 - [x] T-221 コードオーナーへの通知（最後に一致した規則が勝つ。誰に頼むかを出すまでで、投げるのは人）
       — 2026-08-13 / 仕様 [codeowners](nimbus/docs/specs/codeowners.md)
 
