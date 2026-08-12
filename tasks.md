@@ -212,8 +212,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🎨 自分だけの相棒にする
 
-- [ ] T-063 ペルソナ設定 — 口調やキャラを設定できる（ヘルプの「ゆあ」は F6 で実装済み。
-      あれを設定で選べる形にし、コックピット側にも効かせる）[P3]
 
 ### 📊 自分を観測する
 
@@ -533,6 +531,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-063 ペルソナ設定（既定は「そのまま」・ゆあでも正確さは崩さない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
+- [x] T-064 テーマ連動（止まっている状態だけ色を変える・新しい配色は足さない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
+- [x] T-190 交代モード（私が書く番では提案もさせない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
+- [x] T-191 肩越しモード（好みの問題には口を出させない）— 2026-08-13 / 仕様 [persona-and-turns](nimbus/docs/specs/persona-and-turns.md)
 - [x] T-030 フロントマター補完つきエディタ（既に書いたキーは出さない・足りないものを名指し）— 2026-08-13 / 仕様 [authoring](nimbus/docs/specs/authoring.md)
 - [x] T-031 プレビュー実行（plan モードの使い捨てセッション・読み込まれない状態では走らせない）— 2026-08-13 / 仕様 [authoring](nimbus/docs/specs/authoring.md)
 - [x] T-165 自作スキルの回帰テスト（部分点を付けない）— 2026-08-13 / 仕様 [evaluation](nimbus/docs/specs/evaluation.md)
