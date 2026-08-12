@@ -42,7 +42,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-035 プロンプトライブラリ（変数つきテンプレ）。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -131,9 +130,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
 `SKILL.md` が開く・▶ でコックピットへ `/<name>` を送る）と、見出しの「探す」（曖昧な言葉で絞り込む
 QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` と `nimbus.findSkill`。
 
-- [ ] T-117 スキル以外も同じ場所から探せるようにする — サブエージェント・スラッシュコマンド・
-      MCP ツールは今 `contextView.ts` に名前が並ぶだけで、探せないし、そこから使えない
-      （旧 T-033。スクラッチファイルと ID が衝突したのでこちらを振り直した）[P2]
 - [ ] T-030 **フロントマター補完つきエディタ** — Skill / サブエージェント / スラッシュコマンドを書く場所。
       補完・検証つきで、書式ミスで動かない事故を無くす [P2]
 - [ ] T-031 **プレビュー実行** — 保存したらすぐ、サンドボックスのセッションで試し打ちできる [P2]
@@ -527,6 +523,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-035 プロンプトライブラリ（変数つきテンプレ・埋め残しは残して知らせる）— 2026-08-13 / 仕様 [prompts-and-find](nimbus/docs/specs/prompts-and-find.md)
+- [x] T-117 スキル以外も同じ場所から探せる（コマンド・サブエージェント・MCP ツール・定型）— 2026-08-13 / 仕様 [prompts-and-find](nimbus/docs/specs/prompts-and-find.md)
 - [x] T-236 ツリービューの共通土台（4 ビューすべてを載せ替え・ツール入力の取り出しも共通化）— 2026-08-13 / 仕様 [tree-views](nimbus/docs/specs/tree-views.md)
 - [x] T-013 tasks.md とタスク板の対応づけ（定義行から着手・完了で行ごと移す）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)
 - [x] T-233 タスクキューの優先度（高／中／低・同じなら作った順）— 2026-08-13 / 仕様 [tasks-board-link](nimbus/docs/specs/tasks-board-link.md)

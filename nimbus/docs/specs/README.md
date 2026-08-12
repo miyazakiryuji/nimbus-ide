@@ -43,6 +43,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`tasks-board-link.md`](tasks-board-link.md) — tasks.md とタスク板の対応づけ・待機列の優先度
 - [`agent-models.md`](agent-models.md) — サブエージェントごとのモデル指定
 - [`tree-views.md`](tree-views.md) — ツリービューの共通土台
+- [`prompts-and-find.md`](prompts-and-find.md) — 定型プロンプトと横断的な「探す」
 
 IDE 基礎機能:
 
