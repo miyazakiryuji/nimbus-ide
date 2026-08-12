@@ -40,7 +40,9 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-126 / T-127 SQL の安全確認（読み取りだけモード・実行計画）— 実装中 @yua 2026-08-13
+- [ ] T-130 改善前後のベンチ比較 — ばらつきを超えたときだけ「速くなった」と言う。
+      `core/benchmark.ts` を骨格＋テストで確保済み @session-b 2026-08-13 [P2]
+
 
 
       `core/ambiguity.ts` `core/settingsHistory.ts` `core/highlights.ts` を確保済み @session-a 2026-08-13 [P2]
@@ -281,13 +283,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-125 マイグレーション生成とレビュー — スキーマ差分から生成し、破壊的操作（DROP など）は
       必ず人間承認にする（④ の権限ルールと繋げる）[P2]
-- [ ] T-126 本番データの安全な扱い — クエリを流す前に SELECT だけのモードで確認する [P2]
-- [ ] T-127 クエリの実行計画チェック — 生成された SQL が遅くないかを事前に見る [P3]
 
 ### ⚡️ パフォーマンス
 
 - [ ] T-128 プロファイル結果の投入 — DevTools の計測結果を渡して、重い箇所を特定させる [P2]
-- [ ] T-130 改善前後のベンチ比較 — 「速くなった気がする」を数字で確定させる（T-081 の証跡と同じ考え）[P2]
 - [ ] T-222 メモリリークの調査支援と、起動時間の計測 [P2]
 
 ### 🔁 CI/CD
@@ -488,6 +487,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-126 / T-127 SQL を流す前に見る（何が起きるかを書く・DB には繋がない）— 2026-08-13 / 仕様 [sql-safety](nimbus/docs/specs/sql-safety.md)
 - [x] T-121 脆弱性の警告を直す順に並べる（今日できるものを先に・--force は使わせない）— 2026-08-13 / 仕様 [vuln-fix](nimbus/docs/specs/vuln-fix.md)
 - [x] T-118 依存を足す前に見る（良し悪しは決めない・事実だけ）— 2026-08-13 / 仕様 [dep-audit](nimbus/docs/specs/dep-audit.md)
 - [x] T-205 環境の食い違い（パッチ違いで騒がない・どちらに合わせるかは言わない）— 2026-08-13 / 仕様 [env-check](nimbus/docs/specs/env-check.md)
