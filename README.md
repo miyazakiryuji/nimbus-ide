@@ -176,7 +176,10 @@ API が用意されていない、など）。黙って飛ばすと「テスト�
    他人の未コミット変更を `git stash` / `git checkout --` / `git reset --hard` で消してはいけない
 2. `tasks.md` の該当行を 進行中 へ移し、担当と日付を書いてから着手する（これが唯一の「札」です）
 3. コミットは小さく、1 コミット = 1 つの意図。終わったらすぐ
-   `git pull --rebase origin nimbus` → `git push`
+   `git pull --rebase origin nimbus` → `git push`。
+   **コミットは `git commit -- <パス>` のパス指定で行う。** index はセッション間で共有されるので、
+   `git add` 済みの他人の変更を自分のコミットに巻き込んでしまいます
+   （巻き込んだら、push 前なら `git reset --soft HEAD~1` で戻せます）
 4. ローカルに溜め込まない。溜め込むほど競合は解けなくなります
 
 **衝突しやすい場所と、その直しかた**
