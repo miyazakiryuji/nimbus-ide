@@ -219,6 +219,12 @@
         "icon": "$(notebook)"
       },
       {
+        "command": "nimbus.chooseScope",
+        "title": "作業対象のパッケージを選ぶ",
+        "category": "Nimbus",
+        "icon": "$(package)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
@@ -808,6 +814,24 @@
         "title": "やり取りを人に見せる形にする",
         "category": "Nimbus",
         "icon": "$(share)"
+      },
+      {
+        "command": "nimbus.persona",
+        "title": "話しかたを選ぶ",
+        "category": "Nimbus",
+        "icon": "$(person)"
+      },
+      {
+        "command": "nimbus.turnMode",
+        "title": "どちらが書くかを切り替える",
+        "category": "Nimbus",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "nimbus.openReplay",
+        "title": "セッションをたどり直す",
+        "category": "Nimbus",
+        "icon": "$(history)"
       }
     ],
     "menus": {
@@ -1233,6 +1257,17 @@
           "type": "string",
           "default": ".claude/team-bundle.json",
           "description": "チームで共有する設定（配布物）の置き場所。リポジトリにコミットしておくと、更新があったときに取り込めます。"
+        },
+        "nimbus.persona": {
+          "type": "string",
+          "default": "そのまま",
+          "enum": [
+            "そのまま",
+            "簡潔",
+            "ていねいに説明",
+            "ゆあ"
+          ],
+          "description": "コックピットでの話しかた。次のセッションから効きます。"
         }
       }
     },
