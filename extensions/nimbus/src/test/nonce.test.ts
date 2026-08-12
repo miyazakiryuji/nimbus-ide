@@ -16,3 +16,15 @@ test('呼ぶたびに違う値になる（使い回すと CSP の意味が無い
 	const values = new Set(Array.from({ length: 50 }, () => createNonce()));
 	assert.strictEqual(values.size, 50);
 });
+
+test('62 文字すべてが出る（偏りを取り除く処理で末尾を切り落としていないこと）', () => {
+	// 乱数から文字へ写すときに範囲を間違えると、アルファベットの後ろのほうだけが
+	// 出なくなる。2000 本ぶん（64,000 文字）あれば、出ない文字があるのは実装の誤り
+	const seen = new Set<string>();
+	for (let i = 0; i < 2000; i++) {
+		for (const char of createNonce()) {
+			seen.add(char);
+		}
+	}
+	assert.strictEqual(seen.size, 62, `出なかった文字がある: ${seen.size}/62`);
+});
