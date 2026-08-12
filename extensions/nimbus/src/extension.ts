@@ -25,6 +25,7 @@ import { buildYuaSystemPrompt } from './help/yua';
 import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
 import { addClaudeMdSection, ClaudeMdViewProvider, promoteInstruction } from './claudeMdView';
+import { editProtectedPaths } from './protectedPaths';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -37,6 +38,7 @@ import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
+import { EditVerifier } from './editVerifier';
 import { ApprovalsViewProvider } from './approvalsView';
 import type { ApprovalDecision, PendingApproval } from './permissions';
 
@@ -155,6 +157,10 @@ export function activate(context: vscode.ExtensionContext): void {
 			skillsView.setSessionSkills(event.skills);
 			lastApiKeySource = event.apiKeySource;
 		}
+		if (event.kind === 'tool-use') {
+			// 書き換える前の診断を控えておく。「そのターンで増えたぶん」を出すため（T-101）
+			verifier.noteToolUse(event.toolName, event.input);
+		}
 		cockpit.post({ type: 'event', event });
 		activityView.update(retained);
 		updateStatus(sessions.get(event.sessionId));
@@ -164,6 +170,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			// ターンが終わるたびに取り直す。走っている最中に見えないと意味がない（T-017 / T-020）
 			void refreshUsage(event.sessionId);
 			checkCostLimit(event.sessionId, sessions.get(event.sessionId)?.totalCostUsd);
+			// 区切りまで待ってから型を当てる。途中で割り込むと編集の途中経過を叩くことになる（T-101）
+			void verifier.verifyAfterTurn();
 		}
 	});
 
@@ -588,6 +596,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		usageView.clear();
 		activityView.update([]);
 		mcpView.clear();
+		verifier.reset();
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
@@ -818,6 +827,10 @@ export function activate(context: vscode.ExtensionContext): void {
 		log
 	});
 
+	// 生成直後に型を当て、そのターンで増えたエラーだけを差し戻す（T-101）。
+	// 存在しない API を呼んだことに、ビルドを回すより先に気づける
+	const verifier = new EditVerifier({ send: (text) => void send(text), log });
+
 	context.subscriptions.push(
 		output,
 		status,
@@ -901,6 +914,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.refreshSkills', () => skillsView.refresh()),
 		vscode.commands.registerCommand('nimbus.refreshClaudeMd', () => claudeMdView.refresh()),
 		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
+		vscode.commands.registerCommand('nimbus.editProtectedPaths', () => editProtectedPaths()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -941,6 +955,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.sendLastTestFailure', () => {
 			if (!testRuns.sendLastFailure()) {
 				void vscode.window.showInformationMessage('Nimbus: 直近に失敗したテストはありません。');
+			}
+		}),
+		vscode.commands.registerCommand('nimbus.verifyEdits', () => {
+			if (!verifier.sendLast()) {
+				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
 		new vscode.Disposable(() => sessions.closeAll())
