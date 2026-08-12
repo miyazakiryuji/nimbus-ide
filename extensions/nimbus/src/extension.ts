@@ -40,6 +40,7 @@ import { captureAfterReload, readHotReloadConfig } from './hotReload';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
+import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1073,6 +1074,10 @@ function buildOptions(): Partial<Options> {
 	// 拡張ホストの中で動く MCP サーバーなので、別プロセスは立たない
 	if (vscode.workspace.getConfiguration('nimbus').get<boolean>('lsp.enabled') !== false) {
 		options.mcpServers = { ...options.mcpServers, [LSP_SERVER_NAME]: lspMcpServer() };
+	}
+	// 止まっているデバッガの値を読ませる（T-104）。読むだけで、式の評価はさせない
+	if (vscode.workspace.getConfiguration('nimbus').get<boolean>('debug.exposeState') !== false) {
+		options.mcpServers = { ...options.mcpServers, [DEBUG_SERVER_NAME]: debugMcpServer() };
 	}
 	return options;
 }

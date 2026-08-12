@@ -451,6 +451,11 @@
           "default": true,
           "description": "デバッグセッションが停止しているとき、コールスタックと変数の値を Claude が読めるツールとして渡します（読み取りのみ。式の評価はできません）。"
         },
+        "nimbus.debug.exposeState": {
+          "type": "boolean",
+          "default": true,
+          "description": "デバッグセッションが停止しているとき、コールスタックと変数の値を Claude が読めるツールとして渡します（読み取りのみ。式の評価はできません）。"
+        },
         "nimbus.lsp.verifyEdits": {
           "type": "string",
           "enum": [
