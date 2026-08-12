@@ -41,8 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-113 **hunk 単位の部分採用** — 提案を丸呑みにせず、いい部分だけ取り込む @session-b 2026-08-13 [P1]
-
 
 
 
@@ -495,6 +493,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-113 hunk 単位の部分採用（変更を選んで採用・外したものは元のまま残る・Write / Edit / MultiEdit）
+      — 2026-08-13 / 仕様 [approvals-and-diff](nimbus/docs/specs/approvals-and-diff.md)
 
 - [x] T-169 ターミナル出力の自動キャプチャ（落ちたコマンドの出力を通知のボタン 1 つでセッションへ）
       — 2026-08-13 / 仕様 [terminal-capture](nimbus/docs/specs/terminal-capture.md)

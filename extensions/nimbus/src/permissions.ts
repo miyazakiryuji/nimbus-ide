@@ -18,6 +18,7 @@ import { describeTool } from './core/describe';
 import { assessToolRisk, type RiskLevel } from './core/risk';
 import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, isNimbusReadOnlyTool } from './core/secrets';
 import { formatRule, matchesAnyRule, suggestRule } from './core/approvalRules';
+import { planPartialEdit, type PartialEditPlan } from './core/partialEdit';
 
 /** 読み取りだけで副作用が無いツール。設定で自動許可できる */
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead', 'TodoWrite']);
@@ -51,6 +52,11 @@ export type ApprovalDecision = 'allow' | 'allow-session' | 'always-allow' | 'den
 /** キューに積む 1 件。`settle` は最初の 1 回だけ効く（モーダルとビューの二重回答を無視する） */
 interface QueueEntry extends PendingApproval {
 	settle: (decision: ApprovalDecision) => void;
+	/**
+	 * 一部だけ採用（T-113）で組み直した入力。決まっていれば元の input の代わりにこれを渡す。
+	 * 選択の途中で取りやめたときは付かない。
+	 */
+	partialInput?: Record<string, unknown>;
 }
 
 /**
@@ -211,6 +217,19 @@ export function createPermissionBroker(deps: PermissionDeps): {
 			// 危険なものは「常に許可」系を一切出さない。一度きりの判断として毎回聞く
 			const rule = risk.level === 'danger' ? undefined : suggestRule(toolName, input);
 
+			// 一部だけ採用（T-113）。採りたい変更と採りたくない変更が混ざっているときだけ出す。
+			// 危険な書き込み先（システム領域など）では出さない — 一部でも書くこと自体が問題なので
+			const partial =
+				risk.level !== 'danger' && config.get<boolean>('permissions.offerPartialAccept') !== false
+					? planPartialEdit(toolName, input, (path) => {
+						try {
+							return readFileSync(path, 'utf8');
+						} catch {
+							return undefined;
+						}
+					})
+					: undefined;
+
 			const entry: QueueEntry = {
 				id: randomUUID(),
 				sessionId,
@@ -238,7 +257,7 @@ export function createPermissionBroker(deps: PermissionDeps): {
 				// キューモードでなければ、今までどおりその場でモーダルを出す。
 				// await しないのは、キューからの回答（decide / denyAll）でも先に進めるようにするため
 				if (!deps.queueMode?.()) {
-					void askInModal(entry, risk).then((decision) => entry.settle(decision));
+					void askInModal(entry, risk, partial).then((decision) => entry.settle(decision));
 				}
 				const decision = await decided;
 
@@ -249,6 +268,11 @@ export function createPermissionBroker(deps: PermissionDeps): {
 					await deps.onAlwaysAllow?.(entry.rule);
 				}
 				if (decision === 'allow' || decision === 'allow-session' || decision === 'always-allow') {
+					// 一部だけ採用が決まっていれば、組み直した入力を渡す（T-113）
+					if (entry.partialInput) {
+						deps.log(`[permission] 一部だけ採用: ${summary}`);
+						return { behavior: 'allow', updatedInput: entry.partialInput };
+					}
 					deps.log(`[permission] 許可（${risk.level}・${decision}）: ${summary}`);
 					return { behavior: 'allow', updatedInput: input };
 				}
@@ -275,18 +299,35 @@ export function createPermissionBroker(deps: PermissionDeps): {
 	 * その場で聞くモーダル。キューモードでないときの既定の経路で、文言と選択肢は
 	 * 安全機能を入れる前から変えていない（「今後この種類は常に許可」だけを足した）。
 	 */
-	async function askInModal(entry: QueueEntry, risk: { level: RiskLevel; reasons: string[] }): Promise<ApprovalDecision> {
+	async function askInModal(
+		entry: QueueEntry,
+		risk: { level: RiskLevel; reasons: string[] },
+		partial?: PartialEditPlan
+	): Promise<ApprovalDecision> {
 		const ALLOW = '許可';
+		const PARTIAL = partial ? `一部だけ採用（${partial.parts.length} か所から選ぶ）` : undefined;
 		const ALLOW_SESSION = 'このセッションでは常に許可';
 		const ALWAYS = entry.rule ? `今後「${entry.rule}」は常に許可` : undefined;
 		const DENY = '拒否';
-		const choices = risk.level === 'danger' ? [ALLOW, DENY] : [ALLOW, ALLOW_SESSION, ...(ALWAYS ? [ALWAYS] : []), DENY];
+		const choices =
+			risk.level === 'danger'
+				? [ALLOW, DENY]
+				: [ALLOW, ...(PARTIAL ? [PARTIAL] : []), ALLOW_SESSION, ...(ALWAYS ? [ALWAYS] : []), DENY];
 		const choice = await vscode.window.showWarningMessage(
 			riskHeading(risk.level, risk.reasons) + entry.summary,
 			{ modal: true, detail: riskDetail(risk.level) },
 			...choices
 		);
 		if (choice === ALLOW) {
+			return 'allow';
+		}
+		if (PARTIAL && partial && choice === PARTIAL) {
+			// 選び終わるまでは何も決まらない。取りやめたら拒否に倒す（黙って全部書かせない）
+			const rebuilt = await pickParts(partial);
+			if (!rebuilt) {
+				return 'deny';
+			}
+			entry.partialInput = rebuilt;
 			return 'allow';
 		}
 		if (choice === ALLOW_SESSION) {
@@ -296,6 +337,29 @@ export function createPermissionBroker(deps: PermissionDeps): {
 			return 'always-allow';
 		}
 		return choice === DENY ? 'deny' : 'ignored';
+	}
+
+	/**
+	 * 採用する部分を選ばせる（T-113）。
+	 * 既定では**全部にチェックが入った状態**で出す。ここまで来た人は「だいたい採りたい」ので、
+	 * 外すほうを選ばせるほうが手数が少ない。1 つも選ばずに決定したら拒否として扱う。
+	 */
+	async function pickParts(plan: PartialEditPlan): Promise<Record<string, unknown> | undefined> {
+		const items = plan.parts.map((part, index) => ({
+			label: part.label,
+			detail: part.detail,
+			picked: true,
+			index
+		}));
+		const chosen = await vscode.window.showQuickPick(items, {
+			canPickMany: true,
+			title: '採用する変更を選ぶ（外したものは元のまま残ります）',
+			placeHolder: 'チェックを外した変更は適用されません'
+		});
+		if (!chosen || chosen.length === 0) {
+			return undefined;
+		}
+		return plan.rebuild(new Set(chosen.map((item) => item.index)));
 	}
 
 	return { canUseToolFor, pending: () => pending.map(toPublic), decide, denyAll };
