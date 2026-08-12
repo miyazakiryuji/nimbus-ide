@@ -659,6 +659,12 @@
         "title": "仕込んであるものを見る",
         "category": "Nimbus",
         "icon": "$(calendar)"
+      },
+      {
+        "command": "nimbus.openPromptStats",
+        "title": "指示の出しかたを見る",
+        "category": "Nimbus",
+        "icon": "$(graph-line)"
       }
     ],
     "menus": {
