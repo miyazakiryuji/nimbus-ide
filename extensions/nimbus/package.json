@@ -138,12 +138,6 @@
         "icon": "$(shield)"
       },
       {
-        "command": "nimbus.coverageDiff",
-        "title": "この変更のカバレッジを見る",
-        "category": "Nimbus",
-        "icon": "$(shield)"
-      },
-      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
@@ -355,6 +349,18 @@
         "title": "Widget テストの雛形を作る",
         "category": "Nimbus",
         "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.agentModels",
+        "title": "サブエージェントのモデルを決める",
+        "category": "Nimbus",
+        "icon": "$(chip)"
+      },
+      {
+        "command": "nimbus.openBranchHealth",
+        "title": "ブランチのようすを見る",
+        "category": "Nimbus",
+        "icon": "$(git-branch)"
       }
     ],
     "menus": {
@@ -685,6 +691,19 @@
           "default": 0,
           "minimum": 0,
           "description": "このセッションで使ってよい文脈のトークン数。8 割で警告し、超えたら圧縮を促します。0 は予算なし。"
+        },
+        "nimbus.agents.models": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "サブエージェントごとに使うモデル（例: {\"explorer\": \"haiku\"}）。指定したものだけが差し替わります。"
+        },
+        "nimbus.git.baseBranch": {
+          "type": "string",
+          "default": "",
+          "description": "「ブランチのようす」で比べる先。空のときは main（無ければ master）を使います。フォークで main が upstream になっている場合は、追従元のブランチ名を指定してください。"
         }
       }
     },

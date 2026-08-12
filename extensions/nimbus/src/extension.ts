@@ -6,6 +6,7 @@
  */
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
+import { homedir } from 'os';
 import * as vscode from 'vscode';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { NimbusEvent, SessionSummary } from './events';
@@ -32,6 +33,7 @@ import { openFromStackTrace } from './stackTrace';
 import { draftReleaseNotes } from './releaseNotes';
 import { openChangeStats } from './changeStats';
 import { openCodeHealth } from './codeHealth';
+import { openBranchHealth } from './branchHealth';
 import { generateWidgetTest } from './flutterTests';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
@@ -49,6 +51,7 @@ import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
 import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
 import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
 import { buildCompactCommand, compactCandidates } from './core/compactSelection';
+import { buildAgentOverrides, describeAgent, parseAgentFile, type AgentFile } from './core/agentDefs';
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
@@ -56,7 +59,6 @@ import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
-import { showCoverageDiff } from './coverageDiff';
 import { showCoverageDiff } from './coverageDiff';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
@@ -126,7 +128,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const sessions = new SessionManager(
 		undefined,
-		async () => buildOptions(await readPinnedFiles()),
+		async () => buildOptions(await readPinnedFiles(), await readAgentFiles()),
 		(sessionId) => broker.canUseToolFor(sessionId)
 	);
 
@@ -441,6 +443,92 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	/**
+	 * サブエージェントの定義を読む（tasks.md T-232）。
+	 * プロジェクトの `.claude/agents/` と、利用者の `~/.claude/agents/` の両方を見る。
+	 */
+	async function readAgentFiles(): Promise<AgentFile[]> {
+		const roots = [
+			...(vscode.workspace.workspaceFolders ?? []).map((folder) => vscode.Uri.joinPath(folder.uri, '.claude', 'agents')),
+			vscode.Uri.joinPath(vscode.Uri.file(homedir()), '.claude', 'agents')
+		];
+		const files: AgentFile[] = [];
+		const seen = new Set<string>();
+		for (const root of roots) {
+			let entries: [string, vscode.FileType][];
+			try {
+				entries = await vscode.workspace.fs.readDirectory(root);
+			} catch {
+				continue;
+			}
+			for (const [name, type] of entries) {
+				if (type !== vscode.FileType.File || !name.endsWith('.md')) {
+					continue;
+				}
+				try {
+					const content = Buffer.from(
+						await vscode.workspace.fs.readFile(vscode.Uri.joinPath(root, name))
+					).toString('utf8');
+					const parsed = parseAgentFile(name, content);
+					// 先に見つかったほう（プロジェクト側）を優先する
+					if (parsed && !seen.has(parsed.name)) {
+						seen.add(parsed.name);
+						files.push(parsed);
+					}
+				} catch {
+					continue;
+				}
+			}
+		}
+		return files;
+	}
+
+	/** サブエージェントにモデルを割り当てる（T-232） */
+	async function assignAgentModels(): Promise<void> {
+		const files = await readAgentFiles();
+		if (files.length === 0) {
+			void vscode.window.showInformationMessage(
+				'Nimbus: サブエージェントの定義が見つかりませんでした（.claude/agents/*.md に置きます）。'
+			);
+			return;
+		}
+		const config = vscode.workspace.getConfiguration('nimbus');
+		const assigned = config.get<Record<string, string>>('agents.models') ?? {};
+		const chosen = await vscode.window.showQuickPick(
+			files.map((file) => ({
+				label: file.name,
+				description: describeAgent(file, assigned[file.name]),
+				detail: file.description,
+				file
+			})),
+			{ title: 'Nimbus: どのサブエージェントのモデルを決めますか', matchOnDetail: true }
+		);
+		if (!chosen) {
+			return;
+		}
+		const CLEAR = '既定に戻す';
+		// 実際に使えるモデルはセッションから引く。無ければ手で入れてもらう
+		const available = activeSessionId ? await sessions.supportedModels(activeSessionId) : [];
+		const model = await vscode.window.showQuickPick(
+			[CLEAR, ...available.map((entry) => entry.id ?? String(entry))],
+			{ title: `Nimbus: ${chosen.file.name} に使うモデル`, placeHolder: available.length === 0 ? 'セッションを開始すると候補が出ます' : '' }
+		);
+		if (!model) {
+			return;
+		}
+		const next = { ...assigned };
+		if (model === CLEAR) {
+			delete next[chosen.file.name];
+		} else {
+			next[chosen.file.name] = model;
+		}
+		await config.update('agents.models', next, vscode.ConfigurationTarget.Workspace);
+		log(`[agents] ${chosen.file.name} → ${model}`);
+		void vscode.window.showInformationMessage(
+			`Nimbus: ${chosen.file.name} は次のセッションから ${model === CLEAR ? '既定のモデル' : model} を使います。`
+		);
 	}
 
 	/**
@@ -1363,6 +1451,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		// テンプレートから始める（T-148）
 		// tasks.md から板へ（T-013）
 		// 圧縮前に残すものを選ぶ（T-154）
+		// サブエージェントごとのモデル指定（T-232）
+		vscode.commands.registerCommand('nimbus.agentModels', () => assignAgentModels()),
 		vscode.commands.registerCommand('nimbus.compactWithSelection', () => compactWithSelection()),
 		vscode.commands.registerCommand('nimbus.taskFromFile', () => taskFromTasksFile()),
 		// 待機列の優先度（T-233）
@@ -1420,6 +1510,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.draftReleaseNotes', () => draftReleaseNotes()),
 		vscode.commands.registerCommand('nimbus.openChangeStats', () => openChangeStats()),
 		vscode.commands.registerCommand('nimbus.openCodeHealth', () => openCodeHealth()),
+		vscode.commands.registerCommand('nimbus.openBranchHealth', () => openBranchHealth()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -1499,16 +1590,6 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
-		// この変更で足した行がテストされているか（T-109）
-		vscode.commands.registerCommand('nimbus.coverageDiff', () =>
-			showCoverageDiff({
-				send: (text) => {
-					cockpit.reveal();
-					void send(text);
-				},
-				log
-			})
-		),
 		new vscode.Disposable(() => sessions.closeAll())
 	);
 
@@ -1546,8 +1627,15 @@ function workspaceCwd(): string | undefined {
  * `settingSources: []` を明示して、利用者の ~/.claude 設定を暗黙に読み込ませない
  * （何が文脈に入るかを Nimbus 側で説明できる状態に保つため）。
  */
-function buildOptions(pinned: readonly PinnedFile[] = []): Partial<Options> {
+function buildOptions(pinned: readonly PinnedFile[] = [], agentFiles: readonly AgentFile[] = []): Partial<Options> {
 	const options: Partial<Options> = { settingSources: [] };
+	// サブエージェントごとのモデル（T-232）。**割り当てが 1 つも無ければ渡さない** —
+	// 渡すと、利用者の定義を Nimbus が組み直したもので置き換えることになる
+	const agentModels = vscode.workspace.getConfiguration('nimbus').get<Record<string, string>>('agents.models') ?? {};
+	const overrides = buildAgentOverrides(agentFiles, agentModels);
+	if (Object.keys(overrides).length > 0) {
+		options.agents = overrides;
+	}
 	// 常に含めるファイル（T-152）。preset に **足す** ので Claude Code の振る舞いは残る。
 	// 上限を超えたぶんは黙って切らず、外したことを利用者へ伝える
 	const selection = selectWithinBudget(pinned);

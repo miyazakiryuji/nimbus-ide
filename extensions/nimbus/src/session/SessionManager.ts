@@ -283,6 +283,17 @@ export class SessionManager extends EventEmitter {
     }
   }
 
+  /** 使えるモデルの一覧（T-232 の割り当てで候補として出す） */
+  async supportedModels(sessionId: string): Promise<{ id?: string }[]> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return []
+    try {
+      return (await session.handle.supportedModels()) as { id?: string }[]
+    } catch {
+      return []
+    }
+  }
+
   /** 接続中の MCP サーバーの状態と提供ツール（T-029 / T-042） */
   async mcpServers(sessionId: string): Promise<McpServerStatus[]> {
     const session = this.sessions.get(sessionId)
