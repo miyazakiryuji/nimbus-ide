@@ -24,7 +24,7 @@ import { BoardViewProvider } from './tasks/BoardViewProvider';
 import { buildYuaSystemPrompt } from './help/yua';
 import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
-import { addClaudeMdSection, ClaudeMdViewProvider } from './claudeMdView';
+import { addClaudeMdSection, ClaudeMdViewProvider, promoteInstruction } from './claudeMdView';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -901,6 +901,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.refreshSkills', () => skillsView.refresh()),
 		vscode.commands.registerCommand('nimbus.refreshClaudeMd', () => claudeMdView.refresh()),
 		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
+		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
+			promoteInstruction(claudeMdView, node?.item?.text ?? '')
+		),
 		// 一覧から直接「使う」。コックピットへ /<name> を送る
 		vscode.commands.registerCommand('nimbus.useSkill', async (node?: { skill?: { name?: string } }) => {
 			const name = node?.skill?.name;

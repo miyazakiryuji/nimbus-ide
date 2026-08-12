@@ -154,6 +154,12 @@
         "icon": "$(add)"
       },
       {
+        "command": "nimbus.promoteInstruction",
+        "title": "CLAUDE.md に足す",
+        "category": "Nimbus",
+        "icon": "$(arrow-right)"
+      },
+      {
         "command": "nimbus.useSkill",
         "title": "コックピットで使う",
         "category": "Nimbus",
@@ -241,6 +247,10 @@
         {
           "command": "nimbus.useSkill",
           "when": "false"
+        },
+        {
+          "command": "nimbus.promoteInstruction",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -310,6 +320,11 @@
           "command": "nimbus.toggleMcp",
           "when": "view == nimbus.mcp && viewItem =~ /nimbusMcpServer/",
           "group": "nimbus@1"
+        },
+        {
+          "command": "nimbus.promoteInstruction",
+          "when": "view == nimbus.claudeMd && viewItem == nimbusRepeatedInstruction",
+          "group": "inline"
         }
       ]
     },
