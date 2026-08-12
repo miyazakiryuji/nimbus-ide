@@ -1,0 +1,172 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/*
+ * Gutter marks for bookmarks. A plain bookmark is a filled dot; one with a
+ * mnemonic shows the key that reaches it, because that key is the whole point
+ * of assigning one. Colours come from the theme so Nimbus Dark / Light carry
+ * their own palette here.
+ */
+
+.monaco-editor .nimbus-bookmark {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--monaco-monospace-font);
+	font-size: 10px;
+	font-weight: var(--vscode-fontWeight-semiBold);
+	line-height: 1;
+	color: var(--vscode-editorLightBulb-foreground, var(--vscode-textLink-foreground));
+}
+
+.monaco-editor .nimbus-bookmark::after {
+	content: '\25CF';
+	font-size: 8px;
+}
+
+.monaco-editor .nimbus-bookmark-0::after {
+	content: '0';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-1::after {
+	content: '1';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-2::after {
+	content: '2';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-3::after {
+	content: '3';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-4::after {
+	content: '4';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-5::after {
+	content: '5';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-6::after {
+	content: '6';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-7::after {
+	content: '7';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-8::after {
+	content: '8';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-9::after {
+	content: '9';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-A::after {
+	content: 'A';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-B::after {
+	content: 'B';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-C::after {
+	content: 'C';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-D::after {
+	content: 'D';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-E::after {
+	content: 'E';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-F::after {
+	content: 'F';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-G::after {
+	content: 'G';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-H::after {
+	content: 'H';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-I::after {
+	content: 'I';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-J::after {
+	content: 'J';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-K::after {
+	content: 'K';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-L::after {
+	content: 'L';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-M::after {
+	content: 'M';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-N::after {
+	content: 'N';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-O::after {
+	content: 'O';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-P::after {
+	content: 'P';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-Q::after {
+	content: 'Q';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-R::after {
+	content: 'R';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-S::after {
+	content: 'S';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-T::after {
+	content: 'T';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-U::after {
+	content: 'U';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-V::after {
+	content: 'V';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-W::after {
+	content: 'W';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-X::after {
+	content: 'X';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-Y::after {
+	content: 'Y';
+	font-size: 10px;
+}
+.monaco-editor .nimbus-bookmark-Z::after {
+	content: 'Z';
+	font-size: 10px;
+}

@@ -266,6 +266,9 @@ import './contrib/macros/browser/macros.contribution.js';
 // Search Everywhere
 import './contrib/searchEverywhere/browser/searchEverywhere.contribution.js';
 
+// Bookmarks
+import './contrib/bookmarks/browser/bookmarks.contribution.js';
+
 // Bulk Edit
 import '../workbench/contrib/bulkEdit/browser/bulkEditService.js';
 // import '../workbench/contrib/bulkEdit/browser/preview/bulkEdit.contribution.js';
