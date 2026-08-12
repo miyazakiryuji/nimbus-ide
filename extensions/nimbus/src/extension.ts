@@ -57,6 +57,7 @@ import { importReviewComments } from './reviewComments';
 import { shareSession } from './shareSession';
 import { openReplay } from './replay';
 import { checkMermaidDiagrams } from './mermaid';
+import { runSetupWizard } from './setupWizard';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -112,6 +113,13 @@ import {
 	type AgentState,
 	type TurnMode
 } from './core/persona';
+import {
+	localOnlyEffect,
+	RECOVERY_LABEL,
+	shouldNotify,
+	suggestRecovery,
+	type RecoveryOption
+} from './core/recovery';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
@@ -129,7 +137,7 @@ import {
 	type Workflow,
 	type WorkflowState
 } from './core/workflow';
-import { runningTool } from './core/activity';
+import { buildAttributions, runningTool } from './core/activity';
 import {
 	BUILTIN_PROFILES,
 	describeProfile,
@@ -162,7 +170,6 @@ import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
-import { ClipboardHints } from './clipboardHints';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -223,7 +230,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			// 承認待ちで止まっていることに気づけないのが一番困る（T-019）
 			if (pending.length > pendingApprovals) {
 				const latest = pending[pending.length - 1];
-				notify('Nimbus — 承認待ち', oneLine(latest.summary));
+				notify('Nimbus — 承認待ち', oneLine(latest.summary), true);
 			}
 			pendingApprovals = pending.length;
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
@@ -350,12 +357,23 @@ export function activate(context: vscode.ExtensionContext): void {
 	 * 既定では**ウィンドウが前面に無いときだけ**出す。見ている画面に重ねて出しても邪魔なだけで、
 	 * それを繰り返すと通知そのものを切られてしまう（T-087 の集中モードとも衝突しない形）。
 	 */
-	function notify(title: string, body: string): void {
+	function notify(title: string, body: string, isApproval = false): void {
 		const config = vscode.workspace.getConfiguration('nimbus');
-		if (config.get<boolean>('notifications.enabled') === false) {
+		// 集中モード（T-087）は完了通知を黙らせるが、**承認待ちは通す** —
+		// 承認待ちは「止まっている」の知らせで、黙らせると作業が進まなくなる
+		const decision = shouldNotify({
+			enabled: config.get<boolean>('notifications.enabled') !== false,
+			focusMode: config.get<boolean>('focusMode') === true,
+			onlyWhenUnfocused: config.get<boolean>('notifications.onlyWhenUnfocused') !== false,
+			windowFocused: vscode.window.state.focused,
+			isApproval
+		});
+		if (!decision.notify) {
 			return;
 		}
-		if (config.get<boolean>('notifications.onlyWhenUnfocused') !== false && vscode.window.state.focused) {
+		// ローカル完結モード（T-077）では、本文が外部プロセスへ渡る OS 通知を使わない
+		if (config.get<boolean>('localOnly') === true) {
+			void vscode.window.showInformationMessage(`${title} — ${body}`);
 			return;
 		}
 		const command = buildNotifyCommand(process.platform, title, body);
@@ -464,7 +482,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		const config = readHotReloadConfig();
 		const cwd = workspaceCwd(currentScope(context.workspaceState));
-		if (!config.enabled || !cwd) {
+		// ローカル完結モード（T-077）ではコマンドを実行しない
+		if (!config.enabled || !cwd || vscode.workspace.getConfiguration('nimbus').get<boolean>('localOnly') === true) {
 			return;
 		}
 		const changed = collectEvidence(retained).changedFiles;
@@ -669,6 +688,76 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/**
+	 * ローカル完結モード（tasks.md T-077）。
+	 * **何が止まって、何が止まらないかを必ず見せてから**切り替える。
+	 * 「外に出ない」と思い込ませるのが一番危ない。
+	 */
+	async function toggleLocalOnly(): Promise<void> {
+		const config = vscode.workspace.getConfiguration('nimbus');
+		if (config.get<boolean>('localOnly') === true) {
+			await config.update('localOnly', false, vscode.ConfigurationTarget.Workspace);
+			void vscode.window.showInformationMessage('Nimbus: ローカル完結モードを切りました。');
+			return;
+		}
+		const effect = localOnlyEffect();
+		const CONFIRM = '有効にする';
+		const answer = await vscode.window.showWarningMessage(
+			'Nimbus: ローカル完結モードにします。',
+			{
+				modal: true,
+				detail:
+					`止まるもの:\n${effect.stopped.map((line) => `・${line}`).join('\n')}`
+					+ `\n\n止まらないもの:\n${effect.notStopped.map((line) => `・${line}`).join('\n')}`
+			},
+			CONFIRM
+		);
+		if (answer !== CONFIRM) {
+			return;
+		}
+		await config.update('localOnly', true, vscode.ConfigurationTarget.Workspace);
+		log('[local-only] 有効にしました');
+	}
+
+	/**
+	 * 詰まったときの立て直し（tasks.md T-088）。
+	 * **勝手に戻さない。** 見立てとその理由を出して、選ばせる。
+	 */
+	async function offerRecovery(): Promise<void> {
+		const evidence = collectEvidence(retained);
+		const recentErrors = retained.filter((event) => event.kind === 'tool-result' && event.isError).length;
+		const lastRun = evidence.runs[evidence.runs.length - 1];
+		const editCounts = new Map<string, number>();
+		for (const edit of buildAttributions(retained).flatMap((a) => a.edits)) {
+			editCounts.set(edit.path, (editCounts.get(edit.path) ?? 0) + 1);
+		}
+		const suggestion = suggestRecovery({
+			recentToolErrors: recentErrors,
+			repeatedEditsOnSameFile: Math.max(0, ...editCounts.values()),
+			testsFailing: lastRun?.outcome === 'failed'
+		});
+		if (!suggestion.stuck) {
+			void vscode.window.showInformationMessage('Nimbus: いまのところ詰まっているようには見えません。');
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			suggestion.options.map((option) => ({ label: RECOVERY_LABEL[option], option })),
+			{ title: `Nimbus: ${suggestion.reason}`, placeHolder: 'どう立て直しますか' }
+		);
+		if (!chosen) {
+			return;
+		}
+		const commands: Partial<Record<RecoveryOption, string>> = {
+			rewind: 'nimbus.rewind',
+			alternative: 'nimbus.compareOptions',
+			handover: 'nimbus.turnMode'
+		};
+		const command = commands[chosen.option];
+		if (command) {
+			await vscode.commands.executeCommand(command);
+		}
 	}
 
 	/** ペルソナを選ぶ（T-063）。次のセッションから効く */
@@ -888,7 +977,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	 * ここに資格情報が残ると、いちばん流出しやすい形になる。
 	 */
 	async function appendAudit(event: NimbusEvent): Promise<void> {
-		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('audit.enabled') === false) {
+		const auditConfig = vscode.workspace.getConfiguration('nimbus');
+		// ローカル完結モード（T-077）では、持ち出される経路そのものを作らない
+		if (auditConfig.get<boolean>('audit.enabled') === false || auditConfig.get<boolean>('localOnly') === true) {
 			return;
 		}
 		const record = toAuditRecord(event);
@@ -2124,15 +2215,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	}
 
-	// コピーしたエラー文に気づいて聞く（T-170・既定は無効）
-	const clipboardHints = new ClipboardHints({
-		send: (text) => {
-			cockpit.reveal();
-			void send(text);
-		},
-		log
-	});
-
 	// 関数の上に「Nimbus に頼む」を出す（T-172）。右クリックからも同じ入口（T-171）
 	const codeLens = new NimbusCodeLensProvider();
 
@@ -2166,7 +2248,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		stopButton,
 		previewer,
 		terminals,
-		clipboardHints,
 		approvals,
 		approvalsView,
 		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは
@@ -2212,6 +2293,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		// ワークフロー（T-149）・解説モード（T-045）・チーム設定の同期（T-049）
 		// 回帰テスト・ブレ幅・モデル比較（T-165 / T-166 / T-167）
 		// ペルソナ（T-063）と、書く番の切り替え（T-190 / T-191）
+		// ローカル完結（T-077）・立て直し（T-088）
+		vscode.commands.registerCommand('nimbus.localOnly', () => toggleLocalOnly()),
+		vscode.commands.registerCommand('nimbus.recover', () => offerRecovery()),
 		vscode.commands.registerCommand('nimbus.persona', () => choosePersona()),
 		vscode.commands.registerCommand('nimbus.turnMode', () => chooseTurnMode()),
 		vscode.commands.registerCommand('nimbus.evaluate', () => evaluate()),
@@ -2354,6 +2438,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.shareSession', () => shareSession()),
 		vscode.commands.registerCommand('nimbus.openReplay', () => openReplay()),
 		vscode.commands.registerCommand('nimbus.checkMermaid', () => checkMermaidDiagrams()),
+		vscode.commands.registerCommand('nimbus.runSetupWizard', () => runSetupWizard()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {

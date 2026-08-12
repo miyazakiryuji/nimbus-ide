@@ -844,6 +844,24 @@
         "title": "Mermaid の図を確かめる",
         "category": "Nimbus",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "nimbus.localOnly",
+        "title": "ローカル完結モードを切り替える",
+        "category": "Nimbus",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "nimbus.recover",
+        "title": "詰まったときの立て直しを提案してもらう",
+        "category": "Nimbus",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "nimbus.runSetupWizard",
+        "title": "使い始めの設定をする",
+        "category": "Nimbus",
+        "icon": "$(rocket)"
       }
     ],
     "menus": {
@@ -1290,6 +1308,16 @@
           "type": "string",
           "default": "",
           "description": "テストを走らせるコマンド。空のときは実行のたびに聞きます。TAP 形式の出力（node --test など）だけが読めます。"
+        },
+        "nimbus.localOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "監査ログ・ホットリロードのコマンド実行・OS 通知を止めます。Claude 本体との通信と MCP 接続は止まりません。"
+        },
+        "nimbus.focusMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "完了通知を黙らせます。承認待ち（止まっていることの知らせ）は通します。"
         }
       }
     },

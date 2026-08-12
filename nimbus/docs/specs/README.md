@@ -38,6 +38,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`stack-trace.md`](stack-trace.md) — スタックトレースから該当箇所を開く
 - [`lock-diff.md`](lock-diff.md) — ロックファイルの変更を読む
 - [`schedule.md`](schedule.md) — 寝る前に仕込む（予約実行）
+- [`setup.md`](setup.md) — 使い始めの設定（言語別プリセット）
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス
 - [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
 - [`mermaid.md`](mermaid.md) — Mermaid の図を確かめる
@@ -69,6 +70,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`evaluation.md`](evaluation.md) — スキル・プロンプトの評価（回帰・ブレ幅・モデル比較）
 - [`authoring.md`](authoring.md) — スキル・サブエージェント・コマンドを書く支援
 - [`persona-and-turns.md`](persona-and-turns.md) — 話しかた・状態の色・書く番
+- [`local-and-recovery.md`](local-and-recovery.md) — ローカル完結・集中モード・立て直し
 
 IDE 基礎機能:
 
