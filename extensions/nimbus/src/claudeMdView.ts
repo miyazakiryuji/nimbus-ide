@@ -16,6 +16,7 @@ import { findClaudeMdFiles } from './core/claudeMd';
 import { findRepeatedInstructions, type RepeatedInstruction } from './core/repeatedInstructions';
 import { parseTranscript, projectDirName } from './core/transcripts';
 import {
+	appendBullet,
 	appendSection,
 	classifyOrigin,
 	displayLabel,
@@ -144,6 +145,7 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 			const item = new vscode.TreeItem(node.item.text);
 			item.description = `${node.item.count} 回`;
 			item.iconPath = new vscode.ThemeIcon('lightbulb-autofix');
+			item.contextValue = 'nimbusRepeatedInstruction';
 			item.tooltip = new vscode.MarkdownString(
 				`直近のセッションで **${node.item.count} 回**言っています。\n\nCLAUDE.md に書いておくと、毎回言わずに済みます。`
 			);
@@ -237,6 +239,50 @@ export class ClaudeMdViewProvider implements vscode.TreeDataProvider<ClaudeMdNod
 		const suggestions: ClaudeMdNode[] = repeated.length > 0 ? [{ kind: 'repeated', items: repeated }] : [];
 		return [...files.map((file): ClaudeMdNode => ({ kind: 'file', ...file })), ...suggestions];
 	}
+}
+
+/** 「毎回言っている指示」を移す先の節。1 つに溜めて、見出しが増えないようにする */
+const REPEATED_HEADING = '毎回の指示';
+
+/**
+ * 何度も言っている指示を CLAUDE.md へ移す（T-234）。
+ *
+ * 見せるだけでは結局書かれないので、その場で足せるようにする。ただし**足す前に文言を直せる**
+ * ようにしてある。話し言葉のまま入れると、指示としては曖昧なことが多いため。
+ */
+export async function promoteInstruction(view: ClaudeMdViewProvider, text: string): Promise<void> {
+	const target = view.files().find((f) => f.origin === 'project');
+	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+	const path = target?.path ?? (root ? vscode.Uri.joinPath(vscode.Uri.file(root), 'CLAUDE.md').fsPath : undefined);
+	if (!path) {
+		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
+		return;
+	}
+
+	const edited = await vscode.window.showInputBox({
+		title: 'Nimbus: CLAUDE.md に足す',
+		prompt: `「${REPEATED_HEADING}」の節に箇条書きとして足します`,
+		value: text,
+		validateInput: (value) => (value.trim().length === 0 ? '空にはできません' : undefined)
+	});
+	if (edited === undefined) {
+		return;
+	}
+
+	const before = readText(path);
+	const { content, line } = appendBullet(before, REPEATED_HEADING, edited);
+	if (content === before) {
+		void vscode.window.showInformationMessage('Nimbus: 同じ内容が既に書かれています。その行を開きます。');
+	} else {
+		writeFileSync(path, content, 'utf8');
+	}
+	view.refresh();
+
+	const document = await vscode.workspace.openTextDocument(vscode.Uri.file(path));
+	const editor = await vscode.window.showTextDocument(document);
+	const position = new vscode.Position(line, 0);
+	editor.selection = new vscode.Selection(position, position);
+	editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
 }
 
 /**

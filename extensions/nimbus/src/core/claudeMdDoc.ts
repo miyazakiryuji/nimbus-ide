@@ -122,6 +122,38 @@ export function appendSection(content: string, heading: string, body: string): {
 	return { content: next, line };
 }
 
+/**
+ * 節の中に箇条書きを 1 行足す。節が無ければ作る。
+ *
+ * 「毎回言っている指示」を CLAUDE.md へ移すための操作。節ごと足す（`appendSection`）と
+ * 見出しが増えていくので、同じ趣旨のものは 1 つの節に溜める。
+ * 同じ内容が既にあるときは足さず、その行を返す（重複で太らせないのは追記と同じ方針）。
+ */
+export function appendBullet(content: string, heading: string, bullet: string): { content: string; line: number } {
+	const text = bullet.trim();
+	const sections = parseSections(content);
+	const target = sections.find((s) => s.title === heading);
+	if (!target) {
+		const created = appendSection(content, heading, `- ${text}`);
+		return { content: created.content, line: created.line + 2 };
+	}
+
+	const lines = content.split('\n');
+	const bodyLines = target.body.split('\n');
+	const existing = bodyLines.findIndex((line) => line.trim().replace(/^[-*+]\s*/, '') === text);
+	if (existing >= 0) {
+		return { content, line: target.line + existing };
+	}
+
+	// 節の本文の末尾（次の見出しの直前、末尾の空行より前）に足す
+	let insertAt = target.line + bodyLines.length;
+	while (insertAt > target.line + 1 && lines[insertAt - 1]?.trim() === '') {
+		insertAt--;
+	}
+	lines.splice(insertAt, 0, `- ${text}`);
+	return { content: lines.join('\n'), line: insertAt };
+}
+
 /** リンターの指摘。行を持つのは、指摘から直接その場所へ飛ばすため */
 export interface ClaudeMdFinding {
 	kind: 'duplicate-heading' | 'duplicate-line' | 'empty-section' | 'too-long';

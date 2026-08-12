@@ -8,6 +8,7 @@ import * as assert from 'assert';
 import { join } from 'path';
 import { test } from 'node:test';
 import {
+	appendBullet,
 	appendSection,
 	classifyOrigin,
 	displayLabel,
@@ -140,4 +141,23 @@ test('トークン数はおおよそ文字数の 2/3', () => {
 test('ひな形は見出しと説明と本文を持つ', () => {
 	assert.ok(SECTION_TEMPLATES.length > 0);
 	assert.ok(SECTION_TEMPLATES.every((t) => t.heading.length > 0 && t.description.length > 0 && t.body.length > 0));
+});
+
+test('節の中に箇条書きを足す（末尾の空行より前に入る）', () => {
+	const original = '# タイトル\n\n## 毎回の指示\n\n- テストも書く\n\n## 別の節\n\n本文\n';
+	const { content, line } = appendBullet(original, '毎回の指示', 'コミットは細かく');
+	assert.deepStrictEqual(
+		{ line, body: content.split('\n').slice(2, 7) },
+		{ line: 5, body: ['## 毎回の指示', '', '- テストも書く', '- コミットは細かく', ''] }
+	);
+});
+
+test('節が無ければ作って足す', () => {
+	const { content } = appendBullet('# タイトル\n', '毎回の指示', 'コミットは細かく');
+	assert.strictEqual(content, '# タイトル\n\n## 毎回の指示\n\n- コミットは細かく\n');
+});
+
+test('同じ内容が既にあるときは足さず、その行を返す', () => {
+	const original = '## 毎回の指示\n\n- テストも書く\n';
+	assert.deepStrictEqual(appendBullet(original, '毎回の指示', 'テストも書く'), { content: original, line: 2 });
 });

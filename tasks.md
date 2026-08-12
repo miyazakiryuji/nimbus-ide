@@ -31,7 +31,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
 
-- [ ] T-234 「何度も言っている指示」をワンクリックで CLAUDE.md に足せるようにする（今は見せるだけ・T-041 から）
 - [ ] T-235 繰り返しの検出をセッション中にも効かせる（今は過去の記録を読む形なので、走っている最中には出ない）
 
 - [ ] T-014 ターミナルを**好きな数に分割**できるようにする（4 分割に限らず、必要なだけ並べる）—
@@ -506,6 +505,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-234 何度も言っている指示を、その場で CLAUDE.md の「毎回の指示」に足せるようにする — 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
 - [x] T-041 CLAUDE.md のメンテ支援（重複・空の節・長さの指摘＋何度も言っている指示の提示）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
 - [x] T-021 文脈ビューの CLAUDE.md に出どころを添える（プロジェクト／親フォルダから継承／ユーザー設定）— 2026-08-13 / 仕様 [context-view](nimbus/docs/specs/context-view.md)
 - [x] T-041（リンター部分）CLAUDE.md の重複・空の節・長さの指摘とトークン数表示 — 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md)
