@@ -450,10 +450,27 @@ function checkCoreLedger() {
 		.filter((e) => !e.path.startsWith('extensions/nimbus/') && !e.path.startsWith('nimbus/'));
 
 	const modified = entries.filter((e) => e.status === 'M' || e.status === 'D');
-	for (const { path } of modified) {
+
+	/**
+	 * 台帳に載っているかを見る。ディレクトリごと消した場合（例: `extensions/copilot/`）は、
+	 * 中の 4000 個のファイルを 1 件ずつ指摘しても読めないので、**祖先ディレクトリの記載で足りる**とする。
+	 */
+	const coveredByLedger = (path) => {
 		const name = path.slice(path.lastIndexOf('/') + 1);
-		// 台帳にはフルパスか、省略形（`src/.../foo.ts`）のファイル名で載っている
-		if (!ledger.includes(path) && !ledger.includes(name)) {
+		if (ledger.includes(path) || ledger.includes(name)) {
+			return true;
+		}
+		const segments = path.split('/');
+		for (let i = segments.length - 1; i > 0; i--) {
+			if (ledger.includes(`${segments.slice(0, i).join('/')}/`)) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	for (const { path } of modified) {
+		if (!coveredByLedger(path)) {
 			add('ledger', 'error', 'upstream のファイルを変更しているのに台帳に記載が無い', path);
 		}
 	}
