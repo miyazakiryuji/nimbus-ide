@@ -55,6 +55,7 @@ import { draftReviewRequest } from './reviewRequest';
 import { openExplanation } from './explain';
 import { importReviewComments } from './reviewComments';
 import { shareSession } from './shareSession';
+import { openReplay } from './replay';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -99,6 +100,16 @@ import { dryRunHook, manageHooks } from './hooksBuilder';
 import { exportBundle, importBundle, syncTeamBundle } from './bundleCommands';
 import { runEvaluation } from './evaluationRunner';
 import { createCompletionProvider, previewRun, validateDocument } from './authoring';
+import {
+	BUILTIN_PERSONAS,
+	findPersona,
+	stateColor,
+	stateLabel,
+	TURN_MODE_LABEL,
+	turnModeInstruction,
+	type AgentState,
+	type TurnMode
+} from './core/persona';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
@@ -148,6 +159,7 @@ import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
+import { chooseScope, currentScope } from './monorepo';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -185,7 +197,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
 	const outbox = new Outbox();
 	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
-	const reviewView = new ReviewViewProvider(context.workspaceState, () => workspaceCwd(), log);
+	const reviewView = new ReviewViewProvider(context.workspaceState, () => workspaceCwd(currentScope(context.workspaceState)), log);
 	const reviewTree = vscode.window.createTreeView('nimbus.review', { treeDataProvider: reviewView });
 	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
 	const approvalsView = new ApprovalsViewProvider();
@@ -227,7 +239,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const sessions = new SessionManager(
 		undefined,
-		async () => buildOptions(await readPinnedFiles(), await readAgentFiles(), currentProfile()),
+		async () =>
+			buildOptions(
+				await readPinnedFiles(),
+				await readAgentFiles(),
+				currentProfile(),
+				findPersona(vscode.workspace.getConfiguration('nimbus').get<string>('persona')).instruction
+			),
 		(sessionId) => broker.canUseToolFor(sessionId)
 	);
 
@@ -442,7 +460,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			return;
 		}
 		const config = readHotReloadConfig();
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!config.enabled || !cwd) {
 			return;
 		}
@@ -648,6 +666,45 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/** ペルソナを選ぶ（T-063）。次のセッションから効く */
+	async function choosePersona(): Promise<void> {
+		const config = vscode.workspace.getConfiguration('nimbus');
+		const now = findPersona(config.get<string>('persona'));
+		const chosen = await vscode.window.showQuickPick(
+			BUILTIN_PERSONAS.map((persona) => ({
+				label: `${persona.name === now.name ? '$(check) ' : ''}${persona.name}`,
+				description: persona.description,
+				persona
+			})),
+			{ title: `Nimbus: 話しかたを選ぶ（いまは「${now.name}」）` }
+		);
+		if (!chosen) {
+			return;
+		}
+		await config.update('persona', chosen.persona.name, vscode.ConfigurationTarget.Workspace);
+		log(`[persona] ${chosen.persona.name}`);
+		void vscode.window.showInformationMessage(
+			`Nimbus: 「${chosen.persona.name}」にしました。次のセッションから効きます。`
+		);
+	}
+
+	/** 書く番を切り替える（T-190 / T-191）。いまのセッションへ即座に伝える */
+	async function chooseTurnMode(): Promise<void> {
+		const chosen = await vscode.window.showQuickPick(
+			(['agent', 'human', 'shoulder'] as TurnMode[]).map((mode) => ({
+				label: TURN_MODE_LABEL[mode],
+				mode
+			})),
+			{ title: 'Nimbus: どちらが書きますか' }
+		);
+		if (!chosen) {
+			return;
+		}
+		cockpit.reveal();
+		await send(turnModeInstruction(chosen.mode));
+		log(`[turn] ${TURN_MODE_LABEL[chosen.mode]}`);
 	}
 
 	const EVAL_KEY = 'nimbus.evalCases';
@@ -1207,7 +1264,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	 * 無いときの言い回しを 1 か所にまとめる（同じ案内が散ると、直すときに片方が残る）。
 	 */
 	function requireCwd(): string | undefined {
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
 		}
@@ -1225,7 +1282,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	 */
 	async function taskFromTasksFile(): Promise<void> {
 		const uri = tasksFileUri();
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!uri || !cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
 			return;
@@ -1376,7 +1433,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	 * 同じ地点から始まるので、比べているのは「指示の違い」だけになる。
 	 */
 	async function branchSession(): Promise<void> {
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		const summary = activeSessionId ? sessions.get(activeSessionId) : undefined;
 		if (!cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
@@ -1409,7 +1466,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	/** 過去のセッションを再開する（tasks.md T-150） */
 	async function restoreSession(): Promise<void> {
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
 			return;
@@ -1530,6 +1587,17 @@ export function activate(context: vscode.ExtensionContext): void {
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
 		// 「止める」は動いているときだけ出す（押せる状態のときにだけ見えるほうが分かりやすい）
 		const active = sessions.list().filter((s) => s.status === 'running' || s.status === 'starting');
+		// 状態で色を変える（T-064）。新しい配色は足さず、既にその意味を持つトークンへ寄せる
+		const agentState: AgentState =
+			pendingApprovals > 0
+				? 'waiting-approval'
+				: summary?.status === 'error'
+					? 'error'
+					: active.length > 0
+						? 'thinking'
+						: 'idle';
+		const color = stateColor(agentState);
+		status.backgroundColor = color ? new vscode.ThemeColor(color) : undefined;
 		if (active.length > 0) {
 			stopButton.text = active.length > 1 ? `$(debug-stop) 停止 ${active.length}` : '$(debug-stop) 停止';
 			stopButton.show();
@@ -1554,6 +1622,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			`Nimbus — ${summary.status}`,
 			billingModeLabel(lastApiKeySource),
 			summary.model ?? '',
+			`状態: ${stateLabel(agentState)}`,
 			contextPercent !== undefined ? `文脈 ${Math.round(contextPercent)}%（クリックでログ／使用量ビューに内訳）` : '',
 			summary.cwd
 		].filter(Boolean).join('\n');
@@ -1888,7 +1957,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			helpSessionId = sessionId;
 			helpEvents.length = 0;
 			await sessions.createSession({
-				cwd: workspaceCwd() ?? context.extensionUri.fsPath,
+				cwd: workspaceCwd(currentScope(context.workspaceState)) ?? context.extensionUri.fsPath,
 				firstMessage: text,
 				reuseSessionId: sessionId,
 				extraOptions: {
@@ -1925,7 +1994,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	/** タスクを作る。タイトルと指示は 2 段階で聞く（後から編集できないので、ここは丁寧に） */
 	async function newTask(): Promise<void> {
-		const cwd = workspaceCwd();
+		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからタスクを作成してください。');
 			return;
@@ -2129,6 +2198,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.estimate', () => showEstimate()),
 		// ワークフロー（T-149）・解説モード（T-045）・チーム設定の同期（T-049）
 		// 回帰テスト・ブレ幅・モデル比較（T-165 / T-166 / T-167）
+		// ペルソナ（T-063）と、書く番の切り替え（T-190 / T-191）
+		vscode.commands.registerCommand('nimbus.persona', () => choosePersona()),
+		vscode.commands.registerCommand('nimbus.turnMode', () => chooseTurnMode()),
 		vscode.commands.registerCommand('nimbus.evaluate', () => evaluate()),
 		// スキル・サブエージェント・コマンドを書く支援（T-030 / T-031）
 		vscode.languages.registerCompletionItemProvider({ language: 'markdown' }, createCompletionProvider(), ':', '\n'),
@@ -2267,6 +2339,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openExplanation', () => openExplanation()),
 		vscode.commands.registerCommand('nimbus.importReviewComments', () => importReviewComments((text) => void send(text))),
 		vscode.commands.registerCommand('nimbus.shareSession', () => shareSession()),
+		vscode.commands.registerCommand('nimbus.openReplay', () => openReplay()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2361,7 +2434,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		}),
 		// 行をクリックしたら差分を開く。印だけの画面にしないため
 		vscode.commands.registerCommand('nimbus.openReviewDiff', async (entry?: ReviewEntry) => {
-			const cwd = workspaceCwd();
+			const cwd = workspaceCwd(currentScope(context.workspaceState));
 			if (!entry || !cwd) {
 				return;
 			}
@@ -2417,6 +2490,10 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// モノレポで作業対象のパッケージだけを見せる（T-078）
+		vscode.commands.registerCommand('nimbus.chooseScope', () =>
+			chooseScope({ storage: context.workspaceState, log })
+		),
 		// ドキュメントの無いコードから仕様書を起こす（T-080）
 		vscode.commands.registerCommand('nimbus.reverseSpec', () =>
 			reverseSpec({
@@ -2604,7 +2681,11 @@ export function deactivate(): void {
 	// セッションの後始末は context.subscriptions の Disposable で行う
 }
 
-function workspaceCwd(): string | undefined {
+function workspaceCwd(scope?: string): string | undefined {
+	// 作業対象を絞っていれば、そこをセッションの作業ディレクトリにする（T-078）
+	if (scope) {
+		return scope;
+	}
 	const folders = vscode.workspace.workspaceFolders;
 	if (!folders || folders.length === 0) {
 		return undefined;
@@ -2621,7 +2702,8 @@ function workspaceCwd(): string | undefined {
 function buildOptions(
 	pinned: readonly PinnedFile[] = [],
 	agentFiles: readonly AgentFile[] = [],
-	profile?: PolicyProfile
+	profile?: PolicyProfile,
+	personaInstruction = ''
 ): Partial<Options> {
 	const options: Partial<Options> = { settingSources: [] };
 	// 承認ポリシー（T-162）と、危ないことを試すときの器（T-163）
@@ -2643,12 +2725,10 @@ function buildOptions(
 	// 常に含めるファイル（T-152）。preset に **足す** ので Claude Code の振る舞いは残る。
 	// 上限を超えたぶんは黙って切らず、外したことを利用者へ伝える
 	const selection = selectWithinBudget(pinned);
-	if (selection.included.length > 0) {
-		options.systemPrompt = {
-			type: 'preset',
-			preset: 'claude_code',
-			append: buildPinnedPrompt(selection.included)
-		};
+	// ピン留め（T-152）と話しかた（T-063）を、preset に **足す** 形でまとめて渡す
+	const appended = [personaInstruction, buildPinnedPrompt(selection.included)].filter(Boolean).join('\n\n');
+	if (appended) {
+		options.systemPrompt = { type: 'preset', preset: 'claude_code', append: appended };
 	}
 	if (selection.dropped.length > 0) {
 		void vscode.window.showWarningMessage(
