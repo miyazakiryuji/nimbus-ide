@@ -245,6 +245,18 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.exportSession",
+        "title": "%command.exportSession%",
+        "category": "Nimbus",
+        "icon": "$(package)"
+      },
+      {
+        "command": "nimbus.importSession",
+        "title": "%command.importSession%",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
+      },
+      {
         "command": "nimbus.toggleRemoteApproval",
         "title": "%command.toggleRemoteApproval%",
         "category": "Nimbus",

@@ -40,9 +40,9 @@ test('通るのは画面・一覧・答えるの 3 つだけ', () => {
 });
 
 const ITEMS: RemoteItem[] = [
-	{ id: '1', toolName: 'Read', summary: 'a.ts を読む', risk: 'low', waitingSeconds: 3600 },
-	{ id: '2', toolName: 'Bash', summary: 'rm -rf', risk: 'high', waitingSeconds: 10 },
-	{ id: '3', toolName: 'Write', summary: 'b.ts を書く', risk: 'medium', waitingSeconds: 120 }
+	{ id: '1', toolName: 'Read', summary: 'a.ts を読む', risk: 'low', waitingSeconds: 3600, canApprove: true },
+	{ id: '2', toolName: 'Bash', summary: 'rm -rf', risk: 'high', waitingSeconds: 10, canApprove: false },
+	{ id: '3', toolName: 'Write', summary: 'b.ts を書く', risk: 'medium', waitingSeconds: 120, canApprove: true }
 ];
 
 test('危ないものを先に、同じ危なさなら待っている順に', () => {
@@ -60,11 +60,24 @@ test('待ち時間に秒は見せない', () => {
 
 test('一覧に入る文は escape してから渡す', () => {
 	const list = JSON.parse(
-		renderList([{ id: '1', toolName: 'Bash', summary: '<img onerror=x>', risk: 'high', waitingSeconds: 0 }])
+		renderList([
+			{ id: '1', toolName: 'Bash', summary: '<img onerror=x>', risk: 'high', waitingSeconds: 0, canApprove: false }
+		])
 	);
 	assert.strictEqual(list[0].summary, '&lt;img onerror=x&gt;');
 	assert.strictEqual(list[0].riskLabel, '要注意');
 	assert.strictEqual(list[0].waiting, 'たった今');
+	assert.strictEqual(list[0].canApprove, false);
+});
+
+test('差分を見ないと決められないものは、一覧に出すが許可ボタンを出さない', () => {
+	const page = renderPage('x');
+	// 画面側は canApprove を見て出し分ける
+	assert.ok(page.includes('item.canApprove'), page);
+	assert.ok(page.includes('ここでは断るだけです'), page);
+	// 隠さない — 何で止まっているかは知りたい
+	const list = JSON.parse(renderList(ITEMS));
+	assert.deepStrictEqual(list.map((item: { id: string; canApprove: boolean }) => [item.id, item.canApprove]), [['2', false], ['3', true], ['1', true]]);
 });
 
 test('画面は外に何も取りに行かない', () => {
@@ -86,4 +99,5 @@ test('伝える文に閉じ方が入っている', () => {
 	assert.ok(text.includes('指示は送れません'), text);
 	assert.ok(text.includes('10 分使われなければ自動で閉じます'), text);
 	assert.ok(text.includes('前の URL は効きません'), text);
+	assert.ok(text.includes('ここからは断ることしかできません'), text);
 });

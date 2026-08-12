@@ -52,8 +52,22 @@ function toItems(pending: readonly PendingApproval[], now: number): RemoteItem[]
 		toolName: entry.toolName,
 		summary: entry.summary,
 		risk: RISK[entry.risk] ?? 'low',
-		waitingSeconds: Math.max(0, Math.round((now - entry.since) / 1000))
+		waitingSeconds: Math.max(0, Math.round((now - entry.since) / 1000)),
+		canApprove: canApproveRemotely(entry)
 	}));
+}
+
+/**
+ * この画面から許可してよいか。
+ *
+ * **`danger` は許可させない。** この層は `danger` の自動許可の経路を
+ * すべて塞いである（`autoApproveReadOnly` も、セッション内の「常に許可」も、
+ * 保存済みルールも）。遠隔だけが抜け道になると、その一貫性が崩れる。
+ *
+ * 一覧からは**隠さない** — 何で止まっているかは知りたい（それがこの機能の目的）。
+ */
+function canApproveRemotely(entry: PendingApproval): boolean {
+	return entry.risk !== 'danger';
 }
 
 /**
@@ -107,6 +121,19 @@ export async function startRemoteApproval(deps: RemoteApprovalDeps): Promise<
 			response.end('method not allowed');
 			return;
 		}
+		// 画面でボタンを出さないだけでは守りにならない。**通す側でも断る**
+		if (route.allow) {
+			const target = deps.pending().find((entry) => entry.id === route.id);
+			if (target && !canApproveRemotely(target)) {
+				deps.log(`[remote] 許可を断りました（差分を見ないと決められないもの）: ${route.id}`);
+				response.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+				response.end(JSON.stringify({ settled: false, reason: 'needs-diff' }));
+				return;
+			}
+		}
+		// 遠隔から渡すのは `allow` と `deny` だけ。
+		// `allow-session` / `always-allow` は「以後聞かない」を作るので、
+		// 差分を見られない場所から設定を永続化させない
 		const settled = deps.decide(route.id, route.allow ? 'allow' : 'deny');
 		deps.log(`[remote] ${route.allow ? '許可' : '拒否'}: ${route.id}（${settled ? '通りました' : 'もう待っていません'}）`);
 		response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });

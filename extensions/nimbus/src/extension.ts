@@ -211,6 +211,7 @@ import { compareAgentWork } from './agentCompare';
 import { captureSimulator, writeFlowTest } from './simulator';
 import { exportToWiki } from './wikiExport';
 import { createRemoteApproval } from './remoteApproval';
+import { exportSession, importSession } from './sessionSync';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
 import { SessionRepeats } from './sessionRepeats';
@@ -2863,6 +2864,27 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 					void send(text);
 				},
 				log
+			})
+		),
+		// マシンをまたいで続ける。入れる前に手元と突き合わせる（T-085）
+		vscode.commands.registerCommand('nimbus.exportSession', () =>
+			exportSession({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log,
+				activeSessionId: () => activeSessionId
+			})
+		),
+		vscode.commands.registerCommand('nimbus.importSession', () =>
+			importSession({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log,
+				activeSessionId: () => activeSessionId
 			})
 		),
 		// 同じ Wi-Fi の中から承認だけする。できるのは許す・断るだけ（T-054 / T-086）

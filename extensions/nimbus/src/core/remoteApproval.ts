@@ -29,6 +29,14 @@ export interface RemoteItem {
 	risk: 'low' | 'medium' | 'high';
 	/** 待ち始めてからの秒数 */
 	waitingSeconds: number;
+	/**
+	 * この画面から許可してよいか。
+	 *
+	 * **差分が見られない場所で「許す」を押させない。** モーダルでの承認は
+	 * 差分エディタを横に開いた上での判断だが、手元の端末には差分が出ない。
+	 * 同じ「許可」でも判断の質がまるで違うので、危ないものは**拒否だけ**にする。
+	 */
+	canApprove: boolean;
 }
 
 export type RemoteRoute =
@@ -135,6 +143,7 @@ button { flex: 1; padding: 12px; font-size: 15px; border-radius: 10px; border: 0
 .allow { background: #2f7d32; color: #fff; }
 .deny { background: color-mix(in srgb, CanvasText 12%, transparent); color: CanvasText; }
 .empty { opacity: .6; font-size: 14px; }
+.note { flex: 1; align-self: center; font-size: 12px; opacity: .7; }
 .high { border-color: #c25a00; }
 </style>
 </head>
@@ -160,7 +169,9 @@ function render(items) {
     '<div class="summary">' + item.summary + '</div>' +
     '<div class="row">' +
     '<button class="deny" data-id="' + item.id + '" data-allow="0">断る</button>' +
-    '<button class="allow" data-id="' + item.id + '" data-allow="1">許す</button>' +
+    (item.canApprove
+      ? '<button class="allow" data-id="' + item.id + '" data-allow="1">許す</button>'
+      : '<span class="note">ここでは断るだけです（許可は差分を見てから）</span>') +
     '</div></div>').join('');
   for (const button of list.querySelectorAll('button')) {
     button.addEventListener('click', async () => {
@@ -188,7 +199,8 @@ export function renderList(items: readonly RemoteItem[]): string {
 			summary: escapeHtml(item.summary),
 			risk: item.risk,
 			riskLabel: RISK_LABEL[item.risk],
-			waiting: waitingLabel(item.waitingSeconds)
+			waiting: waitingLabel(item.waitingSeconds),
+			canApprove: item.canApprove
 		}))
 	);
 }
@@ -200,6 +212,7 @@ export function describeServer(url: string, idleMinutes: number): string {
 		`  ${url}`,
 		'',
 		`できるのは「許す・断る」だけです。指示は送れません。${idleMinutes} 分使われなければ自動で閉じます。`,
+		'**要注意のもの（`danger`）は、ここからは断ることしかできません** — 許可は差分を見てから机の前で。',
 		'この URL は開くたびに変わります（前の URL は効きません）。'
 	].join('\n');
 }

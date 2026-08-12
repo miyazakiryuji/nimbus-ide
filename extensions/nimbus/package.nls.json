@@ -35,6 +35,8 @@
   "command.compareAgentWork": "別のツールの結果と並べて比べる",
   "command.exportToWiki": "社内 Wiki に貼れる形にする",
   "command.toggleRemoteApproval": "手元の端末から承認だけできるようにする",
+  "command.exportSession": "このセッションを持ち運べる形にする",
+  "command.importSession": "別のマシンから続きを入れる",
   "command.captureSimulator": "シミュレータの画面を撮って渡す",
   "command.writeFlowTest": "確かめたい流れをテストに起こす",
   "command.importCpuProfile": "計測結果を渡して重い箇所を調べる",
