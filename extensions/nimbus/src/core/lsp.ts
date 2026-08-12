@@ -260,6 +260,57 @@ export function renderOutline(symbols: readonly OutlineSymbol[], depth = 0): str
 	return lines.join('\n');
 }
 
+/** 行の範囲（0 起点・両端を含む）を切り出す。シンボル単位で渡すため（T-099） */
+export function sliceLines(text: string, startLine: number, endLine: number): string {
+	const lines = text.split(/\r?\n/);
+	const from = Math.max(0, startLine);
+	const to = Math.min(lines.length - 1, Math.max(from, endLine));
+	return lines.slice(from, to + 1).join('\n');
+}
+
+/** import 行の「読み込み先」を指す位置。ここで定義ジャンプすると実ファイルに当たる */
+const IMPORT_LINE = /^\s*(?:import|export|from|#include|part|library|use|require)\b|\brequire\s*\(/;
+const QUOTED = /['"<]([^'">\n]+)['">]/;
+const BARE_MODULE = /^\s*(?:from|import|use)\s+([A-Za-z_@][\w.:/-]*)/;
+
+/**
+ * import 文の「相手」の位置を集める（T-100）。
+ *
+ * 言語ごとに構文は違うが、**引用符の中か、`from` / `import` の直後の語**を指せば、
+ * どの言語でも定義ジャンプが解決してくれる。構文解析は持ち込まない
+ * （言語の数だけパーサを抱えることになるし、外れても「依存が 1 件減る」だけで済む）。
+ */
+export function importSpecifierPositions(text: string, limit = 100): LspPosition[] {
+	const found: LspPosition[] = [];
+	const lines = text.split(/\r?\n/);
+	for (let line = 0; line < lines.length && found.length < limit; line++) {
+		const source = lines[line];
+		if (!IMPORT_LINE.test(source)) {
+			continue;
+		}
+		const quoted = QUOTED.exec(source);
+		if (quoted) {
+			found.push({ line, character: quoted.index + 1 });
+			continue;
+		}
+		const bare = BARE_MODULE.exec(source);
+		if (bare) {
+			found.push({ line, character: source.indexOf(bare[1]) });
+		}
+	}
+	return found;
+}
+
+/** ファイルの一覧。件数が多いときは切って「他 N 件」を添える */
+export function renderFileList(roots: readonly string[], files: readonly string[], limit: number): string {
+	if (files.length === 0) {
+		return '（ありません）';
+	}
+	const shown = files.slice(0, limit).map((file) => displayPath(roots, file));
+	const omitted = files.length - shown.length;
+	return omitted > 0 ? [...shown, `…他 ${omitted} 件`].join('\n') : shown.join('\n');
+}
+
 /**
  * hover の中身をテキストに均す。
  * 同じ内容が複数のプロバイダから返ることがあるので重複を落とし、長すぎるものは切る。

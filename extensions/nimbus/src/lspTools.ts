@@ -19,12 +19,15 @@ import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-agent-
 import {
 	displayPath,
 	findSymbol,
+	importSpecifierPositions,
 	positionInText,
+	renderFileList,
 	renderHover,
 	renderLocations,
 	renderOutline,
 	resolveWorkspacePath,
 	severityLabel,
+	sliceLines,
 	symbolKindLabel,
 	symbolPosition,
 	toPosition,
@@ -38,6 +41,9 @@ export const LSP_SERVER_NAME = 'nimbus_lsp';
 
 /** 一度に返す件数の上限。参照が 500 件ある関数を丸ごと渡しても読めない */
 const RESULT_LIMIT = 40;
+
+/** 依存グラフで叩く位置の上限。1 ファイルに import が 200 行あっても全部は追わない */
+const GRAPH_PROBE_LIMIT = 40;
 
 /** 言語サーバーが返ってこないときに諦める時間 */
 const PROVIDER_TIMEOUT_MS = 15_000;
@@ -98,6 +104,11 @@ async function runListCommand<T>(command: string, ...args: unknown[]): Promise<T
 		return first;
 	}
 	await delay(WARMUP_RETRY_MS);
+	return (await runCommand<T[]>(command, ...args)) ?? [];
+}
+
+/** 何十回も回す場面（依存の解決）では引き直さない。待ち時間だけが積み上がるため */
+async function runListOnce<T>(command: string, ...args: unknown[]): Promise<T[]> {
 	return (await runCommand<T[]>(command, ...args)) ?? [];
 }
 
@@ -354,6 +365,95 @@ function defineTools() {
 						return textResult('（この言語ではアウトラインを取得できませんでした）');
 					}
 					return textResult(renderOutline(outline));
+				})
+		),
+
+		tool(
+			'read_symbol',
+			'指定したシンボル（クラス・関数・メソッド）の本体だけを返す。巨大なファイルを丸ごと読まずに済むので、文脈を溶かさない。',
+			{ file_path: targetArgs.file_path, symbol: z.string().describe('読みたいシンボル名。`Class.method` の形も使える') },
+			async (args): Promise<ToolResult> =>
+				guard(async () => {
+					const resolved = resolveWorkspacePath(workspaceRoots(), args.file_path);
+					if ('error' in resolved) {
+						return errorResult(resolved.error);
+					}
+					const document = await openDocument(vscode.Uri.file(resolved.path));
+					if (!document) {
+						return errorResult(`ファイルを開けませんでした: ${args.file_path}`);
+					}
+					const outline = await outlineOf(document.uri);
+					const found = findSymbol(outline, args.symbol);
+					if (!found) {
+						const names = outline.map((symbol) => symbol.name).slice(0, 30);
+						return errorResult(
+							`${args.symbol} が ${displayPath(workspaceRoots(), resolved.path)} に見つかりません。` +
+							(names.length > 0 ? `このファイルにあるのは: ${names.join(', ')}` : 'このファイルにはシンボルがありません。')
+						);
+					}
+					const where = `${displayPath(workspaceRoots(), resolved.path)}:${found.range.start.line + 1}–${found.range.end.line + 1}`;
+					const body = sliceLines(document.getText(), found.range.start.line, found.range.end.line);
+					return textResult(`${symbolKindLabel(found.kind)} ${found.name}  ${where}\n\n${body}`);
+				})
+		),
+
+		tool(
+			'file_graph',
+			'ファイルの依存関係を返す。dependencies=このファイルが読み込んでいるもの / dependents=このファイルを参照しているもの。変更の影響範囲を測るときに使う。',
+			{
+				file_path: targetArgs.file_path,
+				direction: z
+					.enum(['dependencies', 'dependents'])
+					.describe('dependencies=読み込んでいる先 / dependents=このファイルに依存している側')
+			},
+			async (args): Promise<ToolResult> =>
+				guard(async () => {
+					const roots = workspaceRoots();
+					const resolved = resolveWorkspacePath(roots, args.file_path);
+					if ('error' in resolved) {
+						return errorResult(resolved.error);
+					}
+					const document = await openDocument(vscode.Uri.file(resolved.path));
+					if (!document) {
+						return errorResult(`ファイルを開けませんでした: ${args.file_path}`);
+					}
+					const self = document.uri.fsPath;
+					const files = new Set<string>();
+
+					if (args.direction === 'dependencies') {
+						// import の相手を定義ジャンプで解決する。構文解析を持ち込まずに言語をまたげる
+						for (const at of importSpecifierPositions(document.getText(), GRAPH_PROBE_LIMIT)) {
+							const found = await runListOnce<vscode.Location | vscode.LocationLink>(
+								'vscode.executeDefinitionProvider',
+								document.uri,
+								new vscode.Position(at.line, at.character)
+							);
+							for (const location of toLocations(found)) {
+								if (location.uri.fsPath !== self) {
+									files.add(location.uri.fsPath);
+								}
+							}
+						}
+					} else {
+						// このファイルが公開しているシンボルを、誰が参照しているか
+						for (const symbol of (await outlineOf(document.uri)).slice(0, GRAPH_PROBE_LIMIT)) {
+							const at = symbolPosition(symbol);
+							const found = await runListOnce<vscode.Location>(
+								'vscode.executeReferenceProvider',
+								document.uri,
+								new vscode.Position(at.line, at.character)
+							);
+							for (const location of found) {
+								if (location.uri.fsPath !== self) {
+									files.add(location.uri.fsPath);
+								}
+							}
+						}
+					}
+
+					const label = args.direction === 'dependencies' ? '読み込んでいる' : '参照している側';
+					const sorted = [...files].sort();
+					return textResult(`${displayPath(roots, self)} が${label}ファイル ${sorted.length} 件\n${renderFileList(roots, sorted, RESULT_LIMIT)}`);
 				})
 		),
 

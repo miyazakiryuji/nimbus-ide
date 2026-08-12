@@ -15,12 +15,15 @@ import {
 	displayPath,
 	findSymbol,
 	formatLocation,
+	importSpecifierPositions,
 	positionInText,
+	renderFileList,
 	renderHover,
 	renderLocations,
 	renderOutline,
 	resolveWorkspacePath,
 	severityLabel,
+	sliceLines,
 	symbolKindLabel,
 	symbolPosition,
 	toPosition,
@@ -153,6 +156,46 @@ test('hover は重複を落とし、長すぎるものは切る', () => {
 	assert.strictEqual(renderHover(['const a: number', ' const a: number ', '']), 'const a: number');
 	assert.strictEqual(renderHover([]), '（型情報は取得できませんでした）');
 	assert.strictEqual(renderHover(['x'.repeat(20)], 10), `${'x'.repeat(10)}\n…（省略）`);
+});
+
+test('シンボルの本体は行の範囲で切り出す（両端を含む・範囲外は詰める）', () => {
+	const source = ['a', 'b', 'c', 'd'].join('\n');
+	assert.deepStrictEqual([sliceLines(source, 1, 2), sliceLines(source, 2, 99), sliceLines(source, 0, 0)], [
+		'b\nc',
+		'c\nd',
+		'a'
+	]);
+});
+
+test('import の相手の位置を、言語をまたいで拾う', () => {
+	const source = [
+		"import { a } from './a';",
+		"const b = require('./b')",
+		'from mypkg import thing',
+		'import "package:foo/bar.dart";',
+		'#include <stdio.h>',
+		'const notAnImport = 1;'
+	].join('\n');
+	assert.deepStrictEqual(importSpecifierPositions(source), [
+		{ line: 0, character: 19 },
+		{ line: 1, character: 19 },
+		{ line: 2, character: 5 },
+		{ line: 3, character: 8 },
+		{ line: 4, character: 10 }
+	]);
+});
+
+test('import の走査は上限で打ち切る', () => {
+	const source = Array.from({ length: 10 }, (_, i) => `import './m${i}';`).join('\n');
+	assert.strictEqual(importSpecifierPositions(source, 3).length, 3);
+});
+
+test('ファイル一覧は相対パスで出し、多すぎるときは切る', () => {
+	assert.strictEqual(renderFileList(['/repo'], [], 5), '（ありません）');
+	assert.strictEqual(
+		renderFileList(['/repo'], ['/repo/a.ts', '/repo/b.ts', '/repo/c.ts'], 2),
+		['a.ts', 'b.ts', '…他 1 件'].join('\n')
+	);
 });
 
 test('種類と深刻度は読める言葉にする', () => {
