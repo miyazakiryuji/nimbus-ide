@@ -170,6 +170,7 @@ import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
+import { trackSchemaImpact } from './schemaImpact';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
@@ -2707,6 +2708,16 @@ export function activate(context: vscode.ExtensionContext): void {
 		// このコードがなぜこうなっているのかを辿る（T-079）
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
+		// 変えた型を参照している場所が壊れていないかを確かめさせる（T-123）
+		vscode.commands.registerCommand('nimbus.trackSchemaImpact', () =>
+			trackSchemaImpact({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

@@ -277,7 +277,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🌐 API・スキーマ
 
-- [ ] T-123 スキーマ変更の影響追跡 — バックエンドの型が変わったときに、フロント側の壊れる箇所を洗い出す [P2]
 
 ### 🗄 データ・DB
 
@@ -331,6 +330,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-123 型の変更が壊す場所を洗い出す（変わった型を参照検索で追い、壊れていないかを確かめさせる）
+      — 2026-08-13 / 仕様 [schema-impact](nimbus/docs/specs/schema-impact.md)
 
 - [x] T-068 他のツールの設定を取り込む（Cursor / Copilot / Windsurf のルールを、出どころつきで CLAUDE.md へ）
       — 2026-08-13 / 仕様 [import-rules](nimbus/docs/specs/import-rules.md)
