@@ -40,7 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-015 デバッグモード（生イベントの時系列）。実装前に claim @session-a 2026-08-13
 
 
 
@@ -158,7 +157,6 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 **リファクタ・移行**
 
 - [ ] T-177 スニペット化 — 生成された定型パターンを保存して使い回す [P3]
-- [ ] T-184 ログの時系列ビューア（Inbox の T-015 デバッグモードと同じ面になりそう）[P2]
 
 ### ⑧ 対話の質（人間とエージェントの間）
 
@@ -207,7 +205,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [ ] T-048 セッションの共有リンク — 会話＋差分をそのまま人に見せる。レビュー依頼や質問が楽になる。
       ※会話と差分には秘匿情報が混じるので、サニタイザ通過と公開範囲の設計が前提 [P2]
 - [ ] T-049 チーム設定の同期 — CLAUDE.md やスキルをリポジトリ経由で配って全員の足並みを揃える（T-043 と対）[P2]
-- [ ] T-050 監査ログ — 誰がどのエージェントに何をさせたか。企業導入を考えるなら絶対いる [P2]
 - [ ] T-211 レビュー依頼の導線（T-048 の共有リンクと対）[P2]
 - [ ] T-212 権限管理（企業導入向け）[P3]
 
@@ -218,7 +215,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-054 スマホから承認だけ — 進行が止まっているのに気づかず 1 時間ロス、を無くす [P2]
 - [ ] T-055 音声で指示 — 手が離せないときに「テスト通しといて」だけ言う [P3]
-- [ ] T-056 アンビエント表示 — ステータスバー／メニューバーで「今なにしてるか」が視界の端に分かる [P2]
 
 ### 🛡 事故る前に
 
@@ -524,6 +520,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-015 デバッグモード（生イベントの時系列ビューア）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
+- [x] T-050 監査ログ（日付ごとの JSONL・サニタイズしてから書く）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
+- [x] T-056 アンビエント表示（走っている間だけ、いまのツールを視界の端に）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
+- [x] T-184 ログの時系列ビューア（T-015 と同じ面に統合）— 2026-08-13 / 仕様 [audit-and-timeline](nimbus/docs/specs/audit-and-timeline.md)
 - [x] T-016 アクティビティバーに設定タブ（いま効いている値を 1 か所に）— 2026-08-13 / 仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)
 - [x] T-043 設定のパッケージ配布（JSON 1 枚・秘匿を弾き、上書きは必ず聞く）— 2026-08-13 / 仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)
 - [x] T-162 承認ポリシーのプロファイル切り替え（広げるときだけ確認する）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
