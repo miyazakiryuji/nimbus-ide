@@ -273,8 +273,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📦 依存・ビルド
 
-- [ ] T-118 依存追加の妥当性チェック — パッケージを足そうとしたときに、メンテ状況・最終更新・
-      既存依存との重複を提示してから承認させる（③ の承認 UI に載る話）[P2]
 - [ ] T-121 脆弱性アラート起点の修正 — 警告が出た依存を、破壊的変更の有無を調べた上で上げる [P2]
 
 ### 🌐 API・スキーマ
@@ -481,6 +479,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-118 依存を足す前に見る（良し悪しは決めない・事実だけ）— 2026-08-13 / 仕様 [dep-audit](nimbus/docs/specs/dep-audit.md)
 - [x] T-205 環境の食い違い（パッチ違いで騒がない・どちらに合わせるかは言わない）— 2026-08-13 / 仕様 [env-check](nimbus/docs/specs/env-check.md)
 - [x] T-203 / T-204 使い始めの設定（言語別プリセット・入るものを見せてから書く）— 2026-08-13 / 仕様 [setup](nimbus/docs/specs/setup.md)
 - [x] T-061 Mermaid の図を確かめる（落ちる書き方を先に・描画はプレビューに任せる）— 2026-08-13 / 仕様 [mermaid](nimbus/docs/specs/mermaid.md)

@@ -886,6 +886,12 @@
         "title": "クリップボードのクラッシュログを調べてもらう",
         "category": "Nimbus",
         "icon": "$(bug)"
+      },
+      {
+        "command": "nimbus.auditDependency",
+        "title": "依存を足す前に見る",
+        "category": "Nimbus",
+        "icon": "$(package)"
       }
     ],
     "menus": {
