@@ -56,6 +56,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`session-extras.md`](session-extras.md) — スキル化・預かり箱・ピン留めとタグ
 - [`hooks.md`](hooks.md) — フックの組み立てとドライラン
 - [`settings-and-bundle.md`](settings-and-bundle.md) — 設定タブと設定のパッケージ配布
+- [`audit-and-timeline.md`](audit-and-timeline.md) — 監査ログ・時系列ビューア・アンビエント表示
 
 IDE 基礎機能:
 

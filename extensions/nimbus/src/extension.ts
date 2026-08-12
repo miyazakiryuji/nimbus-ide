@@ -48,6 +48,7 @@ import { generateFromSchema } from './openapi';
 import { checkApiResponse, generateMockResponse } from './apiCheck';
 import { createSandbox } from './sandbox';
 import { scheduleRun, showSchedule, watchSchedule } from './schedule';
+import { openPromptStats } from './promptStats';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -89,6 +90,9 @@ import { collectTags } from './core/tasks';
 import { dryRunHook, manageHooks } from './hooksBuilder';
 import { exportBundle, importBundle } from './bundleCommands';
 import { SettingsViewProvider } from './settingsView';
+import { TimelineViewProvider } from './timelineView';
+import { toAuditRecord, toJsonLine } from './core/audit';
+import { runningTool } from './core/activity';
 import {
 	BUILTIN_PROFILES,
 	describeProfile,
@@ -114,6 +118,7 @@ import { captureBehavior, verifyEquivalence } from './equivalence';
 import { showConventions } from './conventions';
 import { planBulkChange } from './bulkChange';
 import { checkMutations } from './mutations';
+import { saveSelectionAsSnippet } from './snippets';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -142,6 +147,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const mcpView = new McpViewProvider();
 	// 設定タブ（T-016）。いま効いている値を 1 か所に集める
 	const settingsView = new SettingsViewProvider();
+	// 生イベントの時系列（T-015 / T-184）
+	const timelineView = new TimelineViewProvider();
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
@@ -262,6 +269,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		cockpit.post({ type: 'event', event });
 		warnOnConflict(event);
+		timelineView.update(retained);
+		void appendAudit(event);
 		activityView.update(
 			retained,
 			sessionFiles.snapshots().filter((snapshot) => snapshot.sessionId !== activeSessionId),
@@ -608,6 +617,54 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
+	}
+
+	/** 監査ログの置き場所（T-050）。globalStorage に日付ごとの JSONL で残す */
+	function auditUri(): vscode.Uri {
+		const day = new Date().toISOString().slice(0, 10);
+		return vscode.Uri.joinPath(context.globalStorageUri, 'audit', `${day}.jsonl`);
+	}
+
+	/**
+	 * 監査ログへ追記（tasks.md T-050）。
+	 * **必ずサニタイザを通してから書く** — 監査ログこそ人に見せる前提のものなので、
+	 * ここに資格情報が残ると、いちばん流出しやすい形になる。
+	 */
+	async function appendAudit(event: NimbusEvent): Promise<void> {
+		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('audit.enabled') === false) {
+			return;
+		}
+		const record = toAuditRecord(event);
+		if (!record) {
+			return;
+		}
+		const line = sanitizer.sanitizeString(toJsonLine(record));
+		const uri = auditUri();
+		try {
+			await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
+			let existing = Buffer.alloc(0);
+			try {
+				existing = Buffer.from(await vscode.workspace.fs.readFile(uri));
+			} catch {
+				// 初回は空から
+			}
+			await vscode.workspace.fs.writeFile(uri, Buffer.concat([existing, Buffer.from(line, 'utf8')]));
+		} catch (error) {
+			// 監査が書けないことを、セッションが動かない理由にしない
+			log(`[audit] 書き出せませんでした: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/** 今日の監査ログを開く（T-050） */
+	async function showAuditLog(): Promise<void> {
+		const uri = auditUri();
+		try {
+			await vscode.workspace.fs.stat(uri);
+		} catch {
+			void vscode.window.showInformationMessage('Nimbus: 今日の監査ログはまだありません。');
+			return;
+		}
+		await vscode.window.showTextDocument(uri);
 	}
 
 	/** いま効いているプロファイル（T-162）。設定には名前だけを持つ */
@@ -1290,9 +1347,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		const busy = summary.status === 'running' || summary.status === 'starting';
 		const cost = summary.totalCostUsd !== undefined ? ` · $${summary.totalCostUsd.toFixed(4)}` : '';
+		// いま何をしているかを視界の端に出す（T-056）。走っている間だけ
+		const doing = runningTool(retained);
+		const doingText = busy && doing ? ` · ${doing.toolName}${doing.target ? ` ${doing.target.split('/').pop()}` : ''}` : '';
 		// 文脈をどれだけ使っているかは常に見えていてほしい（T-020）
 		const context = contextPercent !== undefined ? ` · ${bar(contextPercent, 5)} ${Math.round(contextPercent)}%` : '';
-		status.text = `${waiting}${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${context}${cost}`;
+		status.text = `${waiting}${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${doingText}${context}${cost}`;
 		status.tooltip = [
 			`Nimbus — ${summary.status}`,
 			billingModeLabel(lastApiKeySource),
@@ -1863,6 +1923,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
 		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
 		vscode.window.registerTreeDataProvider('nimbus.settings', settingsView),
+		vscode.window.registerTreeDataProvider('nimbus.timeline', timelineView),
+		vscode.commands.registerCommand('nimbus.showAuditLog', () => showAuditLog()),
 		// 設定のパッケージ配布（T-043）
 		vscode.commands.registerCommand('nimbus.exportBundle', () => exportBundle((text) => sanitizer.detect(text), log)),
 		vscode.commands.registerCommand('nimbus.importBundle', () => importBundle(log)),
@@ -1968,6 +2030,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.createSandbox', () => createSandbox()),
 		vscode.commands.registerCommand('nimbus.scheduleRun', () => scheduleRun(context)),
 		vscode.commands.registerCommand('nimbus.showSchedule', () => showSchedule(context)),
+		vscode.commands.registerCommand('nimbus.openPromptStats', () => openPromptStats()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2109,6 +2172,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 一度うまく書けた形はエディタ側に置く（T-177）
+		vscode.commands.registerCommand('nimbus.saveSnippet', () => saveSelectionAsSnippet({ log })),
 		// テストが本当に守っているかを、わざと壊して確かめる（T-182）
 		vscode.commands.registerCommand('nimbus.checkMutations', () =>
 			checkMutations({

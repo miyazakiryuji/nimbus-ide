@@ -76,6 +76,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.timeline",
+          "name": "時系列（デバッグ）",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.usage",
           "name": "使用量",
           "visibility": "collapsed"
@@ -182,6 +187,12 @@
         "title": "テストが守っているかを確かめる",
         "category": "Nimbus",
         "icon": "$(bug)"
+      },
+      {
+        "command": "nimbus.saveSnippet",
+        "title": "選択範囲をスニペットとして保存",
+        "category": "Nimbus",
+        "icon": "$(symbol-snippet)"
       },
       {
         "command": "nimbus.captureBehavior",
@@ -665,6 +676,12 @@
         "title": "指示の出しかたを見る",
         "category": "Nimbus",
         "icon": "$(graph-line)"
+      },
+      {
+        "command": "nimbus.showAuditLog",
+        "title": "今日の監査ログを開く",
+        "category": "Nimbus",
+        "icon": "$(law)"
       }
     ],
     "menus": {
@@ -678,6 +695,11 @@
           "command": "nimbus.generateWidgetTest",
           "when": "resourceExtname == .dart",
           "group": "nimbus@1"
+        },
+        {
+          "command": "nimbus.saveSnippet",
+          "when": "editorHasSelection",
+          "group": "nimbus@2"
         }
       ],
       "commandPalette": [
@@ -1065,6 +1087,11 @@
             "隔離（ネットワーク遮断）"
           ],
           "description": "いま効いている承認ポリシー。切り替えると権限モード・自動許可・サンドボックスがまとめて変わります。"
+        },
+        "nimbus.audit.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "誰がどのエージェントに何をさせたかを、日付ごとの JSONL に残します。資格情報はマスクしてから書き出します。"
         }
       }
     },
