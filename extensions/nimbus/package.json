@@ -832,6 +832,18 @@
         "title": "セッションをたどり直す",
         "category": "Nimbus",
         "icon": "$(history)"
+      },
+      {
+        "command": "nimbus.findFlakyTests",
+        "title": "不安定なテストを探す",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "nimbus.checkMermaid",
+        "title": "Mermaid の図を確かめる",
+        "category": "Nimbus",
+        "icon": "$(type-hierarchy)"
       }
     ],
     "menus": {
@@ -1268,6 +1280,11 @@
             "ゆあ"
           ],
           "description": "コックピットでの話しかた。次のセッションから効きます。"
+        },
+        "nimbus.tests.command": {
+          "type": "string",
+          "default": "",
+          "description": "テストを走らせるコマンド。空のときは実行のたびに聞きます。TAP 形式の出力（node --test など）だけが読めます。"
         }
       }
     },

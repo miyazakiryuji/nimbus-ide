@@ -40,6 +40,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`schedule.md`](schedule.md) — 寝る前に仕込む（予約実行）
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス
 - [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
+- [`mermaid.md`](mermaid.md) — Mermaid の図を確かめる
 - [`replay.md`](replay.md) — セッションをたどり直す（間隔つき）
 - [`explain.md`](explain.md) — 何をしたかを並べ直す（解説モード）
 - [`share-session.md`](share-session.md) — やり取りを人に見せる

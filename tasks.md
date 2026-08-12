@@ -208,7 +208,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📄 コード以外の成果物
 
-- [ ] T-061 Mermaid 図のライブプレビュー — エージェントが描いた構成図をその場で確認する [P3]
 - [ ] T-208 社内 Wiki / Notion 連携 [P3]
 
 ### 🎨 自分だけの相棒にする
@@ -479,6 +478,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-061 Mermaid の図を確かめる（落ちる書き方を先に・描画はプレビューに任せる）— 2026-08-13 / 仕様 [mermaid](nimbus/docs/specs/mermaid.md)
 - [x] T-206 セッションをたどり直す（間隔つき・止まっていた場所を先に）— 2026-08-13 / 仕様 [replay](nimbus/docs/specs/replay.md)
 - [x] T-048 やり取りを人に見せる（伏せる内容を先に見せる・どこにも送らない）— 2026-08-13 / 仕様 [share-session](nimbus/docs/specs/share-session.md)
 - [x] T-116 レビューコメントの取り込み（感想を依頼として扱わない・1 件ずつ渡す）— 2026-08-13 / 仕様 [review-comments](nimbus/docs/specs/review-comments.md)
