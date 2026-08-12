@@ -32,16 +32,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 優先度や置き場所は後で決める。
 
 
-- [ ] T-014 ターミナルを**好きな数に分割**できるようにする（4 分割に限らず、必要なだけ並べる）—
-      複数エージェントの出力を同時に見たい。VS Code は左右分割とタブはあるが、任意のグリッドは組めない
 
 ## 進行中
 
 - [ ] T-091 UI とドキュメントの多言語化 — 判断を書いてから実装 @session-a 2026-08-13 [P2]
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
-
-- [ ] T-014 ターミナルを好きな数に分割する — 実装中 @yua 2026-08-13
 
 
 
@@ -514,6 +510,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-014 ターミナルを好きな数に並べる（読める枚数で頭打ち・フォルダごとに 1 枚）— 2026-08-13 / 仕様 [terminal-layout](nimbus/docs/specs/terminal-layout.md)
 - [x] T-128 計測結果を渡して重い箇所を調べる（直せる場所だけ出す）— 2026-08-13 / 仕様 [cpu-profile](nimbus/docs/specs/cpu-profile.md)
 - [x] T-215 出す前に見る（止めるものと知らせるものを分ける）— 2026-08-13 / 仕様 [preflight](nimbus/docs/specs/preflight.md)
 - [x] T-125 マイグレーションを起こす（壊す操作を先に・NOT NULL の落とし穴を指摘）— 2026-08-13 / 仕様 [schema-diff](nimbus/docs/specs/schema-diff.md)

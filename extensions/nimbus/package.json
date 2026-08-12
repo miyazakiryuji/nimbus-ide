@@ -16,7 +16,8 @@
     "onStartupFinished"
   ],
   "enabledApiProposals": [
-    "testObserver"
+    "testObserver",
+    "terminalDimensions"
   ],
   "capabilities": {
     "virtualWorkspaces": false,
@@ -39,65 +40,65 @@
       "nimbus": [
         {
           "id": "nimbus.cockpit",
-          "name": "コックピット",
+          "name": "%view.nimbus.cockpit%",
           "type": "webview"
         },
         {
           "id": "nimbus.board",
-          "name": "タスク",
+          "name": "%view.nimbus.board%",
           "type": "webview"
         },
         {
           "id": "nimbus.approvals",
-          "name": "承認待ち",
+          "name": "%view.nimbus.approvals%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.review",
-          "name": "レビュー",
+          "name": "%view.nimbus.review%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.skills",
-          "name": "スキル"
+          "name": "%view.nimbus.skills%"
         },
         {
           "id": "nimbus.claudeMd",
-          "name": "CLAUDE.md"
+          "name": "%view.nimbus.claudeMd%"
         },
         {
           "id": "nimbus.context",
-          "name": "文脈",
+          "name": "%view.nimbus.context%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.activity",
-          "name": "セッションの中身",
+          "name": "%view.nimbus.activity%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.timeline",
-          "name": "時系列（デバッグ）",
+          "name": "%view.nimbus.timeline%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.usage",
-          "name": "使用量",
+          "name": "%view.nimbus.usage%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.mcp",
-          "name": "MCP サーバー",
+          "name": "%view.nimbus.mcp%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.settings",
-          "name": "設定",
+          "name": "%view.nimbus.settings%",
           "visibility": "collapsed"
         },
         {
           "id": "nimbus.help",
-          "name": "ヘルプ（ゆあ）",
+          "name": "%view.nimbus.help%",
           "type": "webview",
           "visibility": "collapsed"
         }
@@ -106,907 +107,924 @@
     "commands": [
       {
         "command": "nimbus.newSession",
-        "title": "新しいセッションを開始",
+        "title": "%command.newSession%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.interrupt",
-        "title": "実行中のセッションを中断",
+        "title": "%command.interrupt%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.stopAll",
-        "title": "すべてのセッションを止める（緊急停止）",
+        "title": "%command.stopAll%",
         "category": "Nimbus",
         "icon": "$(debug-stop)"
       },
       {
         "command": "nimbus.showLog",
-        "title": "ログを表示",
+        "title": "%command.showLog%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.sendLastTerminalFailure",
-        "title": "直近に失敗したコマンドをセッションに投入",
+        "title": "%command.sendLastTerminalFailure%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.sendLastTestFailure",
-        "title": "直近に失敗したテストをセッションに投入",
+        "title": "%command.sendLastTestFailure%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.verifyEdits",
-        "title": "型エラーを差し戻す",
+        "title": "%command.verifyEdits%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.askAboutSelection",
-        "title": "Nimbus に頼む",
+        "title": "%command.askAboutSelection%",
         "category": "Nimbus",
         "icon": "$(cloud)"
       },
       {
         "command": "nimbus.coverageDiff",
-        "title": "この変更のカバレッジを見る",
+        "title": "%command.coverageDiff%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.startFromFailingTest",
-        "title": "失敗するテストから始める",
+        "title": "%command.startFromFailingTest%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.runImpactedTests",
-        "title": "変更に関係するテストだけを走らせる",
+        "title": "%command.runImpactedTests%",
         "category": "Nimbus",
         "icon": "$(play-circle)"
       },
       {
         "command": "nimbus.reviewSnapshots",
-        "title": "スナップショットの更新をレビューする",
+        "title": "%command.reviewSnapshots%",
         "category": "Nimbus",
         "icon": "$(device-camera)"
       },
       {
         "command": "nimbus.projectConventions",
-        "title": "このリポジトリの書き方を数える",
+        "title": "%command.projectConventions%",
         "category": "Nimbus",
         "icon": "$(symbol-ruler)"
       },
       {
         "command": "nimbus.planBulkChange",
-        "title": "一括変更の段取りを作る",
+        "title": "%command.planBulkChange%",
         "category": "Nimbus",
         "icon": "$(list-ordered)"
       },
       {
         "command": "nimbus.checkMutations",
-        "title": "テストが守っているかを確かめる",
+        "title": "%command.checkMutations%",
         "category": "Nimbus",
         "icon": "$(bug)"
       },
       {
         "command": "nimbus.saveSnippet",
-        "title": "選択範囲をスニペットとして保存",
+        "title": "%command.saveSnippet%",
         "category": "Nimbus",
         "icon": "$(symbol-snippet)"
       },
       {
         "command": "nimbus.writeAdr",
-        "title": "決めたことを残す（ADR）",
+        "title": "%command.writeAdr%",
         "category": "Nimbus",
         "icon": "$(law)"
       },
       {
         "command": "nimbus.checkApiDocs",
-        "title": "古くなった API ドキュメントを探す",
+        "title": "%command.checkApiDocs%",
         "category": "Nimbus",
         "icon": "$(book)"
       },
       {
         "command": "nimbus.trackSchemaImpact",
-        "title": "型の変更が壊す場所を洗い出す",
+        "title": "%command.trackSchemaImpact%",
         "category": "Nimbus",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "nimbus.investigateCi",
-        "title": "落ちた CI を調べる",
+        "title": "%command.investigateCi%",
         "category": "Nimbus",
         "icon": "$(github)"
       },
       {
         "command": "nimbus.importCpuProfile",
-        "title": "計測結果を渡して重い箇所を調べる",
+        "title": "%command.importCpuProfile%",
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.splitTerminals",
+        "title": "ターミナルを並べる",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.trackMemory",
+        "title": "%command.trackMemory%",
+        "category": "Nimbus",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "nimbus.measureStartup",
+        "title": "%command.measureStartup%",
+        "category": "Nimbus",
+        "icon": "$(watch)"
+      },
+      {
         "command": "nimbus.showPrStack",
-        "title": "積み上げた PR を見る",
+        "title": "%command.showPrStack%",
         "category": "Nimbus",
         "icon": "$(git-pull-request)"
       },
       {
         "command": "nimbus.restackAfterMerge",
-        "title": "下が入った PR を向け直す",
+        "title": "%command.restackAfterMerge%",
         "category": "Nimbus",
         "icon": "$(git-merge)"
       },
       {
         "command": "nimbus.prepareRollback",
-        "title": "戻し方を用意する",
+        "title": "%command.prepareRollback%",
         "category": "Nimbus",
         "icon": "$(discard)"
       },
       {
         "command": "nimbus.planHotfix",
-        "title": "ホットフィックスの手順を出す",
+        "title": "%command.planHotfix%",
         "category": "Nimbus",
         "icon": "$(flame)"
       },
       {
         "command": "nimbus.notifyCodeOwners",
-        "title": "レビューを頼む相手を出す",
+        "title": "%command.notifyCodeOwners%",
         "category": "Nimbus",
         "icon": "$(organization)"
       },
       {
         "command": "nimbus.showOwnersOfActiveFile",
-        "title": "このファイルの持ち主を見る",
+        "title": "%command.showOwnersOfActiveFile%",
         "category": "Nimbus",
         "icon": "$(person)"
       },
       {
         "command": "nimbus.exploreHistory",
-        "title": "なぜこうなっているのかを辿る",
+        "title": "%command.exploreHistory%",
         "category": "Nimbus",
         "icon": "$(history)"
       },
       {
         "command": "nimbus.reverseSpec",
-        "title": "このコードから仕様書を起こす",
+        "title": "%command.reverseSpec%",
         "category": "Nimbus",
         "icon": "$(notebook)"
       },
       {
         "command": "nimbus.chooseScope",
-        "title": "作業対象のパッケージを選ぶ",
+        "title": "%command.chooseScope%",
         "category": "Nimbus",
         "icon": "$(package)"
       },
       {
         "command": "nimbus.captureBehavior",
-        "title": "移行前の振る舞いを固定する",
+        "title": "%command.captureBehavior%",
         "category": "Nimbus",
         "icon": "$(lock)"
       },
       {
         "command": "nimbus.verifyEquivalence",
-        "title": "移行後の等価性を確かめる",
+        "title": "%command.verifyEquivalence%",
         "category": "Nimbus",
         "icon": "$(unlock)"
       },
       {
         "command": "nimbus.repoSummary",
-        "title": "リポジトリの構造要約を作る",
+        "title": "%command.repoSummary%",
         "category": "Nimbus",
         "icon": "$(book)"
       },
       {
         "command": "nimbus.trackRefactor",
-        "title": "置き換えを追いかける",
+        "title": "%command.trackRefactor%",
         "category": "Nimbus",
         "icon": "$(checklist)"
       },
       {
         "command": "nimbus.refactorProgress",
-        "title": "置き換えの進捗を見る",
+        "title": "%command.refactorProgress%",
         "category": "Nimbus",
         "icon": "$(checklist)"
       },
       {
         "command": "nimbus.newTask",
-        "title": "新しいタスク（worktree を切って並列実行）",
+        "title": "%command.newTask%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.findSkill",
-        "title": "スキルを探す",
+        "title": "%command.findSkill%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.askYua",
-        "title": "使い方を聞く（ゆあ）",
+        "title": "%command.askYua%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.refreshSkills",
-        "title": "スキル一覧を更新",
+        "title": "%command.refreshSkills%",
         "category": "Nimbus",
         "icon": "$(refresh)"
       },
       {
         "command": "nimbus.refreshClaudeMd",
-        "title": "CLAUDE.md の一覧を更新",
+        "title": "%command.refreshClaudeMd%",
         "category": "Nimbus",
         "icon": "$(refresh)"
       },
       {
         "command": "nimbus.addClaudeMdSection",
-        "title": "CLAUDE.md に節を足す",
+        "title": "%command.addClaudeMdSection%",
         "category": "Nimbus",
         "icon": "$(add)"
       },
       {
         "command": "nimbus.promoteInstruction",
-        "title": "CLAUDE.md に足す",
+        "title": "%command.promoteInstruction%",
         "category": "Nimbus",
         "icon": "$(arrow-right)"
       },
       {
         "command": "nimbus.useSkill",
-        "title": "コックピットで使う",
+        "title": "%command.useSkill%",
         "category": "Nimbus",
         "icon": "$(play)"
       },
       {
         "command": "nimbus.refreshUsage",
-        "title": "使用量を取得し直す",
+        "title": "%command.refreshUsage%",
         "category": "Nimbus",
         "icon": "$(refresh)"
       },
       {
         "command": "nimbus.compact",
-        "title": "文脈を圧縮する（コンパクション）",
+        "title": "%command.compact%",
         "category": "Nimbus",
         "icon": "$(fold)"
       },
       {
         "command": "nimbus.approvals.allow",
-        "title": "許可",
+        "title": "%command.approvals.allow%",
         "category": "Nimbus",
         "icon": "$(check)"
       },
       {
         "command": "nimbus.approvals.deny",
-        "title": "拒否",
+        "title": "%command.approvals.deny%",
         "category": "Nimbus",
         "icon": "$(close)"
       },
       {
         "command": "nimbus.approvals.alwaysAllow",
-        "title": "今後この種類は常に許可",
+        "title": "%command.approvals.alwaysAllow%",
         "category": "Nimbus",
         "icon": "$(pass)"
       },
       {
         "command": "nimbus.approvals.denyAll",
-        "title": "承認待ちをすべて拒否",
+        "title": "%command.approvals.denyAll%",
         "category": "Nimbus",
         "icon": "$(clear-all)"
       },
       {
         "command": "nimbus.searchTranscripts",
-        "title": "過去セッションを検索",
+        "title": "%command.searchTranscripts%",
         "category": "Nimbus",
         "icon": "$(search)"
       },
       {
         "command": "nimbus.rewind",
-        "title": "チェックポイントまで戻す",
+        "title": "%command.rewind%",
         "category": "Nimbus",
         "icon": "$(discard)"
       },
       {
         "command": "nimbus.refreshMcp",
-        "title": "MCP サーバーを取得し直す",
+        "title": "%command.refreshMcp%",
         "category": "Nimbus",
         "icon": "$(refresh)"
       },
       {
         "command": "nimbus.reconnectMcp",
-        "title": "MCP サーバーを繋ぎ直す",
+        "title": "%command.reconnectMcp%",
         "category": "Nimbus",
         "icon": "$(debug-restart)"
       },
       {
         "command": "nimbus.toggleMcp",
-        "title": "MCP サーバーの有効／無効を切り替える",
+        "title": "%command.toggleMcp%",
         "category": "Nimbus",
         "icon": "$(circle-slash)"
       },
       {
         "command": "nimbus.completionReport",
-        "title": "完了報告を作る（証跡つき）",
+        "title": "%command.completionReport%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.editProtectedPaths",
-        "title": "読ませたくないファイルを指定する",
+        "title": "%command.editProtectedPaths%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.openDigest",
-        "title": "ふりかえりを開く",
+        "title": "%command.openDigest%",
         "category": "Nimbus",
         "icon": "$(graph)"
       },
       {
         "command": "nimbus.explainLockDiff",
-        "title": "ロックファイルの変更を読む",
+        "title": "%command.explainLockDiff%",
         "category": "Nimbus",
         "icon": "$(package)"
       },
       {
         "command": "nimbus.openFromStackTrace",
-        "title": "スタックトレースから開く",
+        "title": "%command.openFromStackTrace%",
         "category": "Nimbus",
         "icon": "$(debug-stackframe)"
       },
       {
         "command": "nimbus.pinnedFiles",
-        "title": "常に含めるファイル（ピン留め）",
+        "title": "%command.pinnedFiles%",
         "category": "Nimbus",
         "icon": "$(pinned)"
       },
       {
         "command": "nimbus.draftReleaseNotes",
-        "title": "リリースノートの下書きを作る",
+        "title": "%command.draftReleaseNotes%",
         "category": "Nimbus",
         "icon": "$(note)"
       },
       {
         "command": "nimbus.openChangeStats",
-        "title": "変更のようすを見る",
+        "title": "%command.openChangeStats%",
         "category": "Nimbus",
         "icon": "$(diff)"
       },
       {
         "command": "nimbus.startFromPreset",
-        "title": "テンプレートから始める",
+        "title": "%command.startFromPreset%",
         "category": "Nimbus",
         "icon": "$(rocket)"
       },
       {
         "command": "nimbus.managePresets",
-        "title": "テンプレートを管理する",
+        "title": "%command.managePresets%",
         "category": "Nimbus",
         "icon": "$(gear)"
       },
       {
         "command": "nimbus.branchSession",
-        "title": "いまの作業を分岐する（A 案・B 案）",
+        "title": "%command.branchSession%",
         "category": "Nimbus",
         "icon": "$(git-branch)"
       },
       {
         "command": "nimbus.restoreSession",
-        "title": "過去のセッションを再開する",
+        "title": "%command.restoreSession%",
         "category": "Nimbus",
         "icon": "$(history)"
       },
       {
         "command": "nimbus.openCodeHealth",
-        "title": "命名と重複を見る",
+        "title": "%command.openCodeHealth%",
         "category": "Nimbus",
         "icon": "$(symbol-keyword)"
       },
       {
         "command": "nimbus.taskFromFile",
-        "title": "tasks.md から着手する",
+        "title": "%command.taskFromFile%",
         "category": "Nimbus",
         "icon": "$(checklist)"
       },
       {
         "command": "nimbus.setTaskPriority",
-        "title": "待機中タスクの優先度を変える",
+        "title": "%command.setTaskPriority%",
         "category": "Nimbus",
         "icon": "$(arrow-up)"
       },
       {
         "command": "nimbus.compactWithSelection",
-        "title": "文脈を圧縮する（残すものを選ぶ）",
+        "title": "%command.compactWithSelection%",
         "category": "Nimbus",
         "icon": "$(list-selection)"
       },
       {
         "command": "nimbus.generateWidgetTest",
-        "title": "Widget テストの雛形を作る",
+        "title": "%command.generateWidgetTest%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.agentModels",
-        "title": "サブエージェントのモデルを決める",
+        "title": "%command.agentModels%",
         "category": "Nimbus",
         "icon": "$(chip)"
       },
       {
         "command": "nimbus.openBranchHealth",
-        "title": "ブランチのようすを見る",
+        "title": "%command.openBranchHealth%",
         "category": "Nimbus",
         "icon": "$(git-branch)"
       },
       {
         "command": "nimbus.proposeCommitSplit",
-        "title": "コミットの分けかたを提案する",
+        "title": "%command.proposeCommitSplit%",
         "category": "Nimbus",
         "icon": "$(git-commit)"
       },
       {
         "command": "nimbus.draftPrDescription",
-        "title": "PR の説明文を作る",
+        "title": "%command.draftPrDescription%",
         "category": "Nimbus",
         "icon": "$(git-pull-request)"
       },
       {
         "command": "nimbus.bisect",
-        "title": "どこで壊れたかを絞り込む",
+        "title": "%command.bisect%",
         "category": "Nimbus",
         "icon": "$(search)"
       },
       {
         "command": "nimbus.openMobileChecks",
-        "title": "提出前の確認（iOS / 権限・プライバシー）",
+        "title": "%command.openMobileChecks%",
         "category": "Nimbus",
         "icon": "$(device-mobile)"
       },
       {
         "command": "nimbus.assistConflicts",
-        "title": "コンフリクトの解決を手伝う",
+        "title": "%command.assistConflicts%",
         "category": "Nimbus",
         "icon": "$(git-merge)"
       },
       {
         "command": "nimbus.openFlutterLint",
-        "title": "Flutter の確認（文言・読み上げ）",
+        "title": "%command.openFlutterLint%",
         "category": "Nimbus",
         "icon": "$(symbol-color)"
       },
       {
         "command": "nimbus.measureBuild",
-        "title": "ビルドを計って前回と比べる",
+        "title": "%command.measureBuild%",
         "category": "Nimbus",
         "icon": "$(watch)"
       },
       {
         "command": "nimbus.refreshReview",
-        "title": "変更の一覧を取り直す",
+        "title": "%command.refreshReview%",
         "category": "Nimbus",
         "icon": "$(refresh)"
       },
       {
         "command": "nimbus.markReviewed",
-        "title": "レビュー済みにする",
+        "title": "%command.markReviewed%",
         "category": "Nimbus",
         "icon": "$(check)"
       },
       {
         "command": "nimbus.markUnreviewed",
-        "title": "未レビューに戻す",
+        "title": "%command.markUnreviewed%",
         "category": "Nimbus",
         "icon": "$(circle-large-outline)"
       },
       {
         "command": "nimbus.clearReviewMarks",
-        "title": "レビューの印をすべて外す",
+        "title": "%command.clearReviewMarks%",
         "category": "Nimbus",
         "icon": "$(clear-all)"
       },
       {
         "command": "nimbus.openReviewDiff",
-        "title": "差分を開く",
+        "title": "%command.openReviewDiff%",
         "category": "Nimbus",
         "icon": "$(diff)"
       },
       {
         "command": "nimbus.prompts",
-        "title": "定型プロンプトを使う",
+        "title": "%command.prompts%",
         "category": "Nimbus",
         "icon": "$(symbol-text)"
       },
       {
         "command": "nimbus.managePrompts",
-        "title": "定型プロンプトを管理する",
+        "title": "%command.managePrompts%",
         "category": "Nimbus",
         "icon": "$(gear)"
       },
       {
         "command": "nimbus.findAnything",
-        "title": "探す（スキル・コマンド・サブエージェント・MCP）",
+        "title": "%command.findAnything%",
         "category": "Nimbus",
         "icon": "$(search)"
       },
       {
         "command": "nimbus.resolveXcodeConflict",
-        "title": "Xcode プロジェクトの衝突を解く",
+        "title": "%command.resolveXcodeConflict%",
         "category": "Nimbus",
         "icon": "$(merge)"
       },
       {
         "command": "nimbus.openDepConsistency",
-        "title": "依存の食い違いを見る",
+        "title": "%command.openDepConsistency%",
         "category": "Nimbus",
         "icon": "$(references)"
       },
       {
         "command": "nimbus.flushOutbox",
-        "title": "預かっている入力を送り直す",
+        "title": "%command.flushOutbox%",
         "category": "Nimbus",
         "icon": "$(mail)"
       },
       {
         "command": "nimbus.sessionToSkill",
-        "title": "このセッションをスキルにする",
+        "title": "%command.sessionToSkill%",
         "category": "Nimbus",
         "icon": "$(lightbulb)"
       },
       {
         "command": "nimbus.pinTask",
-        "title": "タスクをピン留めする",
+        "title": "%command.pinTask%",
         "category": "Nimbus",
         "icon": "$(pinned)"
       },
       {
         "command": "nimbus.tagTask",
-        "title": "タスクにタグを付ける",
+        "title": "%command.tagTask%",
         "category": "Nimbus",
         "icon": "$(tag)"
       },
       {
         "command": "nimbus.openReviewProgress",
-        "title": "レビューの進みを見る",
+        "title": "%command.openReviewProgress%",
         "category": "Nimbus",
         "icon": "$(checklist)"
       },
       {
         "command": "nimbus.showDiffSummary",
-        "title": "変更の要約を見る",
+        "title": "%command.showDiffSummary%",
         "category": "Nimbus",
         "icon": "$(list-tree)"
       },
       {
         "command": "nimbus.hooks",
-        "title": "フックを組み立てる",
+        "title": "%command.hooks%",
         "category": "Nimbus",
         "icon": "$(zap)"
       },
       {
         "command": "nimbus.hookDryRun",
-        "title": "フックを試す（ドライラン）",
+        "title": "%command.hookDryRun%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.openRhythm",
-        "title": "いまのようすを見る",
+        "title": "%command.openRhythm%",
         "category": "Nimbus",
         "icon": "$(pulse)"
       },
       {
         "command": "nimbus.openPlatformChannels",
-        "title": "Platform Channel を突き合わせる",
+        "title": "%command.openPlatformChannels%",
         "category": "Nimbus",
         "icon": "$(plug)"
       },
       {
         "command": "nimbus.switchPolicy",
-        "title": "承認ポリシーを切り替える",
+        "title": "%command.switchPolicy%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.showImpact",
-        "title": "変更の影響範囲を見る",
+        "title": "%command.showImpact%",
         "category": "Nimbus",
         "icon": "$(references)"
       },
       {
         "command": "nimbus.generateFromSchema",
-        "title": "スキーマから型を起こす",
+        "title": "%command.generateFromSchema%",
         "category": "Nimbus",
         "icon": "$(symbol-interface)"
       },
       {
         "command": "nimbus.checkApiResponse",
-        "title": "実物とスキーマを突き合わせる",
+        "title": "%command.checkApiResponse%",
         "category": "Nimbus",
         "icon": "$(symbol-event)"
       },
       {
         "command": "nimbus.generateMockResponse",
-        "title": "仮の応答を作る",
+        "title": "%command.generateMockResponse%",
         "category": "Nimbus",
         "icon": "$(json)"
       },
       {
         "command": "nimbus.exportBundle",
-        "title": "設定をまとめて配る",
+        "title": "%command.exportBundle%",
         "category": "Nimbus",
         "icon": "$(package)"
       },
       {
         "command": "nimbus.importBundle",
-        "title": "配られた設定を読み込む",
+        "title": "%command.importBundle%",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
       },
       {
         "command": "nimbus.createSandbox",
-        "title": "練習用のフォルダを作る",
+        "title": "%command.createSandbox%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.scheduleRun",
-        "title": "寝る前に仕込む",
+        "title": "%command.scheduleRun%",
         "category": "Nimbus",
         "icon": "$(clock)"
       },
       {
         "command": "nimbus.showSchedule",
-        "title": "仕込んであるものを見る",
+        "title": "%command.showSchedule%",
         "category": "Nimbus",
         "icon": "$(calendar)"
       },
       {
         "command": "nimbus.openPromptStats",
-        "title": "指示の出しかたを見る",
+        "title": "%command.openPromptStats%",
         "category": "Nimbus",
         "icon": "$(graph-line)"
       },
       {
         "command": "nimbus.showAuditLog",
-        "title": "今日の監査ログを開く",
+        "title": "%command.showAuditLog%",
         "category": "Nimbus",
         "icon": "$(law)"
       },
       {
         "command": "nimbus.openLicenses",
-        "title": "依存のライセンスを見る",
+        "title": "%command.openLicenses%",
         "category": "Nimbus",
         "icon": "$(law)"
       },
       {
         "command": "nimbus.estimate",
-        "title": "これまでの実績から見積もる",
+        "title": "%command.estimate%",
         "category": "Nimbus",
         "icon": "$(dashboard)"
       },
       {
         "command": "nimbus.compareOptions",
-        "title": "実装方針を比べてもらう",
+        "title": "%command.compareOptions%",
         "category": "Nimbus",
         "icon": "$(list-tree)"
       },
       {
         "command": "nimbus.recordDisagreement",
-        "title": "意見の相違を残す",
+        "title": "%command.recordDisagreement%",
         "category": "Nimbus",
         "icon": "$(git-compare)"
       },
       {
         "command": "nimbus.openHighlights",
-        "title": "やり取りを切り出す（教材用）",
+        "title": "%command.openHighlights%",
         "category": "Nimbus",
         "icon": "$(book)"
       },
       {
         "command": "nimbus.runWorkflow",
-        "title": "流れに沿って進める（調査→実装→テスト→レビュー）",
+        "title": "%command.runWorkflow%",
         "category": "Nimbus",
         "icon": "$(list-ordered)"
       },
       {
         "command": "nimbus.nextWorkflowStep",
-        "title": "流れの次の段へ進む",
+        "title": "%command.nextWorkflowStep%",
         "category": "Nimbus",
         "icon": "$(arrow-right)"
       },
       {
         "command": "nimbus.explainMode",
-        "title": "解説モードにする（判断の理由を添えさせる）",
+        "title": "%command.explainMode%",
         "category": "Nimbus",
         "icon": "$(mortar-board)"
       },
       {
         "command": "nimbus.syncTeam",
-        "title": "チーム設定を取り込む",
+        "title": "%command.syncTeam%",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
       },
       {
         "command": "nimbus.draftReviewRequest",
-        "title": "レビューを頼む文を作る",
+        "title": "%command.draftReviewRequest%",
         "category": "Nimbus",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "nimbus.openExplanation",
-        "title": "何をしたかを並べ直す（解説）",
+        "title": "%command.openExplanation%",
         "category": "Nimbus",
         "icon": "$(list-ordered)"
       },
       {
         "command": "nimbus.evaluate",
-        "title": "スキル・プロンプトを評価する（回帰・ブレ幅・モデル比較）",
+        "title": "%command.evaluate%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.editPermissionRules",
-        "title": "確認せずに許可するルールを編集する",
+        "title": "%command.editPermissionRules%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.importReviewComments",
-        "title": "レビューコメントを取り込む",
+        "title": "%command.importReviewComments%",
         "category": "Nimbus",
         "icon": "$(comment)"
       },
       {
         "command": "nimbus.previewSkill",
-        "title": "いま開いているスキル／サブエージェントを試す",
+        "title": "%command.previewSkill%",
         "category": "Nimbus",
         "icon": "$(play-circle)"
       },
       {
         "command": "nimbus.importPrReview",
-        "title": "PR のレビュー指摘を取り込む",
+        "title": "%command.importPrReview%",
         "category": "Nimbus",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "nimbus.shareSession",
-        "title": "やり取りを人に見せる形にする",
+        "title": "%command.shareSession%",
         "category": "Nimbus",
         "icon": "$(share)"
       },
       {
         "command": "nimbus.persona",
-        "title": "話しかたを選ぶ",
+        "title": "%command.persona%",
         "category": "Nimbus",
         "icon": "$(person)"
       },
       {
         "command": "nimbus.turnMode",
-        "title": "どちらが書くかを切り替える",
+        "title": "%command.turnMode%",
         "category": "Nimbus",
         "icon": "$(arrow-swap)"
       },
       {
         "command": "nimbus.openReplay",
-        "title": "セッションをたどり直す",
+        "title": "%command.openReplay%",
         "category": "Nimbus",
         "icon": "$(history)"
       },
       {
         "command": "nimbus.findFlakyTests",
-        "title": "不安定なテストを探す",
+        "title": "%command.findFlakyTests%",
         "category": "Nimbus",
         "icon": "$(beaker)"
       },
       {
         "command": "nimbus.checkMermaid",
-        "title": "Mermaid の図を確かめる",
+        "title": "%command.checkMermaid%",
         "category": "Nimbus",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "nimbus.localOnly",
-        "title": "ローカル完結モードを切り替える",
+        "title": "%command.localOnly%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.recover",
-        "title": "詰まったときの立て直しを提案してもらう",
+        "title": "%command.recover%",
         "category": "Nimbus",
         "icon": "$(debug-restart)"
       },
       {
         "command": "nimbus.runSetupWizard",
-        "title": "使い始めの設定をする",
+        "title": "%command.runSetupWizard%",
         "category": "Nimbus",
         "icon": "$(rocket)"
       },
       {
         "command": "nimbus.openEnvCheck",
-        "title": "環境の食い違いを見る",
+        "title": "%command.openEnvCheck%",
         "category": "Nimbus",
         "icon": "$(server-environment)"
       },
       {
         "command": "nimbus.installFromUrl",
-        "title": "URL から配布物を入れる",
+        "title": "%command.installFromUrl%",
         "category": "Nimbus",
         "icon": "$(link)"
       },
       {
         "command": "nimbus.pasteCrashLog",
-        "title": "クリップボードのクラッシュログを調べてもらう",
+        "title": "%command.pasteCrashLog%",
         "category": "Nimbus",
         "icon": "$(bug)"
       },
       {
         "command": "nimbus.auditDependency",
-        "title": "依存を足す前に見る",
+        "title": "%command.auditDependency%",
         "category": "Nimbus",
         "icon": "$(package)"
       },
       {
         "command": "nimbus.importOtherToolRules",
-        "title": "他のツールのルールを CLAUDE.md へ取り込む",
+        "title": "%command.importOtherToolRules%",
         "category": "Nimbus",
         "icon": "$(cloud-download)"
       },
       {
         "command": "nimbus.openVulnFixPlan",
-        "title": "脆弱性の警告を直す順に並べる",
+        "title": "%command.openVulnFixPlan%",
         "category": "Nimbus",
         "icon": "$(shield)"
       },
       {
         "command": "nimbus.regenerate",
-        "title": "生成物を作り直す",
+        "title": "%command.regenerate%",
         "category": "Nimbus",
         "icon": "$(sync)"
       },
       {
         "command": "nimbus.checkSql",
-        "title": "SQL を流す前に見る",
+        "title": "%command.checkSql%",
         "category": "Nimbus",
         "icon": "$(database)"
       },
       {
         "command": "nimbus.weeklyReview",
-        "title": "今週のふりかえりを見る",
+        "title": "%command.weeklyReview%",
         "category": "Nimbus",
         "icon": "$(graph)"
       },
       {
         "command": "nimbus.compareBenchmarks",
-        "title": "改善前後のベンチを比べる",
+        "title": "%command.compareBenchmarks%",
         "category": "Nimbus",
         "icon": "$(dashboard)"
       },
       {
         "command": "nimbus.openCiRepro",
-        "title": "CI を手元で再現する",
+        "title": "%command.openCiRepro%",
         "category": "Nimbus",
         "icon": "$(server-process)"
       },
       {
         "command": "nimbus.openMigrationPlan",
-        "title": "マイグレーションを起こす",
+        "title": "%command.openMigrationPlan%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.openPreflight",
-        "title": "出す前に見る",
+        "title": "%command.openPreflight%",
         "category": "Nimbus"
       },
       {
         "command": "nimbus.runMcpTool",
-        "title": "MCP ツールを 1 回だけ試す",
+        "title": "%command.runMcpTool%",
         "category": "Nimbus",
         "icon": "$(play)"
       },
       {
         "command": "nimbus.reproduceFromLog",
-        "title": "ログから再現テストを起こす",
+        "title": "%command.reproduceFromLog%",
         "category": "Nimbus",
         "icon": "$(debug-rerun)"
       },
       {
         "command": "nimbus.importMonitoredIssue",
-        "title": "監視ツールの障害を取り込む",
+        "title": "%command.importMonitoredIssue%",
         "category": "Nimbus",
         "icon": "$(radio-tower)"
       }
@@ -1153,27 +1171,27 @@
         "nimbus.permissions.autoApproveReadOnly": {
           "type": "boolean",
           "default": false,
-          "description": "読み取り専用のツール（Read / Glob / Grep）を確認なしで許可します。書き込みや実行は常に確認します。"
+          "description": "%config.permissions.autoApproveReadOnly%"
         },
         "nimbus.claudeCodeExecutable": {
           "type": "string",
           "default": "",
-          "description": "使用する Claude Code 実行ファイルのパス。空の場合は Nimbus に同梱されたものを使います。"
+          "description": "%config.claudeCodeExecutable%"
         },
         "nimbus.permissions.showDiffBeforeApproval": {
           "type": "boolean",
           "default": true,
-          "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+          "description": "%config.permissions.showDiffBeforeApproval%"
         },
         "nimbus.permissions.offerPartialAccept": {
           "type": "boolean",
           "default": true,
-          "description": "書き換えの提案に変更が 2 か所以上あるとき、承認の選択肢に「一部だけ採用」を出します。外した変更は元のまま残ります。"
+          "description": "%config.permissions.offerPartialAccept%"
         },
         "nimbus.permissions.queueApprovals": {
           "type": "boolean",
           "default": false,
-          "description": "承認をモーダルで聞かず、「承認待ち」ビューに積んで順に処理します。複数セッションを並列で走らせるときに、どのセッションが何で止まっているかを 1 か所で見られます。"
+          "description": "%config.permissions.queueApprovals%"
         },
         "nimbus.permissions.alwaysAllow": {
           "type": "array",
@@ -1181,35 +1199,35 @@
             "type": "string"
           },
           "default": [],
-          "description": "確認せずに許可するツールの一覧。承認時の「今後この種類は常に許可」でここに追加されます。書きかたは Read（そのツール全部）／ Write(*.md)（拡張子）／ Bash(npm test)（コマンドの前方一致）。取り返しがつかない操作（rm -rf など）はルールに関わらず毎回確認します。"
+          "description": "%config.permissions.alwaysAllow%"
         },
         "nimbus.notifications.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "ターンの完了と承認待ちの発生を OS の通知で知らせます。"
+          "description": "%config.notifications.enabled%"
         },
         "nimbus.notifications.onlyWhenUnfocused": {
           "type": "boolean",
           "default": true,
-          "description": "Nimbus のウィンドウが前面に無いときだけ通知します。見ている画面に重ねて出さないための既定です。"
+          "description": "%config.notifications.onlyWhenUnfocused%"
         },
         "nimbus.usage.costLimitUsd": {
           "type": "number",
           "default": 0,
           "minimum": 0,
-          "description": "1 セッションあたりの費用の上限（USD）。超える前に警告し、超えたら停止を促します。0 は上限なし。"
+          "description": "%config.usage.costLimitUsd%"
         },
         "nimbus.usage.warnAtPercent": {
           "type": "number",
           "default": 80,
           "minimum": 1,
           "maximum": 100,
-          "description": "費用の上限に対して何 % で最初の警告を出すか。"
+          "description": "%config.usage.warnAtPercent%"
         },
         "nimbus.safety.blockProtectedReads": {
           "type": "boolean",
           "default": true,
-          "description": "秘匿ファイル（.env・秘密鍵など）の読み取りを、承認を求めずに拒否します。一度読まれた内容は取り消せないため、既定で有効です。"
+          "description": "%config.safety.blockProtectedReads%"
         },
         "nimbus.safety.protectedPaths": {
           "type": "array",
@@ -1217,51 +1235,51 @@
             "type": "string"
           },
           "default": [],
-          "description": "読み取りを禁止するファイルのパターン（glob）。空のときは既定の一覧（.env / *.pem / ~/.ssh など）を使います。先頭に ! を付けると除外規則になります。"
+          "description": "%config.safety.protectedPaths%"
         },
         "nimbus.safety.scanBeforeSend": {
           "type": "boolean",
           "default": true,
-          "description": "送信するテキストに資格情報らしき文字列が含まれていないかを、送る前に検査します。"
+          "description": "%config.safety.scanBeforeSend%"
         },
         "nimbus.tasks.maxConcurrent": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "maximum": 10,
-          "description": "同時に実行するタスク（Claude セッション）の上限。上限に達したタスクは待機し、空きが出ると自動で開始します。"
+          "description": "%config.tasks.maxConcurrent%"
         },
         "nimbus.lsp.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+          "description": "%config.lsp.enabled%"
         },
         "nimbus.editor.codeLens": {
           "type": "boolean",
           "default": true,
-          "description": "関数・クラスの上に「Nimbus に頼む」を表示します。"
+          "description": "%config.editor.codeLens%"
         },
         "nimbus.lsp.groundLibraryVersions": {
           "type": "boolean",
           "default": true,
-          "description": "指示の中で名前が出たライブラリについて、実際に使っているバージョンを添えます（記憶で書かせないため）。"
+          "description": "%config.lsp.groundLibraryVersions%"
         },
         "nimbus.lsp.attachSignatures": {
           "type": "boolean",
           "default": true,
-          "description": "指示の中で名指しした関数・クラスの実際のシグネチャを、送る前に添えます（推測で書かせないため）。"
+          "description": "%config.lsp.attachSignatures%"
         },
         "nimbus.lsp.maxAttachedSignatures": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 20,
-          "description": "1 回の指示に添えるシグネチャの数の上限。"
+          "description": "%config.lsp.maxAttachedSignatures%"
         },
         "nimbus.debug.exposeState": {
           "type": "boolean",
           "default": true,
-          "description": "デバッグセッションが停止しているとき、コールスタックと変数の値を Claude が読めるツールとして渡します（読み取りのみ。式の評価はできません）。"
+          "description": "%config.debug.exposeState%"
         },
         "nimbus.lsp.verifyEdits": {
           "type": "string",
@@ -1271,12 +1289,12 @@
             "auto"
           ],
           "enumDescriptions": [
-            "確かめません。",
-            "型エラーが増えたら通知で知らせ、差し戻すかを選べます。",
-            "型エラーが増えたら自動でセッションへ差し戻します（上限あり）。"
+            "%config.lsp.verifyEdits.enum.0%",
+            "%config.lsp.verifyEdits.enum.1%",
+            "%config.lsp.verifyEdits.enum.2%"
           ],
           "default": "ask",
-          "description": "Claude がファイルを書き換えたあと、そのターンで増えた型エラーだけを確かめます。"
+          "description": "%config.lsp.verifyEdits%"
         },
         "nimbus.lsp.verifyIncludes": {
           "type": "string",
@@ -1285,84 +1303,84 @@
             "warnings"
           ],
           "enumDescriptions": [
-            "型エラーだけを差し戻します。",
-            "lint / analyzer の警告も差し戻します（自動ループ向け）。"
+            "%config.lsp.verifyIncludes.enum.0%",
+            "%config.lsp.verifyIncludes.enum.1%"
           ],
           "default": "errors",
-          "description": "編集後の確認で、どこまでを差し戻すか。"
+          "description": "%config.lsp.verifyIncludes%"
         },
         "nimbus.lsp.maxAutoFixes": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "maximum": 10,
-          "description": "型エラーを自動で差し戻す回数の上限（1 セッションあたり）。直らないまま回り続けるのを止めます。"
+          "description": "%config.lsp.maxAutoFixes%"
         },
         "nimbus.claudeMd.suggestRepeats": {
           "type": "boolean",
           "default": true,
-          "description": "同じ指示を何度も書いていることに気づいたら、CLAUDE.md に足すかを聞きます。"
+          "description": "%config.claudeMd.suggestRepeats%"
         },
         "nimbus.clipboard.suggestOnError": {
           "type": "boolean",
           "default": false,
-          "description": "コピーした内容がエラー文のようなとき、調べるかを聞きます。有効にすると、ウィンドウに戻ってきた瞬間にクリップボードを読みます（内容は画面に出しません）。"
+          "description": "%config.clipboard.suggestOnError%"
         },
         "nimbus.terminal.captureFailures": {
           "type": "boolean",
           "default": true,
-          "description": "ターミナルでコマンドが失敗したら、その出力をセッションに投入できる通知を出します。"
+          "description": "%config.terminal.captureFailures%"
         },
         "nimbus.terminal.maxOutputLines": {
           "type": "number",
           "default": 200,
           "minimum": 10,
           "maximum": 2000,
-          "description": "セッションに投入するターミナル出力の行数の上限（末尾から数えます）。"
+          "description": "%config.terminal.maxOutputLines%"
         },
         "nimbus.terminal.autoRetryBuilds": {
           "type": "boolean",
           "default": false,
-          "description": "ビルド・型チェックが失敗したら、確認なしでセッションに直させ、同じコマンドを同じターミナルで走らせ直します（回数上限つき）。走らせ直すのは利用者が自分で打ったコマンドだけです。"
+          "description": "%config.terminal.autoRetryBuilds%"
         },
         "nimbus.terminal.maxBuildRetries": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "maximum": 10,
-          "description": "ビルドを自動でやり直す回数の上限。直らないまま回り続けるのを止めます。"
+          "description": "%config.terminal.maxBuildRetries%"
         },
         "nimbus.tests.captureFailures": {
           "type": "boolean",
           "default": true,
-          "description": "テストが失敗したら、落ちたテストの名前・場所・メッセージをセッションに投入できる通知を出します。"
+          "description": "%config.tests.captureFailures%"
         },
         "nimbus.tests.maxFailures": {
           "type": "number",
           "default": 10,
           "minimum": 1,
           "maximum": 100,
-          "description": "セッションに投入する失敗テストの件数の上限。"
+          "description": "%config.tests.maxFailures%"
         },
         "nimbus.dialogue.confirmVaguePrompt": {
           "type": "boolean",
           "default": true,
-          "description": "曖昧な指示を送ろうとしたとき、走らせる前に足りていない情報を確認します。対象のファイル名などが書かれていれば確認しません。"
+          "description": "%config.dialogue.confirmVaguePrompt%"
         },
         "nimbus.hotReload.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "ターンが終わって対象ファイルが変わっていたら、リロードしてスクリーンショットを撮り、セッションへ自動で投入します（既定はオフ）。"
+          "description": "%config.hotReload.enabled%"
         },
         "nimbus.hotReload.reloadCommand": {
           "type": "string",
           "default": "",
-          "description": "リロードを起こすシェルコマンド。空ならスクリーンショットだけを撮ります。"
+          "description": "%config.hotReload.reloadCommand%"
         },
         "nimbus.hotReload.screenshotCommand": {
           "type": "string",
           "default": "",
-          "description": "スクリーンショットを撮るシェルコマンド。{file} が出力先のパスに置き換わります（例: xcrun simctl io booted screenshot {file}）。"
+          "description": "%config.hotReload.screenshotCommand%"
         },
         "nimbus.hotReload.extensions": {
           "type": "array",
@@ -1378,14 +1396,14 @@
             ".vue",
             ".css"
           ],
-          "description": "この拡張子のファイルが変わったときだけリロードします。空なら変更があれば常に。"
+          "description": "%config.hotReload.extensions%"
         },
         "nimbus.hotReload.maxRounds": {
           "type": "number",
           "default": 3,
           "minimum": 1,
           "maximum": 10,
-          "description": "1 つの指示につき、自動で回してよい周回数の上限。"
+          "description": "%config.hotReload.maxRounds%"
         },
         "nimbus.context.pinnedFiles": {
           "type": "array",
@@ -1393,13 +1411,13 @@
             "type": "string"
           },
           "default": [],
-          "description": "常にセッションの前提として含めるファイル（ワークスペースからの相対パス）。合計 60KB までで、超えたぶんは外れます。"
+          "description": "%config.context.pinnedFiles%"
         },
         "nimbus.context.budgetTokens": {
           "type": "number",
           "default": 0,
           "minimum": 0,
-          "description": "このセッションで使ってよい文脈のトークン数。8 割で警告し、超えたら圧縮を促します。0 は予算なし。"
+          "description": "%config.context.budgetTokens%"
         },
         "nimbus.agents.models": {
           "type": "object",
@@ -1407,22 +1425,22 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "サブエージェントごとに使うモデル（例: {\"explorer\": \"haiku\"}）。指定したものだけが差し替わります。"
+          "description": "%config.agents.models%"
         },
         "nimbus.git.baseBranch": {
           "type": "string",
           "default": "",
-          "description": "「ブランチのようす」で比べる先。空のときは main（無ければ master）を使います。フォークで main が upstream になっている場合は、追従元のブランチ名を指定してください。"
+          "description": "%config.git.baseBranch%"
         },
         "nimbus.build.command": {
           "type": "string",
           "default": "",
-          "description": "「ビルドを計って前回と比べる」で実行するコマンド（例: flutter build apk / npm run build）。"
+          "description": "%config.build.command%"
         },
         "nimbus.build.artifact": {
           "type": "string",
           "default": "",
-          "description": "大きさを見る成果物のパス（プロジェクト相対）。空のときは時間だけ比べます。"
+          "description": "%config.build.artifact%"
         },
         "nimbus.policy.profile": {
           "type": "string",
@@ -1433,17 +1451,17 @@
             "本番に触る",
             "隔離（ネットワーク遮断）"
           ],
-          "description": "いま効いている承認ポリシー。切り替えると権限モード・自動許可・サンドボックスがまとめて変わります。"
+          "description": "%config.policy.profile%"
         },
         "nimbus.audit.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "誰がどのエージェントに何をさせたかを、日付ごとの JSONL に残します。資格情報はマスクしてから書き出します。"
+          "description": "%config.audit.enabled%"
         },
         "nimbus.team.bundlePath": {
           "type": "string",
           "default": ".claude/team-bundle.json",
-          "description": "チームで共有する設定（配布物）の置き場所。リポジトリにコミットしておくと、更新があったときに取り込めます。"
+          "description": "%config.team.bundlePath%"
         },
         "nimbus.persona": {
           "type": "string",
@@ -1454,37 +1472,37 @@
             "ていねいに説明",
             "ゆあ"
           ],
-          "description": "コックピットでの話しかた。次のセッションから効きます。"
+          "description": "%config.persona%"
         },
         "nimbus.tests.command": {
           "type": "string",
           "default": "",
-          "description": "テストを走らせるコマンド。空のときは実行のたびに聞きます。TAP 形式の出力（node --test など）だけが読めます。"
+          "description": "%config.tests.command%"
         },
         "nimbus.localOnly": {
           "type": "boolean",
           "default": false,
-          "description": "監査ログ・ホットリロードのコマンド実行・OS 通知を止めます。Claude 本体との通信と MCP 接続は止まりません。"
+          "description": "%config.localOnly%"
         },
         "nimbus.focusMode": {
           "type": "boolean",
           "default": false,
-          "description": "完了通知を黙らせます。承認待ち（止まっていることの知らせ）は通します。"
+          "description": "%config.focusMode%"
         },
         "nimbus.safety.warnOnGeneratedEdit": {
           "type": "boolean",
           "default": true,
-          "description": "生成物（*.g.dart / *.freezed.dart / ロックファイルなど）を直接書き換えようとしたときに止めて、代わりに直す先を伝えます。"
+          "description": "%config.safety.warnOnGeneratedEdit%"
         },
         "nimbus.generate.offerAfterSave": {
           "type": "boolean",
           "default": false,
-          "description": "生成物のある元ファイル（model.dart など）を保存したときに、生成物を作り直すか聞きます。既定は無効です。"
+          "description": "%config.generate.offerAfterSave%"
         },
         "nimbus.clarifyVagueJapanese": {
           "type": "boolean",
           "default": true,
-          "description": "指示が曖昧なとき（対象の無い指示語・基準の無い言い方など）に、送る前に一度だけ確認します。"
+          "description": "%config.clarifyVagueJapanese%"
         }
       }
     },
