@@ -32,6 +32,12 @@ export class TaskService extends EventEmitter {
 	private readonly tasks = new Map<string, KanbanTask>();
 	/** 起動処理中のタスク（await の隙間での二重起動と上限超過を防ぐ同期ガード） */
 	private readonly starting = new Set<string>();
+	/**
+	 * 緊急停止（T-057）で自動開始を止めている状態。
+	 * 全部止めた直後に待機列の次が走り出したら、止めた意味が無い。
+	 * 利用者が手でタスクを開始した時点で解除する（＝再開の意思表示）。
+	 */
+	private autoStartPaused = false;
 
 	constructor(
 		private readonly storage: Memento,
@@ -96,12 +102,19 @@ export class TaskService extends EventEmitter {
 		return task;
 	}
 
+	/** 待機タスクの自動開始を止める。緊急停止から呼ぶ */
+	pauseAutoStart(): void {
+		this.autoStartPaused = true;
+	}
+
 	/** 上限に空きがあれば開始する。空きが無ければ理由を返す */
 	async startTask(taskId: string): Promise<{ started: boolean; reason?: string }> {
 		const task = this.mustGet(taskId);
 		if (task.state !== 'pending' || this.starting.has(taskId)) {
 			return { started: false, reason: '待機中のタスクではありません' };
 		}
+		// 手で開始した＝再開の意思表示。ここで自動開始も戻す
+		this.autoStartPaused = false;
 		const limit = this.maxConcurrent();
 		if (!nextStartable([task], limit, this.usedSlots() + this.starting.size - (occupiesSlot(task.state) ? 1 : 0))) {
 			return { started: false, reason: `同時実行の上限（${limit}）に達しています。空きが出ると自動で開始します` };
@@ -160,6 +173,9 @@ export class TaskService extends EventEmitter {
 	}
 
 	async startNextPending(): Promise<void> {
+		if (this.autoStartPaused) {
+			return;
+		}
 		const candidate = nextStartable(this.list(), this.maxConcurrent(), this.starting.size);
 		if (candidate) {
 			await this.startTask(candidate.taskId);

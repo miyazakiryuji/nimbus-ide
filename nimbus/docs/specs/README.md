@@ -9,6 +9,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 ## 一覧
 
 - [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
+- [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
 
 まだ全機能ぶんは書き起こせていません（`tasks.md` の T-003）。残りは README の「できること」と
 `../history/NIMBUS_SPEC.md`（旧実装向けの指示書）、`../testing/` の確認記録に散っています。

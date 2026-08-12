@@ -76,6 +76,14 @@ export function activate(context: vscode.ExtensionContext): void {
 	status.tooltip = 'Nimbus — セッション未開始';
 	status.show();
 
+	// 緊急停止はコマンドパレットを開く余裕が無いときに押すものなので、
+	// 動いている間だけステータスバーに出しておく（T-057）
+	const stopButton = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
+	stopButton.command = 'nimbus.stopAll';
+	stopButton.text = '$(debug-stop) 停止';
+	stopButton.tooltip = 'Nimbus — 動いているセッションをすべて止める';
+	stopButton.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+
 	const cockpit = new CockpitViewProvider(context.extensionUri, {
 		onSend: (text) => void send(text),
 		onInterrupt: () => void interrupt(),
@@ -130,6 +138,14 @@ export function activate(context: vscode.ExtensionContext): void {
 	function updateStatus(summary: SessionSummary | undefined): void {
 		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
+		// 「止める」は動いているときだけ出す（押せる状態のときにだけ見えるほうが分かりやすい）
+		const active = sessions.list().filter((s) => s.status === 'running' || s.status === 'starting');
+		if (active.length > 0) {
+			stopButton.text = active.length > 1 ? `$(debug-stop) 停止 ${active.length}` : '$(debug-stop) 停止';
+			stopButton.show();
+		} else {
+			stopButton.hide();
+		}
 		if (!summary) {
 			status.text = `${waiting}$(cloud) Nimbus`;
 			status.tooltip = 'Nimbus — セッション未開始';
@@ -148,9 +164,51 @@ export function activate(context: vscode.ExtensionContext): void {
 		void vscode.commands.executeCommand('setContext', 'nimbus.hasRunningSession', busy);
 	}
 
-	async function send(text: string): Promise<void> {
+	/**
+	 * 送信前検査（tasks.md T-075）。資格情報らしき文字列を見つけたら送る前に止める。
+	 * サニタイザはログ・DB 向けに既にあるが、**送信は逆向き**（外に出る前）なので別経路で効かせる。
+	 * @returns 実際に送る文字列。undefined なら送らない
+	 */
+	async function checkBeforeSending(text: string): Promise<string | undefined> {
+		if (vscode.workspace.getConfiguration('nimbus').get<boolean>('safety.scanBeforeSend') === false) {
+			return text;
+		}
+		const hits = sanitizer.detect(text);
+		if (hits.length === 0) {
+			return text;
+		}
+		const MASK = 'マスクして送信';
+		const AS_IS = 'そのまま送信';
+		const choice = await vscode.window.showWarningMessage(
+			'送信しようとしている文に、資格情報らしき文字列が含まれています。',
+			{
+				modal: true,
+				detail: `${hits.map((hit) => `・${hit.label}: ${hit.preview}`).join('\n')}\n\n「マスクして送信」を選ぶと、該当部分を伏せ字に置き換えてから送ります。`
+			},
+			MASK,
+			AS_IS
+		);
+		if (choice === MASK) {
+			log(`[safety] 送信前にマスクしました（${hits.length} 件）`);
+			return sanitizer.maskSecrets(text);
+		}
+		if (choice === AS_IS) {
+			log(`[safety] 検出あり・利用者の判断でそのまま送信（${hits.length} 件）`);
+			return text;
+		}
+		// Esc で閉じた場合も undefined。答えなかったものを送信に倒さない
+		log('[safety] 送信を取りやめました');
+		return undefined;
+	}
+
+	async function send(rawText: string): Promise<void> {
 		try {
-			if (activeSessionId && sessions.isActive(activeSessionId)) {
+			const text = await checkBeforeSending(rawText);
+			if (text === undefined) {
+				return;
+			}
+			// 停止済みのセッションへ送らない。緊急停止のあとは新しいセッションとして始める
+			if (activeSessionId && sessions.isAccepting(activeSessionId)) {
 				sessions.sendMessage(activeSessionId, text);
 				return;
 			}
@@ -190,6 +248,36 @@ export function activate(context: vscode.ExtensionContext): void {
 		} catch (error) {
 			log(`[session] 中断に失敗: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+	/**
+	 * 暴走の緊急停止（tasks.md T-057）。走っているセッションを全部止める。
+	 * 「1 つずつ中断して回る」では間に合わないので、確認 1 回で全部に効かせる。
+	 * 成果（worktree・未コミットの変更）には触らない — 止めることと捨てることは別。
+	 */
+	async function stopAll(): Promise<void> {
+		const running = sessions.list().filter((s) => s.status === 'running' || s.status === 'starting');
+		if (running.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 動いているセッションはありません。');
+			return;
+		}
+		const CONFIRM = 'すべて停止';
+		const choice = await vscode.window.showWarningMessage(
+			`動いている ${running.length} 件のセッションをすべて止めます。`,
+			{
+				modal: true,
+				detail: '待機中のタスクの自動開始も止めます（タスクの ▶ を押すと再開します）。worktree と未コミットの変更はそのまま残ります。'
+			},
+			CONFIRM
+		);
+		if (choice !== CONFIRM) {
+			return;
+		}
+		tasks.pauseAutoStart();
+		const stopped = await sessions.stopAll();
+		log(`[safety] 緊急停止: ${stopped} 件のセッションを止めました`);
+		updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
+		void vscode.window.showInformationMessage(`Nimbus: ${stopped} 件のセッションを止めました。`);
 	}
 
 	async function newSession(): Promise<void> {
@@ -232,9 +320,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		{ assistantLabel: 'ゆあ', placeholder: 'Nimbus の使い方を聞く（Enter で送信）' }
 	);
 
-	async function askYua(text: string): Promise<void> {
+	async function askYua(rawText: string): Promise<void> {
 		try {
-			if (helpSessionId && sessions.isActive(helpSessionId)) {
+			const text = await checkBeforeSending(rawText);
+			if (text === undefined) {
+				return;
+			}
+			if (helpSessionId && sessions.isAccepting(helpSessionId)) {
 				sessions.sendMessage(helpSessionId, text);
 				return;
 			}
@@ -409,6 +501,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		output,
 		status,
+		stopButton,
 		previewer,
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
 		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
@@ -440,6 +533,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		}),
 		vscode.commands.registerCommand('nimbus.newSession', () => newSession()),
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
+		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
 		new vscode.Disposable(() => sessions.closeAll())
 	);

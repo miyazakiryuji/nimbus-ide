@@ -33,6 +33,24 @@ export interface CreateSessionInput {
 
 const TERMINAL_STATUSES: ReadonlySet<SessionStatus> = new Set(['completed', 'error'])
 
+/** 緊急停止で中断の返事を待つ上限。止めたいときに止まらないのが一番困る */
+const INTERRUPT_TIMEOUT_MS = 3000
+
+/** 返ってこない Promise で全体を止めないための待ち上限 */
+async function withTimeout(promise: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      promise,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, ms)
+      })
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 /** テスト注入用に query() と同シグネチャの関数型を切り出す */
 export type QueryFn = typeof query
 
@@ -121,6 +139,16 @@ export class SessionManager extends EventEmitter {
     return this.sessions.has(sessionId)
   }
 
+  /**
+   * いま入力を受け付けられるか。`isActive` は「Map にある」だけなので、
+   * 停止済み・終了済みのセッションでも true を返す。送信先を決めるときはこちらを見る
+   * （見ないと、緊急停止のあとにコックピットへ打った文がエラーになって落ちる）。
+   */
+  isAccepting(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId)
+    return session !== undefined && !session.queue.isClosed && !TERMINAL_STATUSES.has(session.status)
+  }
+
   sendMessage(sessionId: string, text: string): void {
     const session = this.mustGet(sessionId)
     if (TERMINAL_STATUSES.has(session.status) || session.queue.isClosed) {
@@ -156,6 +184,24 @@ export class SessionManager extends EventEmitter {
     for (const session of this.sessions.values()) {
       session.queue.close()
     }
+  }
+
+  /**
+   * 緊急停止（tasks.md T-057）。走っている全セッションに中断を投げてから入力を閉じる。
+   * `closeAll` との違いは「いま実行中のターンを止める」こと — 入力を閉じるだけでは
+   * 進行中のツール実行はそのまま最後まで走ってしまう。
+   * 中断に失敗しても閉じるところまでは必ず進める（止まらないほうが困る）。
+   * @returns 停止したセッション数
+   */
+  async stopAll(): Promise<number> {
+    const targets = [...this.sessions.values()]
+    await Promise.allSettled(
+      targets.map(async (session) => withTimeout(session.handle.interrupt(), INTERRUPT_TIMEOUT_MS))
+    )
+    for (const session of targets) {
+      session.queue.close()
+    }
+    return targets.length
   }
 
   list(): SessionSummary[] {

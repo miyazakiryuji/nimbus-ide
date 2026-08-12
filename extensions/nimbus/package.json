@@ -73,6 +73,12 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.stopAll",
+        "title": "すべてのセッションを止める（緊急停止）",
+        "category": "Nimbus",
+        "icon": "$(debug-stop)"
+      },
+      {
         "command": "nimbus.showLog",
         "title": "ログを表示",
         "category": "Nimbus"
@@ -153,6 +159,24 @@
           "type": "boolean",
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+        },
+        "nimbus.safety.blockProtectedReads": {
+          "type": "boolean",
+          "default": true,
+          "description": "秘匿ファイル（.env・秘密鍵など）の読み取りを、承認を求めずに拒否します。一度読まれた内容は取り消せないため、既定で有効です。"
+        },
+        "nimbus.safety.protectedPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "読み取りを禁止するファイルのパターン（glob）。空のときは既定の一覧（.env / *.pem / ~/.ssh など）を使います。先頭に ! を付けると除外規則になります。"
+        },
+        "nimbus.safety.scanBeforeSend": {
+          "type": "boolean",
+          "default": true,
+          "description": "送信するテキストに資格情報らしき文字列が含まれていないかを、送る前に検査します。"
         },
         "nimbus.tasks.maxConcurrent": {
           "type": "number",
