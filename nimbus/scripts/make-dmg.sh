@@ -10,7 +10,7 @@ set -euo pipefail
 
 VERSION="${1:?使い方: make-dmg.sh <version>}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-APP="$(dirname "$ROOT")/VSCode-darwin-arm64/Nimbus.app"
+APP="$(dirname "$ROOT")/Nimbus-darwin-arm64/Nimbus.app"
 OUT="$ROOT/.build/dist"
 DMG="$OUT/nimbus-${VERSION}-darwin-arm64.dmg"
 

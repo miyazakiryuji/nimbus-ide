@@ -165,6 +165,16 @@ const buildRoot = path.dirname(root);`
 				compileExtensionMediaBuildTask,
 				minified ? minifyVSCodeTask : bundleVSCodeTask,`
   ],
+  // パッケージの出力先が `VSCode-<platform>-<arch>` 固定になっている。
+  // 利用者の作業ディレクトリの隣に "VSCode" という名前のフォルダが生えるのは紛らわしいので、
+  // 製品名から決める（`Nimbus-darwin-arm64`）。
+  [
+    GULPFILE_VSCODE,
+    '\t\tconst destinationFolderName = `VSCode${dashed(platform)}${dashed(arch)}`;',
+    `\t\t// --- Start Nimbus ---
+\t\tconst destinationFolderName = \`\${product.nameShort}\${dashed(platform)}\${dashed(arch)}\`;
+\t\t// --- End Nimbus ---`
+  ],
   // macOS 版のターミナル用コマンドが `bin/code` 固定になっている。
   // 本物の VS Code と衝突するうえ、Nimbus の中で `code` と名乗るのは誤解を招くため製品名から決める。
   [

@@ -8,14 +8,14 @@
 #   bash nimbus/branding/smoke-packaged.sh [出力先ディレクトリ]
 set -uo pipefail
 
-APP="$(cd "$(dirname "$0")/../.." && pwd)/../VSCode-darwin-arm64/Nimbus.app"
+APP="$(cd "$(dirname "$0")/../.." && pwd)/../Nimbus-darwin-arm64/Nimbus.app"
 OUT="${1:-/tmp/nimbus-smoke}"
 UD=/tmp/nimbus-smoke-userdata
 EXT=/tmp/nimbus-smoke-ext
 WS=/tmp/nimbus-smoke-ws
 
 mkdir -p "$OUT"
-pkill -f "VSCode-darwin-arm64/Nimbus.app" 2>/dev/null
+pkill -f "Nimbus-darwin-arm64/Nimbus.app" 2>/dev/null
 sleep 2
 rm -rf "$UD" "$EXT" "$WS"
 mkdir -p "$UD/User" "$EXT" "$WS"
@@ -46,7 +46,7 @@ echo "== 3. 起動して Nimbus 拡張と実セッションを確認 =="
 ( nohup env -u NODE_OPTIONS NIMBUS_SMOKE=1 NIMBUS_SMOKE_PROMPT='Reply with exactly: NIMBUS_PACKAGED_OK' \
 	"$APP/Contents/MacOS/Nimbus" --disable-workspace-trust --user-data-dir "$UD" --extensions-dir "$EXT" "$WS" > /tmp/nimbus-smoke-run.log 2>&1 & )
 n=0
-until pgrep -f "VSCode-darwin-arm64/Nimbus.app/Contents/MacOS/Nimbus" >/dev/null 2>&1 || [ $n -ge 60 ]; do sleep 1; n=$((n+1)); done
+until pgrep -f "Nimbus-darwin-arm64/Nimbus.app/Contents/MacOS/Nimbus" >/dev/null 2>&1 || [ $n -ge 60 ]; do sleep 1; n=$((n+1)); done
 
 # 拡張のログでセッションの往復まで待つ（GUI を操作せずに経路全体を確認する）
 n=0

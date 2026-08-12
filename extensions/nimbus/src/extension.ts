@@ -21,6 +21,7 @@ import { TaskService } from './tasks/TaskService';
 import { BoardViewProvider } from './tasks/BoardViewProvider';
 import { buildYuaSystemPrompt } from './help/yua';
 import { discoverSkills, searchSkills, type Skill } from './core/skills';
+import { SkillsViewProvider } from './skillsView';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -34,6 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const sessionAllowAll = new Set<string>();
 	const previewer = new ProposedEditPreviewer();
 	const contextView = new ContextViewProvider();
+	const skillsView = new SkillsViewProvider();
 	let pendingApprovals = 0;
 
 	const broker = createPermissionBroker({
@@ -100,6 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 		if (event.kind === 'session-init') {
 			contextView.update(event);
+			skillsView.setSessionSkills(event.skills);
 			lastApiKeySource = event.apiKeySource;
 		}
 		cockpit.post({ type: 'event', event });
@@ -197,6 +200,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		lastApiKeySource = undefined;
 		retained.length = 0;
 		contextView.update(undefined);
+		skillsView.setSessionSkills([]);
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
 		cockpit.reveal();
@@ -407,6 +411,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		status,
 		previewer,
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
+		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
 		vscode.window.registerWebviewViewProvider(BoardViewProvider.viewType, board, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),
@@ -415,6 +420,18 @@ export function activate(context: vscode.ExtensionContext): void {
 		}),
 		vscode.commands.registerCommand('nimbus.newTask', () => newTask()),
 		vscode.commands.registerCommand('nimbus.findSkill', () => findSkill()),
+		vscode.commands.registerCommand('nimbus.refreshSkills', () => skillsView.refresh()),
+		// 一覧から直接「使う」。コックピットへ /<name> を送る
+		vscode.commands.registerCommand('nimbus.useSkill', async (node?: { skill?: { name?: string } }) => {
+			const name = node?.skill?.name;
+			if (!name) {
+				return;
+			}
+			cockpit.reveal();
+			await send(`/${name}`);
+		}),
+		// フォルダを開き直したら一覧も作り直す
+		vscode.workspace.onDidChangeWorkspaceFolders(() => skillsView.refresh()),
 		vscode.commands.registerCommand('nimbus.askYua', async () => {
 			await vscode.commands.executeCommand('nimbus.help.focus');
 		}),

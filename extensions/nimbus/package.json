@@ -45,8 +45,13 @@
           "type": "webview"
         },
         {
+          "id": "nimbus.skills",
+          "name": "スキル"
+        },
+        {
           "id": "nimbus.context",
-          "name": "文脈"
+          "name": "文脈",
+          "visibility": "collapsed"
         },
         {
           "id": "nimbus.help",
@@ -86,6 +91,18 @@
         "command": "nimbus.askYua",
         "title": "使い方を聞く（ゆあ）",
         "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.refreshSkills",
+        "title": "スキル一覧を更新",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.useSkill",
+        "title": "コックピットで使う",
+        "category": "Nimbus",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -93,6 +110,29 @@
         {
           "command": "nimbus.interrupt",
           "when": "nimbus.hasRunningSession"
+        },
+        {
+          "command": "nimbus.useSkill",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "nimbus.refreshSkills",
+          "when": "view == nimbus.skills",
+          "group": "navigation"
+        },
+        {
+          "command": "nimbus.findSkill",
+          "when": "view == nimbus.skills",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "nimbus.useSkill",
+          "when": "view == nimbus.skills && viewItem =~ /nimbusSkill/",
+          "group": "inline"
         }
       ]
     },

@@ -23,6 +23,7 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 8 | `src/.../chat/browser/chat.shared.contribution.ts` | `chat.disableAIFeatures` の既定値を `false` → `true` | 初回起動の「Sign in to use GitHub Copilot」モーダルを止める（下記の実測を参照） | 同上 |
 | 9 | `src/.../extensions/browser/extensions.contribution.ts` | `extensions.verifySignature` の既定値を `true` → `false` | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無いため、既定のままだと**拡張を 1 つもインストールできない**（実測） | 同上 |
 | 10 | `build/gulpfile.vscode.ts` | macOS のターミナル用コマンドを `bin/code` 固定から `bin/${product.applicationName}` に | 本物の VS Code の `code` と衝突する。製品名から決めるのが素直（upstream にも通る一般化） | 同上 |
+| 11 | `build/gulpfile.vscode.ts` | パッケージ出力先を `VSCode-<platform>-<arch>` から `${product.nameShort}-…` に | 利用者の作業ディレクトリの隣に "VSCode" という名前のフォルダが生えるのは紛らわしい | 同上 |
 
 ## リポジトリ運用（push できない問題とその回避）
 

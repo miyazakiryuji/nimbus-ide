@@ -699,7 +699,9 @@ BUILD_TARGETS.forEach(buildTarget => {
 
 	const [vscode, vscodeMin] = ['', 'min'].map(minified => {
 		const sourceFolderName = `out-vscode${dashed(minified)}`;
-		const destinationFolderName = `VSCode${dashed(platform)}${dashed(arch)}`;
+		// --- Start Nimbus ---
+		const destinationFolderName = `${product.nameShort}${dashed(platform)}${dashed(arch)}`;
+		// --- End Nimbus ---
 
 		const packageTasks: task.Task[] = [
 			compileNativeExtensionsBuildTask,
