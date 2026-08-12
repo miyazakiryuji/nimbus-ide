@@ -42,6 +42,7 @@ import { measureBuild } from './buildMetrics';
 import { resolveXcodeConflict } from './pbxprojConflict';
 import { openDepConsistency } from './depConsistency';
 import { openReviewProgress } from './reviewProgress';
+import { openRhythm } from './rhythm';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -91,7 +92,7 @@ import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
 import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { showRepoSummary } from './repoSummary';
-import { showRepoSummary } from './repoSummary';
+import { reviewSnapshots } from './snapshotReview';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1879,6 +1880,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.resolveXcodeConflict', () => resolveXcodeConflict()),
 		vscode.commands.registerCommand('nimbus.openDepConsistency', () => openDepConsistency()),
 		vscode.commands.registerCommand('nimbus.openReviewProgress', () => openReviewProgress(context)),
+		vscode.commands.registerCommand('nimbus.openRhythm', () =>
+			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals }))
+		),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
@@ -2002,9 +2006,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
-		// 何のプロジェクトで、どこに何があるか（T-176）。最初の探索を省くための地図
-		vscode.commands.registerCommand('nimbus.repoSummary', () =>
-			showRepoSummary({
+		// スナップショットは通すために更新できてしまう（T-181）。更新そのものをレビューする
+		vscode.commands.registerCommand('nimbus.reviewSnapshots', () =>
+			reviewSnapshots({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);
