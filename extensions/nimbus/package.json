@@ -53,6 +53,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.review",
+          "name": "レビュー",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.skills",
           "name": "スキル"
         },
@@ -415,6 +420,60 @@
         "title": "ビルドを計って前回と比べる",
         "category": "Nimbus",
         "icon": "$(watch)"
+      },
+      {
+        "command": "nimbus.refreshReview",
+        "title": "変更の一覧を取り直す",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.markReviewed",
+        "title": "レビュー済みにする",
+        "category": "Nimbus",
+        "icon": "$(check)"
+      },
+      {
+        "command": "nimbus.markUnreviewed",
+        "title": "未レビューに戻す",
+        "category": "Nimbus",
+        "icon": "$(circle-large-outline)"
+      },
+      {
+        "command": "nimbus.clearReviewMarks",
+        "title": "レビューの印をすべて外す",
+        "category": "Nimbus",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "nimbus.openReviewDiff",
+        "title": "差分を開く",
+        "category": "Nimbus",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "nimbus.prompts",
+        "title": "定型プロンプトを使う",
+        "category": "Nimbus",
+        "icon": "$(symbol-text)"
+      },
+      {
+        "command": "nimbus.managePrompts",
+        "title": "定型プロンプトを管理する",
+        "category": "Nimbus",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "nimbus.findAnything",
+        "title": "探す（スキル・コマンド・サブエージェント・MCP）",
+        "category": "Nimbus",
+        "icon": "$(search)"
+      },
+      {
+        "command": "nimbus.resolveXcodeConflict",
+        "title": "Xcode プロジェクトの衝突を解く",
+        "category": "Nimbus",
+        "icon": "$(merge)"
       }
     ],
     "menus": {
@@ -442,9 +501,23 @@
         {
           "command": "nimbus.promoteInstruction",
           "when": "false"
+        },
+        {
+          "command": "nimbus.openReviewDiff",
+          "when": "false"
         }
       ],
       "view/title": [
+        {
+          "command": "nimbus.clearReviewMarks",
+          "when": "view == nimbus.review",
+          "group": "navigation"
+        },
+        {
+          "command": "nimbus.refreshReview",
+          "when": "view == nimbus.review",
+          "group": "navigation"
+        },
         {
           "command": "nimbus.refreshMcp",
           "when": "view == nimbus.mcp",
@@ -515,6 +588,16 @@
         {
           "command": "nimbus.promoteInstruction",
           "when": "view == nimbus.claudeMd && viewItem == nimbusRepeatedInstruction",
+          "group": "inline"
+        },
+        {
+          "command": "nimbus.markReviewed",
+          "when": "view == nimbus.review && viewItem == nimbusUnreviewed",
+          "group": "inline"
+        },
+        {
+          "command": "nimbus.markUnreviewed",
+          "when": "view == nimbus.review && viewItem == nimbusReviewed",
           "group": "inline"
         }
       ]
