@@ -162,6 +162,7 @@ import { checkApiDocs } from './apiDocs';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
+import { ClipboardHints } from './clipboardHints';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -2123,6 +2124,15 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	}
 
+	// コピーしたエラー文に気づいて聞く（T-170・既定は無効）
+	const clipboardHints = new ClipboardHints({
+		send: (text) => {
+			cockpit.reveal();
+			void send(text);
+		},
+		log
+	});
+
 	// 関数の上に「Nimbus に頼む」を出す（T-172）。右クリックからも同じ入口（T-171）
 	const codeLens = new NimbusCodeLensProvider();
 
@@ -2156,6 +2166,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		stopButton,
 		previewer,
 		terminals,
+		clipboardHints,
 		approvals,
 		approvalsView,
 		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは

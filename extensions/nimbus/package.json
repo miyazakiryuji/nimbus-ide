@@ -1133,6 +1133,11 @@
           "maximum": 10,
           "description": "型エラーを自動で差し戻す回数の上限（1 セッションあたり）。直らないまま回り続けるのを止めます。"
         },
+        "nimbus.clipboard.suggestOnError": {
+          "type": "boolean",
+          "default": false,
+          "description": "コピーした内容がエラー文のようなとき、調べるかを聞きます。有効にすると、ウィンドウに戻ってきた瞬間にクリップボードを読みます（内容は画面に出しません）。"
+        },
         "nimbus.terminal.captureFailures": {
           "type": "boolean",
           "default": true,

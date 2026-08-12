@@ -129,7 +129,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 ### ⑥ IDE との統合（フォークにした旨味が出る場所）
 
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
-- [ ] T-170 エラー文をコピーした瞬間に「調べます？」と提案する（オフにできること）[P3]
 - [ ] T-173 マルチルートワークスペース対応 — **共通ヘルパは実装済み**（`pickWorkspaceRoot` /
       `resolveWorkspaceRoot`・仕様 `nimbus/docs/specs/workspace-roots.md`）。残りは各セッションが
       自分の持ち場を自分の番で載せ替える。**承認・レビュー層の 5 ファイルは載せ替え済み**
@@ -246,8 +245,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       OSS 代替（open-remote-ssh 等）の調査が前提 [P2]
 - [ ] T-085 マシンをまたぐセッション同期 — 会社の Mac で始めて、家の PC で続きを見る [P3]
 - [ ] T-086 iPad から様子見 — 閲覧と承認だけの軽量クライアント（T-054 と同じ線）[P3]
-- [ ] T-203 言語別プリセット — Flutter / Go / Swift などの初期設定の雛形 [P2]
-- [ ] T-204 **初回セットアップウィザード** — 連携・権限・CLAUDE.md 生成まで案内する [P2]
 - [ ] T-205 環境差分の検出 — 「自分の環境では動くのに」問題の切り分け [P2]
 
 ### 🧠 メンタル・集中
@@ -337,6 +334,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-170 コピーしたエラー文に気づく（既定は無効。戻ってきた瞬間に 1 回だけ見て、中身は画面に出さない）
+      — 2026-08-13 / 仕様 [clipboard-hints](nimbus/docs/specs/clipboard-hints.md)
 
 - [x] T-133 不安定なテストの検出（1 回でも結果が変われば flaky・回によって現れないものも別に出す）
       — 2026-08-13 / 仕様 [flaky-tests](nimbus/docs/specs/flaky-tests.md)
@@ -479,6 +479,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-203 / T-204 使い始めの設定（言語別プリセット・入るものを見せてから書く）— 2026-08-13 / 仕様 [setup](nimbus/docs/specs/setup.md)
 - [x] T-061 Mermaid の図を確かめる（落ちる書き方を先に・描画はプレビューに任せる）— 2026-08-13 / 仕様 [mermaid](nimbus/docs/specs/mermaid.md)
 - [x] T-206 セッションをたどり直す（間隔つき・止まっていた場所を先に）— 2026-08-13 / 仕様 [replay](nimbus/docs/specs/replay.md)
 - [x] T-048 やり取りを人に見せる（伏せる内容を先に見せる・どこにも送らない）— 2026-08-13 / 仕様 [share-session](nimbus/docs/specs/share-session.md)
