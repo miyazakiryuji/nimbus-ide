@@ -2784,6 +2784,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				log
 			})
 		),
+		// 積み上げた PR の順と、下が入った後の付け替え（T-135）
+		vscode.commands.registerCommand('nimbus.showPrStack', () => showPrStack({ log })),
+		vscode.commands.registerCommand('nimbus.restackAfterMerge', () => restackAfterMerge({ log })),
 		// 戻す手順を出す。走らせない（T-216）
 		vscode.commands.registerCommand('nimbus.prepareRollback', () => prepareRollback({ log })),
 		// 急ぐときの手順。省かない段は省かない（T-144）

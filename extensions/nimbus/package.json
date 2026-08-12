@@ -219,6 +219,18 @@
         "icon": "$(github)"
       },
       {
+        "command": "nimbus.showPrStack",
+        "title": "積み上げた PR を見る",
+        "category": "Nimbus",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "nimbus.restackAfterMerge",
+        "title": "下が入った PR を向け直す",
+        "category": "Nimbus",
+        "icon": "$(git-merge)"
+      },
+      {
         "command": "nimbus.prepareRollback",
         "title": "戻し方を用意する",
         "category": "Nimbus",
