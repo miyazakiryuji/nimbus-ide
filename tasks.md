@@ -127,7 +127,8 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
 - [ ] T-170 エラー文をコピーした瞬間に「調べます？」と提案する（オフにできること）[P3]
 - [ ] T-173 マルチルートワークスペース対応 — **共通ヘルパは実装済み**（`pickWorkspaceRoot` /
       `resolveWorkspaceRoot`・仕様 `nimbus/docs/specs/workspace-roots.md`）。残りは各セッションが
-      自分の持ち場（28 ファイル）を自分の番で載せ替える。T-236 と同じ進め方 [P2]
+      自分の持ち場を自分の番で載せ替える。**承認・レビュー層の 5 ファイルは載せ替え済み**
+      （commitSplit / conflicts / diffSummary / impact / prReview）[P2]
 - [ ] T-174 ノートブック（`.ipynb`）対応 [P3]
 
 ### ⑦ コードの理解と生成の精度（エンジン側）

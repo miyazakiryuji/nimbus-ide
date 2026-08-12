@@ -8,6 +8,7 @@
  * 判断の本体は `core/impact.ts`（VS Code 非依存・単体テスト済み）。
  */
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { apiChanges, summarizeDiff } from './core/diffSummary';
@@ -22,9 +23,10 @@ const IGNORE = '**/{node_modules,out,out-build,out-vscode,.build,dist,build,.git
 const MAX_FILES = 3000;
 
 export async function showImpact(): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	// マルチルート対応（T-173）。探索の起点になるので、聞かずに決まるならそのまま進む。
+	// フォルダが 1 つなら何も聞かない
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 

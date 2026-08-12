@@ -9,6 +9,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import { pickWorkspaceRoot } from './workspaceRoots';
 import {
 	conflictPrompt,
 	describeConflict,
@@ -27,9 +28,10 @@ async function conflictedFiles(cwd: string): Promise<string[]> {
 }
 
 export async function assistConflicts(send: (text: string) => void): Promise<void> {
-	const folder = vscode.workspace.workspaceFolders?.[0];
+	// マルチルート対応（T-173）。競合はフォルダごとに違うので、対象を決めてから探す。
+	// フォルダが 1 つなら何も聞かない
+	const folder = await pickWorkspaceRoot();
 	if (!folder) {
-		void vscode.window.showInformationMessage('Nimbus: フォルダを開いてから実行してください。');
 		return;
 	}
 	const cwd = folder.uri.fsPath;
