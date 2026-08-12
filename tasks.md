@@ -115,8 +115,6 @@ F4 で実装済み**（`extensions/nimbus/src/tasks/`）。ここに残るのは
       フック・`settings.json` の階層）を Nimbus から見て直せるようにする。T-008 の CLAUDE.md 編集と
       同じ面に載る可能性が高い [P2]
 - [ ] T-028 パーミッションルールの GUI 編集（`settings.json` の allow / deny / ask を画面から）[P2]
-- [ ] T-162 承認ポリシーのプロファイル切り替え — 開発用／本番接続時で許可の広さを変える [P2]
-- [ ] T-163 実行サンドボックス／ネットワーク遮断モード — 危ないことを試すときの器 [P2]
 
 - [ ] T-235 MCP ツールの単体実行 — エージェント抜きでツールを 1 回だけ呼んで試す。
       SDK の `Query` に直接呼ぶ API が無く、`@modelcontextprotocol/sdk` で別途繋ぐ必要がある
@@ -529,6 +527,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-162 承認ポリシーのプロファイル切り替え（広げるときだけ確認する）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
+- [x] T-163 実行サンドボックス・ネットワーク遮断（SDK の sandbox で外に出さない）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
 - [x] T-026 Hooks の GUI ビルダー（イベントは 31 種類・よく使う 5 つを前面に）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
 - [x] T-044 ターミナルの Shift+Enter を改行に（出荷時から ESC+CR を送る）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
 - [x] T-161 フックのドライラン（本番と同じ形の入力で、止まるかを先に確かめる）— 2026-08-13 / 仕様 [hooks](nimbus/docs/specs/hooks.md)
