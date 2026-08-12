@@ -226,7 +226,7 @@
       },
       {
         "command": "nimbus.splitTerminals",
-        "title": "ターミナルを並べる",
+        "title": "%command.splitTerminals%",
         "category": "Nimbus"
       },
       {
