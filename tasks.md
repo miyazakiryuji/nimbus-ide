@@ -214,7 +214,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### ⏰ 時間軸
 
-- [ ] T-051 就寝前の予約実行 — 「朝までにこれ調べといて」を仕込んで寝る [P2]
 
 ### 📱 デスクを離れる
 
@@ -482,6 +481,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-051 寝る前に仕込む（過ぎた時刻は翌日・承認で止まることを黙らない・常駐しない）— 2026-08-13 / 仕様 [schedule](nimbus/docs/specs/schedule.md)
 - [x] T-046 / T-213 練習用サンドボックス（直すところがある状態で置く）— 2026-08-13 / 仕様 [sandbox](nimbus/docs/specs/sandbox.md)
 - [x] T-218 / T-124 実物とスキーマの突き合わせと、仮の応答 — 2026-08-13 / 仕様 [api-check](nimbus/docs/specs/api-check.md)
 - [x] T-122 スキーマから型を起こす（Dart / TypeScript・扱えないものは扱えないと書く）— 2026-08-13 / 仕様 [openapi](nimbus/docs/specs/openapi.md)

@@ -35,6 +35,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`bisect.md`](bisect.md) — どこで壊れたかを絞り込む
 - [`stack-trace.md`](stack-trace.md) — スタックトレースから該当箇所を開く
 - [`lock-diff.md`](lock-diff.md) — ロックファイルの変更を読む
+- [`schedule.md`](schedule.md) — 寝る前に仕込む（予約実行）
 - [`sandbox.md`](sandbox.md) — 練習用サンドボックス
 - [`rhythm.md`](rhythm.md) — いまのようす（区切りと待ち時間）
 - [`digest.md`](digest.md) — ふりかえり（週次ダイジェスト・成長ログ）

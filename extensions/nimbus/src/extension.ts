@@ -1969,10 +1969,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.showSchedule', () => showSchedule(context)),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
-			if (autoApprove) {
-				sessionAllowAll.add('scheduled');
-			}
-			void newSession(prompt);
+			void (async () => {
+				await newSession();
+				await send(prompt);
+				// 承認を自動で通すのは、仕込むときに明示的に選ばれたときだけ（T-051）
+				if (autoApprove && activeSessionId) {
+					sessionAllowAll.add(activeSessionId);
+				}
+			})();
 		}),
 		vscode.commands.registerCommand('nimbus.checkApiResponse', () => checkApiResponse()),
 		vscode.commands.registerCommand('nimbus.generateMockResponse', () => generateMockResponse()),
