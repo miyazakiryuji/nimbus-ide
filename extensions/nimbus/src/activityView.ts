@@ -21,6 +21,7 @@ import {
 	type SubagentRun,
 	type TouchedFile
 } from './core/activity';
+import { collectEvidence } from './core/evidence';
 
 type Node = {
 	label: string;
@@ -206,6 +207,18 @@ export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 			group('サブエージェント', 'organization', activity.subagents.map(subagentNode), '（まだ動いていません）'),
 			group('フック', 'zap', activity.hooks.map(hookNode), '（発火していません）'),
 			group('触ったファイル', 'files', activity.files.map(fileNode), '（まだありません）'),
+			// 「動いた気がする」を排除するための材料（T-081）
+			group(
+				'テストの証跡',
+				'beaker',
+				collectEvidence(this.events).runs.map((run) => ({
+					label: run.command,
+					description: `${run.outcome === 'passed' ? '成功' : run.outcome === 'failed' ? '失敗' : '判定できず'} · ${time(run.at)}`,
+					tooltip: run.output,
+					icon: run.outcome === 'passed' ? 'pass' : run.outcome === 'failed' ? 'error' : 'question'
+				})),
+				'（テストを実行していません）'
+			),
 			group(
 				'コンパクション',
 				'fold',
