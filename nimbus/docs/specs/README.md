@@ -48,6 +48,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`tree-views.md`](tree-views.md) — ツリービューの共通土台
 - [`prompts-and-find.md`](prompts-and-find.md) — 定型プロンプトと横断的な「探す」
 - [`session-extras.md`](session-extras.md) — スキル化・預かり箱・ピン留めとタグ
+- [`hooks.md`](hooks.md) — フックの組み立てとドライラン
 
 IDE 基礎機能:
 
