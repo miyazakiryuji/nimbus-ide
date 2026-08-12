@@ -115,6 +115,18 @@ export interface BlockedRead {
 const READ_TOOLS = new Set(['Read', 'NotebookRead']);
 
 /**
+ * Nimbus 自身が提供する読み取り専用ツールの接頭辞。
+ * 中身は Nimbus のコードなので副作用が無いと分かっているが、
+ * **返す内容はファイルの中身**なので、秘匿ファイルの遮断はここにも効かせる。
+ */
+export const NIMBUS_READONLY_TOOL_PREFIX = 'mcp__nimbus_';
+
+/** 承認なしで通してよい読み取り専用ツールか（副作用が無いことを Nimbus 側が保証できるもの） */
+export function isNimbusReadOnlyTool(toolName: string): boolean {
+	return toolName.startsWith(NIMBUS_READONLY_TOOL_PREFIX);
+}
+
+/**
  * このツール呼び出しが秘匿ファイルを読もうとしているかを判定する。
  * Bash は「読めるコマンド」に秘匿パスが現れたときだけ止める
  * （`echo x >> .env` のような書き込みまで止めると、開発の邪魔をするだけになる）。
@@ -129,9 +141,10 @@ export function findBlockedRead(
 	}
 	const record = input as Record<string, unknown>;
 
-	if (READ_TOOLS.has(toolName)) {
-		const path = record['file_path'] ?? record['path'] ?? record['notebook_path'];
-		if (typeof path === 'string' && isProtectedPath(path, globs)) {
+	// Nimbus 自作の読み取りツール（LSP など）も、返すのはファイルの中身なので同じ規則で止める
+	if (READ_TOOLS.has(toolName) || isNimbusReadOnlyTool(toolName)) {
+		const path = record['file_path'] ?? record['path'] ?? record['notebook_path'] ?? record['uri'];
+		if (typeof path === 'string' && isProtectedPath(path.replace(/^file:\/\//, ''), globs)) {
 			return { path, via: 'tool' };
 		}
 		return undefined;

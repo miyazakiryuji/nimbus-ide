@@ -26,28 +26,136 @@ export function normalizeSdkMessage(
 
   switch (msg.type) {
     case 'system': {
-      if (msg.subtype === 'init') {
-        return [
-          {
-            kind: 'session-init',
-            sessionId,
-            timestamp,
-            claudeSessionId: msg.session_id,
-            claudeCodeVersion: msg.claude_code_version,
-            model: msg.model,
-            cwd: msg.cwd,
-            permissionMode: msg.permissionMode,
-            apiKeySource: msg.apiKeySource,
-            tools: msg.tools,
-            mcpServers: msg.mcp_servers.map((s) => ({ name: s.name, status: s.status })),
-            plugins: msg.plugins.map((p) => ({ name: p.name, version: p.version })),
-            skills: msg.skills,
-            slashCommands: msg.slash_commands,
-            agents: msg.agents
-          }
-        ]
+      switch (msg.subtype) {
+        case 'init':
+          return [
+            {
+              kind: 'session-init',
+              sessionId,
+              timestamp,
+              claudeSessionId: msg.session_id,
+              claudeCodeVersion: msg.claude_code_version,
+              model: msg.model,
+              cwd: msg.cwd,
+              permissionMode: msg.permissionMode,
+              apiKeySource: msg.apiKeySource,
+              tools: msg.tools,
+              mcpServers: msg.mcp_servers.map((s) => ({ name: s.name, status: s.status })),
+              plugins: msg.plugins.map((p) => ({ name: p.name, version: p.version })),
+              skills: msg.skills,
+              slashCommands: msg.slash_commands,
+              agents: msg.agents
+            }
+          ]
+
+        // フックの発火（T-027）。3 つの段階を 1 種類のイベントにまとめる
+        case 'hook_started':
+          return [
+            {
+              kind: 'hook',
+              sessionId,
+              timestamp,
+              phase: 'started',
+              hookId: msg.hook_id,
+              hookName: msg.hook_name,
+              hookEvent: msg.hook_event
+            }
+          ]
+        case 'hook_progress':
+          return [
+            {
+              kind: 'hook',
+              sessionId,
+              timestamp,
+              phase: 'progress',
+              hookId: msg.hook_id,
+              hookName: msg.hook_name,
+              hookEvent: msg.hook_event,
+              output: msg.output,
+              stderr: msg.stderr
+            }
+          ]
+        case 'hook_response':
+          return [
+            {
+              kind: 'hook',
+              sessionId,
+              timestamp,
+              phase: 'response',
+              hookId: msg.hook_id,
+              hookName: msg.hook_name,
+              hookEvent: msg.hook_event,
+              outcome: msg.outcome,
+              exitCode: msg.exit_code,
+              output: msg.output,
+              stderr: msg.stderr
+            }
+          ]
+
+        // サブエージェント（T-018）。親には最終サマリーしか返らないので、ここで拾わないと中が見えない
+        case 'task_started':
+          return [
+            {
+              kind: 'subagent',
+              sessionId,
+              timestamp,
+              phase: 'started',
+              taskId: msg.task_id,
+              description: msg.description,
+              subagentType: msg.subagent_type,
+              prompt: msg.prompt
+            }
+          ]
+        case 'task_progress':
+          return [
+            {
+              kind: 'subagent',
+              sessionId,
+              timestamp,
+              phase: 'progress',
+              taskId: msg.task_id,
+              description: msg.description,
+              subagentType: msg.subagent_type,
+              lastToolName: msg.last_tool_name,
+              summary: msg.summary,
+              usage: {
+                totalTokens: msg.usage.total_tokens,
+                toolUses: msg.usage.tool_uses,
+                durationMs: msg.usage.duration_ms
+              }
+            }
+          ]
+        case 'task_updated':
+          return [
+            {
+              kind: 'subagent',
+              sessionId,
+              timestamp,
+              phase: 'updated',
+              taskId: msg.task_id,
+              description: msg.patch.description,
+              status: msg.patch.status,
+              error: msg.patch.error
+            }
+          ]
+
+        // コンパクション（T-022）。黙って起きると履歴が飛んだように見える
+        case 'compact_boundary':
+          return [
+            {
+              kind: 'compaction',
+              sessionId,
+              timestamp,
+              trigger: msg.compact_metadata.trigger,
+              preTokens: msg.compact_metadata.pre_tokens,
+              postTokens: msg.compact_metadata.post_tokens,
+              durationMs: msg.compact_metadata.duration_ms
+            }
+          ]
+
+        default:
+          return []
       }
-      return []
     }
 
     case 'assistant': {

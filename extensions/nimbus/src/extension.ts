@@ -5,6 +5,7 @@
  * エディタ・ファイルツリー・SCM・検索は Code - OSS のものをそのまま使う。
  */
 import { randomUUID } from 'crypto';
+import { spawn } from 'child_process';
 import * as vscode from 'vscode';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { NimbusEvent, SessionSummary } from './events';
@@ -24,6 +25,8 @@ import { discoverSkills, searchSkills, type Skill } from './core/skills';
 import { SkillsViewProvider } from './skillsView';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
+import { ActivityViewProvider } from './activityView';
+import { buildNotifyCommand, oneLine } from './core/notify';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -39,6 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const contextView = new ContextViewProvider();
 	const skillsView = new SkillsViewProvider();
 	const usageView = new UsageViewProvider();
+	const activityView = new ActivityViewProvider();
 	let pendingApprovals = 0;
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
@@ -50,6 +54,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		log,
 		previewer,
 		onPendingChanged: (pending) => {
+			// 承認待ちで止まっていることに気づけないのが一番困る（T-019）
+			if (pending.length > pendingApprovals) {
+				const latest = pending[pending.length - 1];
+				notify('Nimbus — 承認待ち', oneLine(latest.summary));
+			}
 			pendingApprovals = pending.length;
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
 			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
@@ -121,14 +130,47 @@ export function activate(context: vscode.ExtensionContext): void {
 			lastApiKeySource = event.apiKeySource;
 		}
 		cockpit.post({ type: 'event', event });
+		activityView.update(retained);
 		updateStatus(sessions.get(event.sessionId));
 		logEvent(event);
 		if (event.kind === 'turn-result') {
+			notify('Nimbus — ターンが終わりました', oneLine(event.resultText ?? '応答が返りました'));
 			// ターンが終わるたびに取り直す。走っている最中に見えないと意味がない（T-017 / T-020）
 			void refreshUsage(event.sessionId);
 			checkCostLimit(event.sessionId, sessions.get(event.sessionId)?.totalCostUsd);
 		}
 	});
+
+	/**
+	 * OS 通知（tasks.md T-019）。放置して他の作業に戻れることが体験の芯なので、
+	 * ウィンドウを見ていなくても届く必要がある。VS Code の通知はウィンドウの中にしか出ない。
+	 *
+	 * 既定では**ウィンドウが前面に無いときだけ**出す。見ている画面に重ねて出しても邪魔なだけで、
+	 * それを繰り返すと通知そのものを切られてしまう（T-087 の集中モードとも衝突しない形）。
+	 */
+	function notify(title: string, body: string): void {
+		const config = vscode.workspace.getConfiguration('nimbus');
+		if (config.get<boolean>('notifications.enabled') === false) {
+			return;
+		}
+		if (config.get<boolean>('notifications.onlyWhenUnfocused') !== false && vscode.window.state.focused) {
+			return;
+		}
+		const command = buildNotifyCommand(process.platform, title, body);
+		if (!command) {
+			// OS 通知を出せないプラットフォームではウィンドウ内に落とす（黙って消さない）
+			void vscode.window.showInformationMessage(`${title} — ${body}`);
+			return;
+		}
+		try {
+			// シェルを通さない。タスク名に引用符が混ざっても壊れないようにするため
+			const child = spawn(command.command, command.args, { stdio: 'ignore' });
+			child.on('error', (error) => log(`[notify] 通知を出せませんでした: ${error.message}`));
+			child.unref();
+		} catch (error) {
+			log(`[notify] 通知を出せませんでした: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
 
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
 	async function refreshUsage(sessionId: string): Promise<void> {
@@ -350,6 +392,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		contextView.update(undefined);
 		skillsView.setSessionSkills([]);
 		usageView.clear();
+		activityView.update([]);
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
@@ -568,6 +611,17 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
 		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
+		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
+		// 手動のコンパクション（T-022）。溜まってきたと感じた時点で自分で起こせるようにする。
+		// SDK に専用の API は無く、CLI と同じく `/compact` を送るのが正規の経路
+		vscode.commands.registerCommand('nimbus.compact', async () => {
+			if (!activeSessionId || !sessions.isAccepting(activeSessionId)) {
+				void vscode.window.showInformationMessage('Nimbus: 動いているセッションがありません。');
+				return;
+			}
+			sessions.sendMessage(activeSessionId, '/compact');
+			log('[session] 手動でコンパクションを要求しました');
+		}),
 		vscode.commands.registerCommand('nimbus.refreshUsage', async () => {
 			if (!activeSessionId) {
 				void vscode.window.showInformationMessage('Nimbus: セッションを開始すると使用量を取得できます。');

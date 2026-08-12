@@ -54,6 +54,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.activity",
+          "name": "セッションの中身",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.usage",
           "name": "使用量",
           "visibility": "collapsed"
@@ -120,6 +125,12 @@
         "title": "使用量を取得し直す",
         "category": "Nimbus",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.compact",
+        "title": "文脈を圧縮する（コンパクション）",
+        "category": "Nimbus",
+        "icon": "$(fold)"
       }
     ],
     "menus": {
@@ -175,6 +186,16 @@
           "type": "boolean",
           "default": true,
           "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
+        },
+        "nimbus.notifications.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "ターンの完了と承認待ちの発生を OS の通知で知らせます。"
+        },
+        "nimbus.notifications.onlyWhenUnfocused": {
+          "type": "boolean",
+          "default": true,
+          "description": "Nimbus のウィンドウが前面に無いときだけ通知します。見ている画面に重ねて出さないための既定です。"
         },
         "nimbus.usage.costLimitUsd": {
           "type": "number",

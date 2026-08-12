@@ -15,7 +15,7 @@ import type { CanUseTool, PermissionResult } from '@anthropic-ai/claude-agent-sd
 import { buildPreview, ProposedEditPreviewer } from './proposedEdit';
 import { describeTool } from './core/describe';
 import { assessToolRisk, type RiskLevel } from './core/risk';
-import { DEFAULT_PROTECTED_GLOBS, findBlockedRead } from './core/secrets';
+import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, isNimbusReadOnlyTool } from './core/secrets';
 
 /** 読み取りだけで副作用が無いツール。設定で自動許可できる */
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead', 'TodoWrite']);
@@ -90,6 +90,14 @@ export function createPermissionBroker(deps: PermissionDeps): {
 						message: `Nimbus が秘匿ファイルの読み取りを拒否しました: ${blocked.path}（設定 nimbus.safety.protectedPaths）`
 					};
 				}
+			}
+
+			// Nimbus 自身が提供する読み取り専用ツール（LSP など）は常に通す。
+			// 実装が Nimbus のコードなので副作用が無いと**分かっている**うえ、
+			// 定義ジャンプのたびに承認を求めたら使いものにならない。
+			// ただし上の秘匿ファイル遮断は先に通っている（何を返すかは別の話なので）
+			if (isNimbusReadOnlyTool(toolName)) {
+				return { behavior: 'allow', updatedInput: input };
 			}
 
 			// 危険度は自動許可より先に決める。「常に許可」で `rm -rf` まで素通りさせない（T-058）

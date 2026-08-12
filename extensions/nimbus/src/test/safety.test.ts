@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import { assessCommandRisk, assessPathRisk, assessToolRisk } from '../core/risk';
-import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, globToRegExp, isProtectedPath } from '../core/secrets';
+import { DEFAULT_PROTECTED_GLOBS, findBlockedRead, globToRegExp, isNimbusReadOnlyTool, isProtectedPath } from '../core/secrets';
 import { createSanitizer } from '../sanitizer';
 
 // --- 危険操作の事前検知（T-058） ---
@@ -117,6 +117,17 @@ test('Bash からの覗き見も止めるが、書き込みは止めない', () 
 
 test('Write / Edit は読み取り経路ではないので対象外', () => {
 	assert.strictEqual(findBlockedRead('Write', { file_path: '/w/.env' }), undefined);
+});
+
+test('Nimbus 自作の読み取りツール（LSP など）にも遮断を効かせる', () => {
+	// 承認なしで通す経路なので、ここが抜けると .env が素通りする
+	assert.ok(isNimbusReadOnlyTool('mcp__nimbus_lsp__definition'));
+	assert.ok(!isNimbusReadOnlyTool('mcp__other__definition'));
+	assert.deepStrictEqual(findBlockedRead('mcp__nimbus_lsp__definition', { uri: 'file:///w/.env' }), {
+		path: 'file:///w/.env',
+		via: 'tool'
+	});
+	assert.strictEqual(findBlockedRead('mcp__nimbus_lsp__definition', { uri: 'file:///w/a.ts' }), undefined);
 });
 
 test('既定の一覧は空配列で置き換えられない（設定ミスで丸腰にしない）', () => {
