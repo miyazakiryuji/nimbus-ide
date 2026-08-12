@@ -37,6 +37,7 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 16 | `build/lib/extensions.ts` | `packagedDependenciesByExtension` に `nimbus: ['@anthropic-ai/claude-agent-sdk']` | SDK は自パッケージ内の実行ファイルを子プロセスで起動するため、バンドルせず node_modules ごと同梱する | 同上 |
 | 17 | `src/vs/platform/extensionManagement/node/extensionManagementService.ts` | 署名検証のフォールバックを `true` → `false` | 設定の既定値だけでは CLI 経路で undefined になり true に戻る。Open VSX の拡張が入らない（実測） | 同上 |
 | 18 | `src/vs/sessions/sessions.common.main.ts` | スクラッチファイルの contribution を 1 行 import | 機能自体は `src/vs/sessions/contrib/scratchFiles/`（新規追加）にあり、登録だけがここに要る（T-033） | 手作業（追従時は import 行の位置だけ確認する） |
+| 19 | `src/vs/nls.ts` | `_format()` の末尾で、文言中の "Visual Studio Code" / "VS Code" を製品名に置き換える | upstream の文言には製品名が直書きされている（`localize()` 内だけで 152 箇所・約 90 ファイル）。ファイルごとに直すと差分が広がって追従できない。`localize` / `localize2` が必ず通る集約点で 1 回だけ行えば、新しい文言にも自動で効く | `nimbus/branding/apply-core-changes.mjs` |
 
 ## リポジトリ運用（push できない問題とその回避）
 

@@ -270,7 +270,9 @@ for (const [file, from, to] of replacements) {
   if (hits !== 1) {
     throw new Error(`${file}: 置換対象が ${hits} 箇所（1 箇所であるべき）— upstream の文言が変わった可能性:\n  ${from}`)
   }
-  byFile.set(file, text.replace(from, to))
+  // 置換文字列は関数で渡す。素の文字列だと `$&` などが JS の特殊記法として展開され、
+  // パッチが壊れる（実際に nls.ts のパッチが壊れて esbuild が構文エラーを出した）
+  byFile.set(file, text.replace(from, () => to))
   applied++
 }
 

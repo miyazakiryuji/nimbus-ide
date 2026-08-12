@@ -40,7 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-002 `localize()` に残る "VS Code" 直書き 152 箇所の掃除（`grep -rn "localize" --include="*.ts" src/vs | grep "VS Code"`）@session-doctor 2026-08-13 [P1]
 
 - [ ] T-033 **スクラッチファイル**（IntelliJ 由来）— 実装・型チェック・単体テスト（13,177 件全通過）
       まで完了。残るは画面確認とパッケージ版スモーク（`nimbus/docs/testing/scratch-files.md` §2・§3）
@@ -536,3 +535,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-145 ドクター（不要ファイル・宣言と実装のズレ・台帳の記載漏れを機械で洗い出す）— 2026-08-13 / `node nimbus/scripts/doctor.mjs` / 仕様 [quality-commands](nimbus/docs/specs/quality-commands.md)
 - [x] T-146 テストコマンド（モジュールテスト＋GUI 操作テスト）— 2026-08-13 / `bash nimbus/scripts/test.sh` / スキル `nimbus-doctor` `spec-drift` `nimbus-test`
 - [x] T-234 重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
+- [x] T-002 `localize()` の "VS Code" 直書き 152 箇所 — 2026-08-13 / nls の集約点（`_format`）で置換。1 ファイルの変更で全部に効き、upstream の新しい文言にも追随する

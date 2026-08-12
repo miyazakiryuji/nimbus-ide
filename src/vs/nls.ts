@@ -45,19 +45,7 @@ function _format(message: string, args: (string | number | boolean | undefined |
 
 	if (isPseudo) {
 		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
-		result = '\uFF3B' + result.replace(/[aouei]/g, '	if (isPseudo) {
-		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
 		result = '\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\uFF3D';
-	}
-
-	return result;
-}	if (isPseudo) {
-		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
-		result = '\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\uFF3D';
-	}
-
-	return result;
-}') + '\uFF3D';
 	}
 
 	// --- Start Nimbus ---
