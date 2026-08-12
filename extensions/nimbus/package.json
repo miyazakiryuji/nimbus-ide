@@ -126,6 +126,12 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.askAboutSelection",
+        "title": "Nimbus に頼む",
+        "category": "Nimbus",
+        "icon": "$(cloud)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
@@ -286,6 +292,13 @@
       }
     ],
     "menus": {
+      "editor/context": [
+        {
+          "command": "nimbus.askAboutSelection",
+          "when": "editorTextFocus",
+          "group": "nimbus@1"
+        }
+      ],
       "commandPalette": [
         {
           "command": "nimbus.interrupt",
@@ -463,6 +476,11 @@
           "type": "boolean",
           "default": true,
           "description": "定義ジャンプ・参照検索・型情報・呼び出し階層・診断を、Claude が使えるツールとして渡します（読み取りのみ・承認は求めません）。"
+        },
+        "nimbus.editor.codeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "関数・クラスの上に「Nimbus に頼む」を表示します。"
         },
         "nimbus.lsp.attachSignatures": {
           "type": "boolean",

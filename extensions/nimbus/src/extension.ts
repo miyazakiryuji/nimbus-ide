@@ -49,6 +49,7 @@ import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
+import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1022,6 +1023,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	}
 
+	// 関数の上に「Nimbus に頼む」を出す（T-172）。右クリックからも同じ入口（T-171）
+	const codeLens = new NimbusCodeLensProvider();
+
 	// ターミナルで落ちたコマンドを拾ってセッションへ渡す（T-169）。
 	// 「出力を選んでコピーして貼る」を通知のボタン 1 つに畳む
 	const terminals = new TerminalWatcher({
@@ -1166,6 +1170,26 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
 		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
+		// エディタから直接頼む（T-171 / T-172）。ファイル名も行番号も打ち直さない
+		vscode.commands.registerCommand(
+			'nimbus.askAboutSelection',
+			(args?: { uri: string; startLine: number; endLine: number; symbol?: string }) =>
+				askAboutSelection(
+					{
+						send: (text) => {
+							cockpit.reveal();
+							void send(text);
+						}
+					},
+					args
+				)
+		),
+		vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLens),
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration('nimbus.editor.codeLens')) {
+				codeLens.refresh();
+			}
+		}),
 		// 通知を閉じてしまっても、あとから同じものを投入できる（T-169 / T-039）
 		vscode.commands.registerCommand('nimbus.sendLastTerminalFailure', () => {
 			if (!terminals.sendLastFailure()) {
