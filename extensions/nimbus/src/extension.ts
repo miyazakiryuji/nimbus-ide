@@ -84,6 +84,7 @@ import { showCoverageDiff } from './coverageDiff';
 import { buildFailingTestPrompt } from './core/testFailures';
 import { runImpactedTests } from './impactedTests';
 import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
+import { showRefactorProgress, startRefactorTrack } from './refactorProgress';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -1851,6 +1852,20 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// 段階的リファクタの進捗（T-111）。残りの数が見えないと、大きな置き換えは途中で止まる
+		vscode.commands.registerCommand('nimbus.trackRefactor', () =>
+			startRefactorTrack({ storage: context.workspaceState, send: (text) => void send(text), log })
+		),
+		vscode.commands.registerCommand('nimbus.refactorProgress', () =>
+			showRefactorProgress({
+				storage: context.workspaceState,
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		// 段階的リファクタの進捗（T-111）。残りの数が見えないと、大きな置き換えは途中で止まる
 		vscode.commands.registerCommand('nimbus.trackRefactor', () =>
 			startRefactorTrack({ storage: context.workspaceState, send: (text) => void send(text), log })

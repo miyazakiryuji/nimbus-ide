@@ -167,6 +167,18 @@
         "icon": "$(checklist)"
       },
       {
+        "command": "nimbus.trackRefactor",
+        "title": "置き換えを追いかける",
+        "category": "Nimbus",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "nimbus.refactorProgress",
+        "title": "置き換えの進捗を見る",
+        "category": "Nimbus",
+        "icon": "$(checklist)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
