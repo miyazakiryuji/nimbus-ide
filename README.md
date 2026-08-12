@@ -105,6 +105,83 @@ Microsoft の Visual Studio Marketplace は、利用規約により Microsoft �
    [`nimbus/docs/core-changes.md`](nimbus/docs/core-changes.md) に必ず記録する
 3. 身元の差し替えは手編集せず、`nimbus/branding/*.mjs` のスクリプトで再適用できる形にする
 4. ベースは開発中の `main` ではなく**リリース系のブランチ／タグ**に載せる
+5. やること・やりたいことは [`tasks.md`](tasks.md) に集約する。**このファイルは随時更新する**
+6. **機能を実装したら、同じコミットで仕様書を直す**（下記「実装したら仕様書を直す」）
 
 upstream への追従は [`nimbus/scripts/sync-upstream.sh`](nimbus/scripts/sync-upstream.sh) を参照。
 テストは `node --test "extensions/nimbus/out/test/*.test.js"`。
+
+### タスクは tasks.md にある
+
+やること・やりたいことは、粒度を問わず [`tasks.md`](tasks.md) に集めています。
+**このファイルは随時更新します** — 思いついたら Inbox に 1 行足し、着手したら 進行中 へ移し、
+終わったら 完了 へ移す。「こんなことをしたい」程度の思いつきも、整える前にそのまま書いてよい場所です。
+
+作業を始める前に `tasks.md` を読み、終わったら必ず状態を反映してください。
+ここが最新でないと、次に作業する人（あるいは別の AI）は同じことを二度やることになります。
+
+### 実装したら仕様書を直す
+
+**機能を足した／振る舞いを変えたら、実装と同じコミットで仕様書を直します。**
+コードだけ進んでドキュメントが取り残されると、次のセッションが古い記述を「正しい仕様」として
+作業を始めてしまう。並行開発では、ここが最初に壊れます。
+
+実装のたびに見直すもの:
+
+1. [`nimbus/docs/specs/`](nimbus/docs/specs/) の `<機能名>.md` — その機能の仕様（無ければ新しく作る）
+2. [`nimbus/docs/core-changes.md`](nimbus/docs/core-changes.md) — コア（`src/vs/**`）に触ったときは必ず
+3. `nimbus/docs/testing/` — 受け入れ条件と、それをどう確認したかの記録
+4. この README の「できること」と設定の表 — 利用者から見た振る舞いが変わったとき
+5. [`tasks.md`](tasks.md) — 該当タスクを 完了 へ移す。残った宿題は新しい行として Inbox に足す
+
+「あとでまとめて書く」は成立しません（まとめて書くまでの間に、他のセッションが古い前提で動き出す）。
+
+### 複数の AI で並行開発する
+
+このリポジトリは、**複数の AI セッション（Claude Code など）が同じ作業ブランチ `nimbus` を
+同時に触る**前提で運用しています。ひとりが順番に書く前提の作法では壊れるので、次を守ってください。
+
+**作業を分ける**
+
+- 機能は原則 `extensions/nimbus/src/<機能>/` の中で完結させる。ファイルが分かれていれば衝突しない
+- コアは `// --- Start Nimbus ---` ブロックだけを触り、`nimbus/docs/core-changes.md` に**追記**する
+- 長い作業や実験は git worktree を切る（`git worktree add ../nimbus-<topic> nimbus`）。
+  同じチェックアウトで 2 つのセッションが同時にビルドすると `out/` を奪い合います
+
+**始めかたと終わりかた**
+
+1. `git status` を見る。**汚れていたら他のセッションが作業中**かもしれない。
+   他人の未コミット変更を `git stash` / `git checkout --` / `git reset --hard` で消してはいけない
+2. `tasks.md` の該当行を 進行中 へ移し、担当と日付を書いてから着手する（これが唯一の「札」です）
+3. コミットは小さく、1 コミット = 1 つの意図。終わったらすぐ
+   `git pull --rebase origin nimbus` → `git push`
+4. ローカルに溜め込まない。溜め込むほど競合は解けなくなります
+
+**衝突しやすい場所と、その直しかた**
+
+| 場所 | 直しかた |
+| --- | --- |
+| `product.json` | 手で直さない。`node nimbus/branding/apply-product-json.mjs` で当て直す |
+| `nimbus/branding/out/` などの生成物 | 手で直さない。`node nimbus/branding/make-icon.mjs` で作り直す |
+| `package-lock.json` | 片方を採用し、`npm install` で作り直す |
+| `extensions/nimbus/package.json` の `contributes` | **両方の追加を残す。** 相手の commands / views / themes を消さない |
+| `nimbus/docs/core-changes.md` | **両方の記録を残す。** 追従マージのための台帳なので、消すと後で詰む |
+| `tasks.md` | **両方の行を残す。** ID が重複したら、後からコミットする側が採番し直す |
+| 実装コード | 相手の意図を読んでから統合する。片方を捨てるなら、捨てた理由を `tasks.md` の「保留」に 1 行残す |
+
+**解決の手順**
+
+```bash
+git pull --rebase origin nimbus   # まず rebase で取り込む
+git status                        # 衝突したファイルを確認する
+
+# 生成物は作り直す。台帳・contributes・tasks.md は「両方残す」で解決する
+git add <解決したファイル>
+git rebase --continue
+
+npm run compile                                      # 型とビルドを確認
+node --test "extensions/nimbus/out/test/*.test.js"   # Nimbus 側のテスト
+```
+
+どちらが正しいか判断できない衝突は、**推測で片方を捨てず `git rebase --abort` して人間に聞く。**
+消えた作業は git からも復元できないことがあります。
