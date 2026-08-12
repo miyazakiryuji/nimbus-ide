@@ -28,6 +28,10 @@ import { addClaudeMdSection, ClaudeMdViewProvider } from './claudeMdView';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
+import { McpViewProvider } from './mcpView';
+import { canReconnect, type McpServer } from './core/mcp';
+import { buildCheckpoints, checkpointLabel, describeRewind } from './core/checkpoints';
+import { searchTranscripts } from './transcriptSearch';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { ApprovalsViewProvider } from './approvalsView';
@@ -49,6 +53,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const claudeMdView = new ClaudeMdViewProvider();
 	const usageView = new UsageViewProvider();
 	const activityView = new ActivityViewProvider();
+	const mcpView = new McpViewProvider();
 	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
 	const approvalsView = new ApprovalsViewProvider();
 	const approvals = vscode.window.createTreeView('nimbus.approvals', { treeDataProvider: approvalsView });
@@ -142,6 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			retained.splice(0, retained.length - MAX_RETAINED_EVENTS);
 		}
 		if (event.kind === 'session-init') {
+			void refreshMcp();
 			contextView.update(event);
 			skillsView.setSessionSkills(event.skills);
 			lastApiKeySource = event.apiKeySource;
@@ -187,6 +193,85 @@ export function activate(context: vscode.ExtensionContext): void {
 		} catch (error) {
 			log(`[notify] 通知を出せませんでした: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+	/**
+	 * チェックポイントへの巻き戻し（tasks.md T-025）。
+	 * CLI の Esc 2 回と違い、**戻す先を選んでから**、**何が変わるかを見てから**戻す。
+	 */
+	async function rewindToCheckpoint(): Promise<void> {
+		if (!activeSessionId) {
+			void vscode.window.showInformationMessage('Nimbus: セッションが開始されていません。');
+			return;
+		}
+		const checkpoints = buildCheckpoints(retained);
+		if (checkpoints.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 戻れる地点がまだありません。');
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			checkpoints.map((checkpoint) => ({
+				label: `${checkpoint.index}. ${checkpointLabel(checkpoint)}`,
+				description: new Date(checkpoint.at).toLocaleTimeString('ja-JP'),
+				checkpoint
+			})),
+			{ title: 'Nimbus: どこまで戻しますか', placeHolder: 'この指示を出す直前の状態に戻します' }
+		);
+		if (!chosen) {
+			return;
+		}
+		// 先に空振りで何が変わるかを見る。見せずに戻すのは Esc 2 回と同じで、進歩が無い
+		const preview = await sessions.rewind(activeSessionId, chosen.checkpoint.messageUuid, true);
+		if (!preview || !preview.canRewind) {
+			void vscode.window.showWarningMessage(`Nimbus: ${describeRewind(preview ?? { canRewind: false })}`);
+			return;
+		}
+		const CONFIRM = '戻す';
+		const answer = await vscode.window.showWarningMessage(
+			`「${checkpointLabel(chosen.checkpoint)}」の直前まで戻します。`,
+			{ modal: true, detail: describeRewind(preview) },
+			CONFIRM
+		);
+		if (answer !== CONFIRM) {
+			return;
+		}
+		const result = await sessions.rewind(activeSessionId, chosen.checkpoint.messageUuid, false);
+		log(`[rewind] ${describeRewind(result ?? { canRewind: false })}`);
+		void vscode.window.showInformationMessage(`Nimbus: 戻しました（${describeRewind(result ?? { canRewind: false })}）。`);
+	}
+
+	/** MCP サーバーの一覧を取り直す（T-029 / T-042） */
+	async function refreshMcp(): Promise<void> {
+		if (!activeSessionId) {
+			mcpView.clear();
+			return;
+		}
+		mcpView.update(await sessions.mcpServers(activeSessionId));
+	}
+
+	/** 繋ぎ直し・有効無効の切り替え。押して意味のある状態のときだけ効かせる */
+	async function mcpAction(server: McpServer | undefined, action: 'reconnect' | 'toggle'): Promise<void> {
+		if (!server || !activeSessionId) {
+			return;
+		}
+		try {
+			if (action === 'reconnect') {
+				if (!canReconnect(server.status)) {
+					void vscode.window.showInformationMessage(`Nimbus: ${server.name} は繋ぎ直せる状態ではありません。`);
+					return;
+				}
+				await sessions.reconnectMcpServer(activeSessionId, server.name);
+				log(`[mcp] ${server.name} を繋ぎ直しました`);
+			} else {
+				await sessions.toggleMcpServer(activeSessionId, server.name, server.status === 'disabled');
+				log(`[mcp] ${server.name} を${server.status === 'disabled' ? '有効' : '無効'}にしました`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			log(`[mcp] 操作に失敗: ${message}`);
+			void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+		}
+		await refreshMcp();
 	}
 
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
@@ -499,6 +584,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		skillsView.setSessionSkills([]);
 		usageView.clear();
 		activityView.update([]);
+		mcpView.clear();
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
@@ -750,6 +836,17 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('nimbus.claudeMd', claudeMdView),
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),
 		vscode.window.registerTreeDataProvider('nimbus.activity', activityView),
+		vscode.window.registerTreeDataProvider('nimbus.mcp', mcpView),
+		// 過去セッションの横断検索（T-034）。読むのは Claude Code 本体の記録で、Nimbus は書かない
+		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
+		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
+		vscode.commands.registerCommand('nimbus.refreshMcp', () => refreshMcp()),
+		vscode.commands.registerCommand('nimbus.reconnectMcp', (node?: { server?: McpServer }) =>
+			mcpAction(node?.server, 'reconnect')
+		),
+		vscode.commands.registerCommand('nimbus.toggleMcp', (node?: { server?: McpServer }) =>
+			mcpAction(node?.server, 'toggle')
+		),
 		// 手動のコンパクション（T-022）。溜まってきたと感じた時点で自分で起こせるようにする。
 		// SDK に専用の API は無く、CLI と同じく `/compact` を送るのが正規の経路
 		vscode.commands.registerCommand('nimbus.compact', async () => {

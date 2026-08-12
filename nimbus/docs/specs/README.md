@@ -19,6 +19,8 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
 - [`usage.md`](usage.md) — 使用量（5 時間・週の枠／文脈の消費／費用と上限アラート）
 - [`session-activity.md`](session-activity.md) — セッションの中身（サブエージェント・フック・触ったファイル・コンパクション）と通知
+- [`checkpoints-and-mcp.md`](checkpoints-and-mcp.md) — チェックポイントの巻き戻しと MCP サーバーの管理
+- [`transcript-search.md`](transcript-search.md) — 過去セッションの横断検索
 
 IDE 基礎機能:
 

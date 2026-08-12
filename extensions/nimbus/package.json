@@ -73,6 +73,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "nimbus.mcp",
+          "name": "MCP サーバー",
+          "visibility": "collapsed"
+        },
+        {
           "id": "nimbus.help",
           "name": "ヘルプ（ゆあ）",
           "type": "webview",
@@ -176,6 +181,36 @@
         "title": "承認待ちをすべて拒否",
         "category": "Nimbus",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "nimbus.searchTranscripts",
+        "title": "過去セッションを検索",
+        "category": "Nimbus",
+        "icon": "$(search)"
+      },
+      {
+        "command": "nimbus.rewind",
+        "title": "チェックポイントまで戻す",
+        "category": "Nimbus",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "nimbus.refreshMcp",
+        "title": "MCP サーバーを取得し直す",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.reconnectMcp",
+        "title": "MCP サーバーを繋ぎ直す",
+        "category": "Nimbus",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "nimbus.toggleMcp",
+        "title": "MCP サーバーの有効／無効を切り替える",
+        "category": "Nimbus",
+        "icon": "$(circle-slash)"
       }
     ],
     "menus": {
@@ -190,6 +225,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "nimbus.refreshMcp",
+          "when": "view == nimbus.mcp",
+          "group": "navigation"
+        },
         {
           "command": "nimbus.approvals.denyAll",
           "when": "view == nimbus.approvals",
@@ -240,6 +280,16 @@
         {
           "command": "nimbus.approvals.alwaysAllow",
           "when": "view == nimbus.approvals && viewItem =~ /nimbusApprovalRule/ && nimbus.approvalQueueMode",
+          "group": "nimbus@1"
+        },
+        {
+          "command": "nimbus.reconnectMcp",
+          "when": "view == nimbus.mcp && viewItem == nimbusMcpServer",
+          "group": "inline"
+        },
+        {
+          "command": "nimbus.toggleMcp",
+          "when": "view == nimbus.mcp && viewItem =~ /nimbusMcpServer/",
           "group": "nimbus@1"
         }
       ]
