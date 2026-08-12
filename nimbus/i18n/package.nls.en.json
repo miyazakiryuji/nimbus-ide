@@ -238,5 +238,7 @@
   "config.gif.width": "GIF width in pixels. Height keeps the original ratio.",
   "command.pluginActions": "Use an Instruction Added by an Extension",
   "config.managedPolicy": "The ceiling your organization sets on permissions. Limits written here cannot be loosened by the user — only narrowed. Intended to be delivered per machine, for example through MDM.",
-  "command.packageSkills": "Package Your Skills for Sharing"
+  "command.packageSkills": "Package Your Skills for Sharing",
+  "command.dictateInstruction": "Dictate an Instruction",
+  "config.voice.modelPath": "Where the model lives, when you use whisper.cpp. Other transcription tools do not need this."
 }
