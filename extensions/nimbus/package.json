@@ -922,6 +922,12 @@
         "title": "今週のふりかえりを見る",
         "category": "Nimbus",
         "icon": "$(graph)"
+      },
+      {
+        "command": "nimbus.compareBenchmarks",
+        "title": "改善前後のベンチを比べる",
+        "category": "Nimbus",
+        "icon": "$(dashboard)"
       }
     ],
     "menus": {
