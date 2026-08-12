@@ -474,6 +474,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-045 何をしたかを並べ直す（理由は書かれたものだけ・推測で補わない）— 2026-08-13 / 仕様 [explain](nimbus/docs/specs/explain.md)
 - [x] T-211 レビューを頼む文（読む順はテストから・テスト無しは自分から言う）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-214 やり取りの切り出し（切り出す時点で伏せる・保存しない）— 2026-08-13 / 仕様 [highlights](nimbus/docs/specs/highlights.md)
 - [x] T-202 危ない書き方の検出（断定しない・当てられても困らない用途は拾わない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)

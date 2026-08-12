@@ -201,6 +201,12 @@
         "icon": "$(law)"
       },
       {
+        "command": "nimbus.checkApiDocs",
+        "title": "古くなった API ドキュメントを探す",
+        "category": "Nimbus",
+        "icon": "$(book)"
+      },
+      {
         "command": "nimbus.captureBehavior",
         "title": "移行前の振る舞いを固定する",
         "category": "Nimbus",
@@ -748,6 +754,12 @@
         "title": "レビューを頼む文を作る",
         "category": "Nimbus",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "nimbus.openExplanation",
+        "title": "何をしたかを並べ直す（解説）",
+        "category": "Nimbus",
+        "icon": "$(list-ordered)"
       }
     ],
     "menus": {
