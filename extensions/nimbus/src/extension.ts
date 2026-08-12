@@ -9,10 +9,13 @@ import * as vscode from 'vscode';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 import type { NimbusEvent, SessionSummary } from './events';
 import { SessionManager } from './session/SessionManager';
-import { createCanUseTool } from './permissions';
+import { createPermissionBroker } from './permissions';
 import { CockpitViewProvider } from './cockpit/CockpitViewProvider';
 import { createSanitizer } from './sanitizer';
 import { reportMissingExecutable, resolveClaudeExecutable } from './claudeExecutable';
+import { ContextViewProvider } from './contextView';
+import { ProposedEditPreviewer } from './proposedEdit';
+import { billingModeLabel } from './billing';
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -24,14 +27,29 @@ export function activate(context: vscode.ExtensionContext): void {
 	const log = (message: string): void => output.appendLine(sanitizer.sanitizeString(message));
 
 	const sessionAllowAll = new Set<string>();
+	const previewer = new ProposedEditPreviewer();
+	const contextView = new ContextViewProvider();
+	let pendingApprovals = 0;
+
+	const broker = createPermissionBroker({
+		sessionAllowAll,
+		log,
+		previewer,
+		onPendingChanged: (pending) => {
+			pendingApprovals = pending.length;
+			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
+		}
+	});
+
 	const sessions = new SessionManager(
 		undefined,
 		async () => buildOptions(),
-		(sessionId) => createCanUseTool(sessionId, { sessionAllowAll, log })
+		(sessionId) => broker.canUseToolFor(sessionId)
 	);
 
 	/** 現在前面で操作しているセッション。並列セッションは F4 で本格対応する */
 	let activeSessionId: string | undefined;
+	let lastApiKeySource: string | undefined;
 	const retained: NimbusEvent[] = [];
 
 	const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -59,6 +77,10 @@ export function activate(context: vscode.ExtensionContext): void {
 		if (retained.length > MAX_RETAINED_EVENTS) {
 			retained.splice(0, retained.length - MAX_RETAINED_EVENTS);
 		}
+		if (event.kind === 'session-init') {
+			contextView.update(event);
+			lastApiKeySource = event.apiKeySource;
+		}
 		cockpit.post({ type: 'event', event });
 		updateStatus(sessions.get(event.sessionId));
 		logEvent(event);
@@ -82,16 +104,23 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	function updateStatus(summary: SessionSummary | undefined): void {
+		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
+		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
 		if (!summary) {
-			status.text = '$(cloud) Nimbus';
+			status.text = `${waiting}$(cloud) Nimbus`;
 			status.tooltip = 'Nimbus — セッション未開始';
 			void vscode.commands.executeCommand('setContext', 'nimbus.hasRunningSession', false);
 			return;
 		}
 		const busy = summary.status === 'running' || summary.status === 'starting';
 		const cost = summary.totalCostUsd !== undefined ? ` · $${summary.totalCostUsd.toFixed(4)}` : '';
-		status.text = `${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${cost}`;
-		status.tooltip = `Nimbus — ${summary.status}${summary.model ? ` · ${summary.model}` : ''}\n${summary.cwd}`;
+		status.text = `${waiting}${busy ? '$(sync~spin)' : '$(cloud)'} Nimbus${cost}`;
+		status.tooltip = [
+			`Nimbus — ${summary.status}`,
+			billingModeLabel(lastApiKeySource),
+			summary.model ?? '',
+			summary.cwd
+		].filter(Boolean).join('\n');
 		void vscode.commands.executeCommand('setContext', 'nimbus.hasRunningSession', busy);
 	}
 
@@ -144,7 +173,9 @@ export function activate(context: vscode.ExtensionContext): void {
 			sessions.close(activeSessionId);
 		}
 		activeSessionId = undefined;
+		lastApiKeySource = undefined;
 		retained.length = 0;
+		contextView.update(undefined);
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
 		cockpit.reveal();
@@ -153,6 +184,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		output,
 		status,
+		previewer,
+		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
 		vscode.window.registerWebviewViewProvider(CockpitViewProvider.viewType, cockpit, {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),

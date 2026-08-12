@@ -38,6 +38,11 @@
           "id": "nimbus.cockpit",
           "name": "コックピット",
           "type": "webview"
+        },
+        {
+          "id": "nimbus.context",
+          "name": "文脈",
+          "icon": "$(book)"
         }
       ]
     },
@@ -78,13 +83,19 @@
           "type": "string",
           "default": "",
           "description": "使用する Claude Code 実行ファイルのパス。空の場合は Nimbus に同梱されたものを使います。"
+        },
+        "nimbus.permissions.showDiffBeforeApproval": {
+          "type": "boolean",
+          "default": true,
+          "description": "ファイルを書き換えるツールの承認を求める前に、変更内容を差分エディタで表示します。"
         }
       }
     }
   },
   "scripts": {
     "compile": "gulp compile-extension:nimbus",
-    "watch": "gulp watch-extension:nimbus"
+    "watch": "gulp watch-extension:nimbus",
+    "test": "node --test out/test/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.226"
