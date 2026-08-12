@@ -132,6 +132,12 @@
         "icon": "$(cloud)"
       },
       {
+        "command": "nimbus.coverageDiff",
+        "title": "この変更のカバレッジを見る",
+        "category": "Nimbus",
+        "icon": "$(shield)"
+      },
+      {
         "command": "nimbus.newTask",
         "title": "新しいタスク（worktree を切って並列実行）",
         "category": "Nimbus"
@@ -331,6 +337,18 @@
         "title": "待機中タスクの優先度を変える",
         "category": "Nimbus",
         "icon": "$(arrow-up)"
+      },
+      {
+        "command": "nimbus.compactWithSelection",
+        "title": "文脈を圧縮する（残すものを選ぶ）",
+        "category": "Nimbus",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "nimbus.generateWidgetTest",
+        "title": "Widget テストの雛形を作る",
+        "category": "Nimbus",
+        "icon": "$(beaker)"
       }
     ],
     "menus": {
@@ -338,6 +356,11 @@
         {
           "command": "nimbus.askAboutSelection",
           "when": "editorTextFocus",
+          "group": "nimbus@1"
+        },
+        {
+          "command": "nimbus.generateWidgetTest",
+          "when": "resourceExtname == .dart",
           "group": "nimbus@1"
         }
       ],
@@ -555,19 +578,6 @@
           ],
           "default": "ask",
           "description": "Claude がファイルを書き換えたあと、そのターンで増えた型エラーだけを確かめます。"
-        },
-        "nimbus.lsp.verifyIncludes": {
-          "type": "string",
-          "enum": [
-            "errors",
-            "warnings"
-          ],
-          "enumDescriptions": [
-            "型エラーだけを差し戻します。",
-            "lint / analyzer の警告も差し戻します（自動ループ向け）。"
-          ],
-          "default": "errors",
-          "description": "編集後の確認で、どこまでを差し戻すか。"
         },
         "nimbus.lsp.verifyIncludes": {
           "type": "string",

@@ -32,6 +32,7 @@ import { openFromStackTrace } from './stackTrace';
 import { draftReleaseNotes } from './releaseNotes';
 import { openChangeStats } from './changeStats';
 import { openCodeHealth } from './codeHealth';
+import { generateWidgetTest } from './flutterTests';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -47,6 +48,7 @@ import { thresholdLevel } from './core/usage';
 import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
 import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
 import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
+import { buildCompactCommand, compactCandidates } from './core/compactSelection';
 import { PRIORITY_LABEL, type TaskPriority } from './core/tasks';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
@@ -54,6 +56,7 @@ import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
 import { buildSignatureNote } from './signatureAttachment';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
+import { showCoverageDiff } from './coverageDiff';
 import { TerminalWatcher } from './terminalWatcher';
 import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
@@ -437,6 +440,42 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	/**
+	 * 圧縮前に「何を残すか」を選ぶ（tasks.md T-154）。
+	 * コンパクションを黙って任せない。選んだものは `/compact` への指示として渡す。
+	 */
+	async function compactWithSelection(): Promise<void> {
+		if (!activeSessionId || !sessions.isAccepting(activeSessionId)) {
+			void vscode.window.showInformationMessage('Nimbus: 動いているセッションがありません。');
+			return;
+		}
+		const candidates = compactCandidates(retained);
+		if (candidates.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 残すものを選べるだけの会話がまだありません。');
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			candidates.map((candidate) => ({
+				label: candidate.label,
+				description: candidate.kind === 'instruction' ? '指示' : 'まとめ',
+				detail: new Date(candidate.at).toLocaleTimeString('ja-JP'),
+				candidate,
+				picked: false
+			})),
+			{
+				title: 'Nimbus: 圧縮後も残すものを選ぶ（選ばなければ全部おまかせ）',
+				canPickMany: true,
+				matchOnDescription: true
+			}
+		);
+		if (!chosen) {
+			return;
+		}
+		const command = buildCompactCommand(chosen.map((item) => item.candidate));
+		sessions.sendMessage(activeSessionId, command);
+		log(`[compact] ${chosen.length} 件を残すよう指示して圧縮します`);
 	}
 
 	function tasksFileUri(): vscode.Uri | undefined {
@@ -1322,6 +1361,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.pinnedFiles', () => managePinnedFiles()),
 		// テンプレートから始める（T-148）
 		// tasks.md から板へ（T-013）
+		// 圧縮前に残すものを選ぶ（T-154）
+		vscode.commands.registerCommand('nimbus.compactWithSelection', () => compactWithSelection()),
 		vscode.commands.registerCommand('nimbus.taskFromFile', () => taskFromTasksFile()),
 		// 待機列の優先度（T-233）
 		vscode.commands.registerCommand('nimbus.setTaskPriority', (node?: { taskId?: string }) =>
@@ -1408,6 +1449,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
 		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),
+		// 開いている Dart から Widget / ゴールデンテストの雛形を作る（T-193）
+		vscode.commands.registerCommand('nimbus.generateWidgetTest', () => generateWidgetTest()),
 		// エディタから直接頼む（T-171 / T-172）。ファイル名も行番号も打ち直さない
 		vscode.commands.registerCommand(
 			'nimbus.askAboutSelection',
@@ -1445,6 +1488,16 @@ export function activate(context: vscode.ExtensionContext): void {
 				void vscode.window.showInformationMessage('Nimbus: 差し戻す型エラーはありません。');
 			}
 		}),
+		// この変更で足した行がテストされているか（T-109）
+		vscode.commands.registerCommand('nimbus.coverageDiff', () =>
+			showCoverageDiff({
+				send: (text) => {
+					cockpit.reveal();
+					void send(text);
+				},
+				log
+			})
+		),
 		new vscode.Disposable(() => sessions.closeAll())
 	);
 
