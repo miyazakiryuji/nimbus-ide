@@ -10,6 +10,7 @@ import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 import { displayPath } from './core/lsp';
 import { resolveWorkspaceRoot } from './workspaceRoots';
+import { isNotebookCell } from './core/notebooks';
 import {
 	buildCharacterizationPrompt,
 	buildEquivalencePrompt,
@@ -54,6 +55,10 @@ async function currentTarget(): Promise<BehaviorTarget | undefined> {
 	// 選択が無ければファイル全体。書き換わっていれば HEAD 側を取る
 	let code = editor.document.getText();
 	let fromHead = false;
+	// セルは git の管理単位ではないので、HEAD との比較はしない（T-174）
+	if (isNotebookCell(editor.document.uri.scheme)) {
+		return { file, code, fromHead };
+	}
 	try {
 		const head = await git(root, ['show', `HEAD:${file}`]);
 		if (head.length > 0 && head !== code) {

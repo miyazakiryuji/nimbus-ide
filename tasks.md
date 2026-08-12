@@ -136,7 +136,6 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
       `resolveWorkspaceRoot`・仕様 `nimbus/docs/specs/workspace-roots.md`）。残りは各セッションが
       自分の持ち場を自分の番で載せ替える。**承認・レビュー層の 5 ファイルは載せ替え済み**
       （commitSplit / conflicts / diffSummary / impact / prReview）[P2]
-- [ ] T-174 ノートブック（`.ipynb`）対応 [P3]
 
 ### ⑦ コードの理解と生成の精度（エンジン側）
 
@@ -341,6 +340,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-174 ノートブック対応（セルを「ファイル名（セル N）」で扱い、git に渡せない機能は理由つきで断る）
+      — 2026-08-13 / 仕様 [notebooks](nimbus/docs/specs/notebooks.md)
 
 - [x] T-078 モノレポのスコープ切り替え（選んだパッケージを、これから始めるセッションの作業ディレクトリにする）
       — 2026-08-13 / 仕様 [monorepo-scope](nimbus/docs/specs/monorepo-scope.md)

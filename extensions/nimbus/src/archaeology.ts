@@ -16,6 +16,7 @@ import {
 	parseBlamePorcelain
 } from './core/archaeology';
 import { resolveWorkspaceRoot } from './workspaceRoots';
+import { isNotebookCell, notebookNotSupported } from './core/notebooks';
 
 export interface ArchaeologyDeps {
 	send: (text: string) => void;
@@ -40,6 +41,11 @@ export async function exploreHistory(deps: ArchaeologyDeps): Promise<void> {
 	const folder = editor ? resolveWorkspaceRoot(editor.document.uri) : undefined;
 	if (!editor || !folder) {
 		void vscode.window.showInformationMessage('Nimbus: 調べたい範囲を開いてから実行してください。');
+		return;
+	}
+	// セルは git の管理単位ではない（T-174）
+	if (isNotebookCell(editor.document.uri.scheme)) {
+		void vscode.window.showInformationMessage(`Nimbus: ${notebookNotSupported('履歴を辿る機能')}`);
 		return;
 	}
 	const root = folder.uri.fsPath;

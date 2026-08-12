@@ -8,6 +8,8 @@
  */
 import * as vscode from 'vscode';
 import { displayPath } from './core/lsp';
+import { describeCell } from './core/notebooks';
+import { resolveNotebookCell } from './notebooks';
 import {
 	buildSelectionPrompt,
 	intentChoices,
@@ -65,6 +67,14 @@ export async function askAboutSelection(deps: EditorActionsDeps, args?: LensArgs
 	deps.send(buildSelectionPrompt(context, picked.intent as EditorIntent, freeText));
 }
 
+/** ノートブックのセルは「ファイル名（セル N）」で言う（T-174）。そのままでは開き直せない */
+function locationLabel(uri: vscode.Uri): string {
+	const cell = resolveNotebookCell(uri);
+	return cell
+		? describeCell(displayPath(roots(), cell.notebook.fsPath), cell.index)
+		: displayPath(roots(), uri.fsPath);
+}
+
 function contextFromEditor(): SelectionContext | undefined {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -75,7 +85,7 @@ function contextFromEditor(): SelectionContext | undefined {
 		? editor.document.lineAt(selection.active.line).range
 		: new vscode.Range(selection.start, selection.end);
 	return {
-		file: displayPath(roots(), editor.document.uri.fsPath),
+		file: locationLabel(editor.document.uri),
 		startLine: range.start.line + 1,
 		endLine: range.end.line + 1,
 		code: editor.document.getText(range)
