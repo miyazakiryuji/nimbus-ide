@@ -59,6 +59,7 @@ import { openReplay } from './replay';
 import { checkMermaidDiagrams } from './mermaid';
 import { runSetupWizard } from './setupWizard';
 import { openEnvCheck } from './envCheck';
+import { auditDependency } from './depAudit';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -121,7 +122,8 @@ import {
 	suggestRecovery,
 	type RecoveryOption
 } from './core/recovery';
-import { appendBlock, candidatesFor, checkBundleUrl } from './core/importSettings';
+import { checkBundleUrl } from './core/importSettings';
+import { importOtherToolRules } from './importRules';
 import { buildCrashPrompt, parseCrashLog } from './core/crashLog';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
@@ -170,7 +172,6 @@ import { checkMutations } from './mutations';
 import { saveSelectionAsSnippet } from './snippets';
 import { writeAdr } from './decisions';
 import { checkApiDocs } from './apiDocs';
-import { trackSchemaImpact } from './schemaImpact';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
@@ -692,56 +693,6 @@ export function activate(context: vscode.ExtensionContext): void {
 			{ title: `Nimbus: ${title}` }
 		);
 		return chosen?.taskId;
-	}
-
-	/**
-	 * 他ツールの指示書を取り込む（tasks.md T-068）。
-	 * **中身は変換しない。** 置き場所と出どころの見出しを付けて CLAUDE.md へ足すだけ。
-	 */
-	async function importFromOtherTools(): Promise<void> {
-		const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-		if (!root) {
-			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
-			return;
-		}
-		const present: string[] = [];
-		for (const source of candidatesFor(['.cursorrules', '.cursor/rules', '.github/copilot-instructions.md', '.windsurfrules'])) {
-			try {
-				await vscode.workspace.fs.stat(vscode.Uri.joinPath(root, source.from));
-				present.push(source.from);
-			} catch {
-				// 無いものは候補にしない
-			}
-		}
-		const found = candidatesFor(present);
-		if (found.length === 0) {
-			void vscode.window.showInformationMessage('Nimbus: 取り込める設定が見つかりませんでした。');
-			return;
-		}
-		const chosen = await vscode.window.showQuickPick(
-			found.map((candidate) => ({ label: candidate.from, description: candidate.description, candidate })),
-			{ title: 'Nimbus: 他のツールから取り込む', canPickMany: true }
-		);
-		if (!chosen || chosen.length === 0) {
-			return;
-		}
-		const target = vscode.Uri.joinPath(root, 'CLAUDE.md');
-		let existing = '';
-		try {
-			existing = Buffer.from(await vscode.workspace.fs.readFile(target)).toString('utf8');
-		} catch {
-			// 無ければ新しく作る
-		}
-		const date = new Date().toISOString().slice(0, 10);
-		for (const item of chosen) {
-			const content = Buffer.from(
-				await vscode.workspace.fs.readFile(vscode.Uri.joinPath(root, item.candidate.from))
-			).toString('utf8');
-			existing = appendBlock(existing, item.candidate, content, date);
-		}
-		await vscode.workspace.fs.writeFile(target, Buffer.from(existing, 'utf8'));
-		await vscode.window.showTextDocument(target);
-		log(`[import] ${chosen.length} 件を CLAUDE.md へ取り込みました`);
 	}
 
 	/** 配布物を URL から入れる（tasks.md T-071）。**https だけ**通す */
@@ -2390,7 +2341,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		// ペルソナ（T-063）と、書く番の切り替え（T-190 / T-191）
 		// ローカル完結（T-077）・立て直し（T-088）
 		// 他ツールからの取り込み（T-068）・ワンクリック導入（T-071）・実機ログ（T-074）
-		vscode.commands.registerCommand('nimbus.importFromOtherTools', () => importFromOtherTools()),
+		vscode.commands.registerCommand('nimbus.importOtherToolRules', () => importOtherToolRules({ log })),
 		vscode.commands.registerCommand('nimbus.installFromUrl', () => installFromUrl()),
 		vscode.commands.registerCommand('nimbus.pasteCrashLog', () => pasteCrashLog()),
 		vscode.commands.registerCommand('nimbus.localOnly', () => toggleLocalOnly()),
@@ -2539,6 +2490,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.checkMermaid', () => checkMermaidDiagrams()),
 		vscode.commands.registerCommand('nimbus.runSetupWizard', () => runSetupWizard()),
 		vscode.commands.registerCommand('nimbus.openEnvCheck', () => openEnvCheck()),
+		vscode.commands.registerCommand('nimbus.auditDependency', () => auditDependency()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
@@ -2708,16 +2660,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		// このコードがなぜこうなっているのかを辿る（T-079）
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
-				send: (text) => {
-					cockpit.reveal();
-					void send(text);
-				},
-				log
-			})
-		),
-		// 変えた型を参照している場所が壊れていないかを確かめさせる（T-123）
-		vscode.commands.registerCommand('nimbus.trackSchemaImpact', () =>
-			trackSchemaImpact({
 				send: (text) => {
 					cockpit.reveal();
 					void send(text);

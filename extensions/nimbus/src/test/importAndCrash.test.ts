@@ -1,41 +1,17 @@
 /**
- * 設定インポート・ワンクリック導入・実機ログ（T-068 / T-071 / T-074）の単体テスト。
+ * ワンクリック導入・実機ログ（T-071 / T-074）の単体テスト。
  *
- * インポートは**既存を書き換えない**こと、URL は **https だけ**通すこと、
- * クラッシュログは**自分のコードが無いときに無いと言う**ことが要。
+ * URL は **https だけ**通すこと、クラッシュログは
+ * **自分のコードが無いときに無いと言う**ことが要。
+ *
+ * T-068（他ツールの取り込み）は `core/importRules.ts` 側のテストが持つ。
  *
  *   node --test extensions/nimbus/out/test
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { appendBlock, candidatesFor, checkBundleUrl } from '../core/importSettings';
+import { checkBundleUrl } from '../core/importSettings';
 import { buildCrashPrompt, parseCrashLog } from '../core/crashLog';
-
-test('置いてあるものだけを取り込み候補にする', () => {
-	const found = candidatesFor(['.cursorrules', '.github/copilot-instructions.md', 'README.md']);
-	assert.deepStrictEqual(found.map((c) => c.from), ['.cursorrules', '.github/copilot-instructions.md']);
-	assert.ok(found.every((c) => c.to === 'CLAUDE.md'));
-	assert.deepStrictEqual(candidatesFor([]), []);
-});
-
-test('取り込みは既存を書き換えず、出どころを見出しに残す', () => {
-	const candidate = candidatesFor(['.cursorrules'])[0];
-	const result = appendBlock('# 既存の内容\n\nそのまま', candidate, 'タブを使う', '2026-08-13');
-	assert.ok(result.startsWith('# 既存の内容\n\nそのまま'), '既存が変わっている');
-	assert.ok(result.includes('## .cursorrules から取り込み（2026-08-13）'));
-	assert.ok(result.includes('タブを使う'));
-});
-
-test('同じ日に二度取り込んでも重ねない', () => {
-	const candidate = candidatesFor(['.cursorrules'])[0];
-	const once = appendBlock('', candidate, 'ルール', '2026-08-13');
-	assert.strictEqual(appendBlock(once, candidate, 'ルール', '2026-08-13'), once);
-});
-
-test('中身が空なら何もしない', () => {
-	const candidate = candidatesFor(['.cursorrules'])[0];
-	assert.strictEqual(appendBlock('既存', candidate, '   ', '2026-08-13'), '既存');
-});
 
 test('ワンクリック導入は https だけ通す', () => {
 	assert.deepStrictEqual(checkBundleUrl('https://example.com/b.json'), { ok: true, url: 'https://example.com/b.json' });

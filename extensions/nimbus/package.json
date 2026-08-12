@@ -207,12 +207,6 @@
         "icon": "$(book)"
       },
       {
-        "command": "nimbus.trackSchemaImpact",
-        "title": "型の変更が壊す場所を洗い出す",
-        "category": "Nimbus",
-        "icon": "$(type-hierarchy)"
-      },
-      {
         "command": "nimbus.exploreHistory",
         "title": "なぜこうなっているのかを辿る",
         "category": "Nimbus",
@@ -876,12 +870,6 @@
         "icon": "$(server-environment)"
       },
       {
-        "command": "nimbus.importFromOtherTools",
-        "title": "他のツールから設定を取り込む",
-        "category": "Nimbus",
-        "icon": "$(cloud-download)"
-      },
-      {
         "command": "nimbus.installFromUrl",
         "title": "URL から配布物を入れる",
         "category": "Nimbus",
@@ -898,6 +886,12 @@
         "title": "依存を足す前に見る",
         "category": "Nimbus",
         "icon": "$(package)"
+      },
+      {
+        "command": "nimbus.importOtherToolRules",
+        "title": "他のツールのルールを CLAUDE.md へ取り込む",
+        "category": "Nimbus",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
@@ -1354,6 +1348,11 @@
           "type": "boolean",
           "default": false,
           "description": "完了通知を黙らせます。承認待ち（止まっていることの知らせ）は通します。"
+        },
+        "nimbus.safety.warnOnGeneratedEdit": {
+          "type": "boolean",
+          "default": true,
+          "description": "生成物（*.g.dart / *.freezed.dart / ロックファイルなど）を直接書き換えようとしたときに止めて、代わりに直す先を伝えます。"
         }
       }
     },
