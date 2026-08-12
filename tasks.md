@@ -41,7 +41,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-055 音声で指示 — 手が離せないときに「テスト通しといて」だけ言う。
       聞き間違える前提で、危ないことは音声で実行しない。`core/voiceCommands.ts` `src/voiceCommands.ts` を確保
       **@yua と @session-c が二重着手。どちらが進めるか決めてください** 2026-08-13 [P3]
 - [ ] T-084 リモート開発 — **調査完了**（[調査記録](nimbus/docs/history/remote-dev-investigation.md)）。
@@ -307,6 +306,10 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
+- [x] T-055 音声で指示（声は聞き間違える前提。そのまま実行するのは取り返しのつくものだけ。
+      承認は音声で受けない。認識は OS に任せ、Nimbus は癖を吸収する）
+      — 2026-08-13 / 仕様 [voice](nimbus/docs/specs/voice.md)
+
 - [x] T-085 マシンをまたいでセッションを続ける（運んで困るのは会話ではなく前提のほう。
       別リポジトリなら止め、ずれは全部挙げて、続ける前に読み直させる。運ぶ経路は決めない）
       — 2026-08-13 / 仕様 [session-sync](nimbus/docs/specs/session-sync.md)
@@ -548,6 +551,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-070 共有マーケット（入れる側）— 一覧は `https` に JSON を 1 枚置くだけ。サーバーも登録も要らない。
       `https` 以外は通さず、壊れた一覧は部分的に受け入れない。既定の一覧は空（推し先を作らない）
       — 2026-08-13 / 仕様 [market](nimbus/docs/specs/market.md)
+- [x] T-055 声で指示する（手元で完結・確認なしに送らない）— 2026-08-13 / 仕様 [voice-input](nimbus/docs/specs/voice-input.md) / **書き起こしツールの実行確認は未実施**
 - [x] T-070 スキルを配れる形にする（出す側。入れる側は別セッションの market）— 2026-08-13 / 仕様 [skill-package](nimbus/docs/specs/skill-package.md)
 - [x] T-006 公証の手順とスクリプト（既定は ad-hoc のまま・明示時のみ公証）— 2026-08-13 / 仕様 [notarization](nimbus/docs/specs/notarization.md) / **実際の公証は証明書を持つ本人が実行**
 - [x] T-223 作業の様子を GIF にする（枚数を先に見積もる・ffmpeg が無ければ手順を出す）— 2026-08-13 / 仕様 [gif-export](nimbus/docs/specs/gif-export.md)

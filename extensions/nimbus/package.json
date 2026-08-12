@@ -245,6 +245,17 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.dictateInstruction",
+        "title": "%command.dictateInstruction%",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.listenForCommand",
+        "title": "%command.listenForCommand%",
+        "category": "Nimbus",
+        "icon": "$(mic)"
+      },
+      {
         "command": "nimbus.exportSession",
         "title": "%command.exportSession%",
         "category": "Nimbus",
@@ -1616,6 +1627,11 @@
             }
           },
           "additionalProperties": false
+        },
+        "nimbus.voice.modelPath": {
+          "type": "string",
+          "default": "",
+          "description": "%config.voice.modelPath%"
         }
       }
     },
