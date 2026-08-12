@@ -39,8 +39,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-125 マイグレーション生成とレビュー（スキーマ差分から起こし、壊す操作を先に見せる）— 実装中 @yua 2026-08-13
-
 
       `nimbus/scripts/headless.mjs` `src/mcpToolRunner.ts` を確保済み @session-a 2026-08-13 [P2]
 
@@ -280,7 +278,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🗄 データ・DB
 
-- [ ] T-125 マイグレーション生成とレビュー — スキーマ差分から生成し、破壊的操作（DROP など）は
       必ず人間承認にする（④ の権限ルールと繋げる）[P2]
 
 ### ⚡️ パフォーマンス
@@ -495,6 +492,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-125 マイグレーションを起こす（壊す操作を先に・NOT NULL の落とし穴を指摘）— 2026-08-13 / 仕様 [schema-diff](nimbus/docs/specs/schema-diff.md)
 - [x] T-132 CI を手元で再現する（環境の版を突き合わせ・CI 専用の行は落とす）— 2026-08-13 / 仕様 [ci-repro](nimbus/docs/specs/ci-repro.md)
 - [x] T-126 / T-127 SQL を流す前に見る（何が起きるかを書く・DB には繋がない）— 2026-08-13 / 仕様 [sql-safety](nimbus/docs/specs/sql-safety.md)
 - [x] T-121 脆弱性の警告を直す順に並べる（今日できるものを先に・--force は使わせない）— 2026-08-13 / 仕様 [vuln-fix](nimbus/docs/specs/vuln-fix.md)

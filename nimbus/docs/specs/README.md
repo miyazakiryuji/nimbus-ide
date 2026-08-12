@@ -27,6 +27,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`release-notes.md`](release-notes.md) — リリースノートの下書き
 - [`build-metrics.md`](build-metrics.md) — ビルド時間と成果物の大きさの変化
 - [`sql-safety.md`](sql-safety.md) — SQL を流す前に見る
+- [`schema-diff.md`](schema-diff.md) — マイグレーションを起こす
 - [`api-check.md`](api-check.md) — 実物との突き合わせと仮の応答
 - [`openapi.md`](openapi.md) — スキーマから型を起こす
 - [`platform-channel.md`](platform-channel.md) — Dart とネイティブの橋渡しの突き合わせ
