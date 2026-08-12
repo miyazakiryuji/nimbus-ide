@@ -31,6 +31,7 @@ import { explainLockDiff } from './lockDiff';
 import { openFromStackTrace } from './stackTrace';
 import { draftReleaseNotes } from './releaseNotes';
 import { openChangeStats } from './changeStats';
+import { openCodeHealth } from './codeHealth';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -44,6 +45,7 @@ import { captureAfterReload, readHotReloadConfig } from './hotReload';
 import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile } from './core/pinned';
 import { thresholdLevel } from './core/usage';
 import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
+import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
@@ -433,6 +435,92 @@ export function activate(context: vscode.ExtensionContext): void {
 		const message = describeConflict(conflict, sessionName);
 		log(`[conflict] ${message}`);
 		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
+	}
+
+	/** テンプレートから始める（tasks.md T-148） */
+	async function startFromPreset(): Promise<void> {
+		const start = await pickPreset(context.globalState);
+		if (!start) {
+			return;
+		}
+		const cwd = workspaceCwd();
+		if (!cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからセッションを開始してください。');
+			return;
+		}
+		await newSession();
+		const sessionId = randomUUID();
+		activeSessionId = sessionId;
+		await sessions.createSession({
+			cwd,
+			firstMessage: start.prompt,
+			reuseSessionId: sessionId,
+			extraOptions: {
+				...(start.permissionMode ? { permissionMode: start.permissionMode } : {}),
+				...(start.model ? { model: start.model } : {})
+			}
+		});
+		cockpit.reveal();
+		log(`[preset] テンプレートから開始しました（${start.permissionMode ?? 'default'}）`);
+	}
+
+	/**
+	 * セッションの分岐（tasks.md T-036）。
+	 * いまのセッションを**再開したもの**を案の数だけ作り、それぞれ別の指示を送る。
+	 * 同じ地点から始まるので、比べているのは「指示の違い」だけになる。
+	 */
+	async function branchSession(): Promise<void> {
+		const cwd = workspaceCwd();
+		const summary = activeSessionId ? sessions.get(activeSessionId) : undefined;
+		if (!cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+			return;
+		}
+		const plan = await planBranch(summary?.claudeSessionId, 'いまの作業');
+		if (!plan) {
+			return;
+		}
+		for (let index = 0; index < plan.prompts.length; index++) {
+			try {
+				// タスクとして作ると worktree が切られ、案どうしが互いを壊さない
+				await tasks.createTask({
+					title: plan.titles[index],
+					prompt: plan.prompts[index],
+					repoCwd: cwd,
+					autoStart: index === 0
+				});
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				log(`[branch] ${plan.titles[index]} を作れませんでした: ${message}`);
+				void vscode.window.showErrorMessage(`Nimbus: ${message}`);
+				return;
+			}
+		}
+		void vscode.window.showInformationMessage(
+			`Nimbus: ${plan.prompts.length} 案をタスクとして作りました。同時実行の上限まで順に走ります。`
+		);
+	}
+
+	/** 過去のセッションを再開する（tasks.md T-150） */
+	async function restoreSession(): Promise<void> {
+		const cwd = workspaceCwd();
+		if (!cwd) {
+			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてください。');
+			return;
+		}
+		const chosen = await pickRestorable(cwd);
+		if (!chosen) {
+			return;
+		}
+		await newSession();
+		const sessionId = randomUUID();
+		activeSessionId = sessionId;
+		await sessions.createSession({ cwd, resumeClaudeSessionId: chosen.sessionId, reuseSessionId: sessionId });
+		cockpit.reveal();
+		log(`[restore] ${chosen.title ?? chosen.sessionId} を再開しました`);
+		void vscode.window.showInformationMessage(
+			`Nimbus: 「${chosen.title ?? chosen.sessionId.slice(0, 8)}」を再開しました。続きから指示できます。`
+		);
 	}
 
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
@@ -1096,6 +1184,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		// 過去セッションの横断検索（T-034）。読むのは Claude Code 本体の記録で、Nimbus は書かない
 		vscode.commands.registerCommand('nimbus.searchTranscripts', () => searchTranscripts(log)),
 		vscode.commands.registerCommand('nimbus.pinnedFiles', () => managePinnedFiles()),
+		// テンプレートから始める（T-148）
+		vscode.commands.registerCommand('nimbus.startFromPreset', () => startFromPreset()),
+		vscode.commands.registerCommand('nimbus.managePresets', () => managePresets(context.globalState)),
+		// 同じ地点から A 案・B 案（T-036）
+		vscode.commands.registerCommand('nimbus.branchSession', () => branchSession()),
+		// 過去のセッションを再開（T-150）
+		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 証跡つき完了報告（T-081）。「できました」だけの報告を無くす
 		vscode.commands.registerCommand('nimbus.completionReport', () => openCompletionReport(retained)),
 		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
@@ -1140,6 +1235,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openFromStackTrace', () => openFromStackTrace()),
 		vscode.commands.registerCommand('nimbus.draftReleaseNotes', () => draftReleaseNotes()),
 		vscode.commands.registerCommand('nimbus.openChangeStats', () => openChangeStats()),
+		vscode.commands.registerCommand('nimbus.openCodeHealth', () => openCodeHealth()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),

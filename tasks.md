@@ -43,9 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-036 **セッションの分岐** — 同じ地点から A 案・B 案を並列に。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-148 セッションテンプレート — 開始条件を保存して呼び出す。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-150 セッションの復元 — 過去のセッションを再開する。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -156,6 +153,8 @@ QuickPick・説明文にも当たる）。`extensions/nimbus/src/skillsView.ts` 
       相当する設定を最初から入れておき、利用者にやらせない（キーバインドで Esc+Enter を送るのが定石）[P2]
 （Inbox の T-014「ターミナルの多分割」もこの層の話。整理したらここへ移す）
 - [ ] T-170 エラー文をコピーした瞬間に「調べます？」と提案する（オフにできること）[P3]
+- [ ] T-171 選択範囲へのクイックアクション — 右クリックで「これをリファクタ」 [P2]
+- [ ] T-172 コードレンズによる関数単位のアクション提示 [P2]
 - [ ] T-173 マルチルートワークスペース対応 [P2]
 - [ ] T-174 ノートブック（`.ipynb`）対応 [P3]
 
@@ -450,9 +449,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
-- [x] T-171 / T-172 エディタから直接頼む（右クリックと、関数の上のコードレンズ。説明／リファクタ／テスト／自由指示）
-      — 2026-08-13 / 仕様 [editor-actions](nimbus/docs/specs/editor-actions.md)
-
 - [x] T-004 §6 の画面確認（6 項目を GUI テストのケースに起こし 13/13 通過。あわせて GUI テストが
       開発ビルドで動いていなかった不具合 2 件を修正）— 2026-08-13 / [f3-f6 §6](nimbus/docs/testing/f3-f6.md)
 
@@ -518,6 +514,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-036 セッションの分岐（同じ地点から A 案・B 案をタスクとして並列に）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)
+- [x] T-148 セッションテンプレート（調査／実装／レビューを同梱・{input} 展開）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)
+- [x] T-150 セッションの復元（Claude Code の記録から再開。自前バックアップは持たない）— 2026-08-13 / 仕様 [session-lifecycle](nimbus/docs/specs/session-lifecycle.md)
 - [x] T-011 同じファイルを触っているセッションの検出（書く前に知らせる・読みと書きを区別）— 2026-08-13 / 仕様 [parallel-awareness](nimbus/docs/specs/parallel-awareness.md)
 - [x] T-012 いま誰が何をしているかの俯瞰（並列時だけ「他のセッション」を出す）— 2026-08-13 / 仕様 [parallel-awareness](nimbus/docs/specs/parallel-awareness.md)
 - [x] T-152 コンテキストのピン留め（常に含めるファイル・上限つき・preset に append）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)

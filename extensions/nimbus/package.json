@@ -289,6 +289,36 @@
         "title": "変更のようすを見る",
         "category": "Nimbus",
         "icon": "$(diff)"
+      },
+      {
+        "command": "nimbus.startFromPreset",
+        "title": "テンプレートから始める",
+        "category": "Nimbus",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "nimbus.managePresets",
+        "title": "テンプレートを管理する",
+        "category": "Nimbus",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "nimbus.branchSession",
+        "title": "いまの作業を分岐する（A 案・B 案）",
+        "category": "Nimbus",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "nimbus.restoreSession",
+        "title": "過去のセッションを再開する",
+        "category": "Nimbus",
+        "icon": "$(history)"
+      },
+      {
+        "command": "nimbus.openCodeHealth",
+        "title": "命名と重複を見る",
+        "category": "Nimbus",
+        "icon": "$(symbol-keyword)"
       }
     ],
     "menus": {

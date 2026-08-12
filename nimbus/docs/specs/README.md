@@ -31,6 +31,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`images-and-hot-reload.md`](images-and-hot-reload.md) — 画像の投入とホットリロード連携
 - [`context-control.md`](context-control.md) — 文脈の制御（ピン留め・予算・効率）
 - [`parallel-awareness.md`](parallel-awareness.md) — 並列セッションの見える化（誰が何を触っているか）
+- [`session-lifecycle.md`](session-lifecycle.md) — セッションの始め方・分けかた・戻しかた
 
 IDE 基礎機能:
 
