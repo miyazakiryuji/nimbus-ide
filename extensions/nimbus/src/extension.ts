@@ -215,6 +215,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			checkCostLimit(event.sessionId, sessions.get(event.sessionId)?.totalCostUsd);
 			// 区切りまで待ってから型を当てる。途中で割り込むと編集の途中経過を叩くことになる（T-101）
 			void verifier.verifyAfterTurn();
+			// 直したはずのビルドを、同じ端末でもう一度走らせる（T-106・既定は無効）
+			terminals.onTurnFinished();
 		}
 	});
 

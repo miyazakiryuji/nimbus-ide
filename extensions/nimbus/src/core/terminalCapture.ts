@@ -110,6 +110,34 @@ export function shouldOfferCapture(commandLine: string, exitCode: number | undef
 	return !IGNORED_COMMANDS.has(name);
 }
 
+/**
+ * 「直して、もう一度同じものを走らせる」ことに意味があるコマンドか（T-106）。
+ *
+ * ビルドと型チェックだけを対象にする。`rm` や `deploy` を勝手に繰り返すのは論外だし、
+ * `npm install` のように 1 回で終わるものを回しても意味がない。
+ * **利用者が自分で打ったコマンドを、そのまま打ち直すだけ**という範囲に留める。
+ */
+const BUILD_PATTERNS = [
+	/\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:build|compile|typecheck|type-check|tsc)\b/,
+	/\btsc\b/,
+	/\bcargo\s+(?:build|check)\b/,
+	/\bgo\s+build\b/,
+	/\bmake\b/,
+	/\b(?:\.\/)?gradlew?\s+\S*(?:build|assemble|compile)/,
+	/\bflutter\s+build\b/,
+	/\bdart\s+compile\b/,
+	/\bmvn\s+(?:compile|package|install)\b/,
+	/\bswift\s+build\b/,
+	/\bxcodebuild\b/,
+	/\bcmake\s+--build\b/,
+	/\bdotnet\s+build\b/
+];
+
+export function isRetriableBuild(commandLine: string): boolean {
+	const command = commandLine.trim();
+	return command.length > 0 && BUILD_PATTERNS.some((pattern) => pattern.test(command));
+}
+
 export interface TerminalFailure {
 	commandLine: string;
 	cwd?: string;

@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import {
 	buildFailurePrompt,
 	failureHeadline,
+	isRetriableBuild,
 	shouldOfferCapture,
 	DEFAULT_MAX_LINES,
 	type TerminalFailure
@@ -31,6 +32,11 @@ export class TerminalWatcher implements vscode.Disposable {
 	private readonly buffers = new Map<vscode.TerminalShellExecution, string>();
 	/** 直近の失敗。通知を閉じてしまってもコマンドから拾い直せるように持つ */
 	private lastFailure?: { prompt: string; headline: string };
+	/**
+	 * ビルドの自動リトライ（T-106）。
+	 * 「利用者が打ったコマンドを、直したあとに同じ端末で打ち直す」だけに留める。
+	 */
+	private retry?: { terminal: vscode.Terminal; commandLine: string; rounds: number };
 
 	constructor(private readonly deps: TerminalWatcherDeps) {
 		this.disposables.push(
@@ -45,6 +51,25 @@ export class TerminalWatcher implements vscode.Disposable {
 		}
 		this.disposables.length = 0;
 		this.buffers.clear();
+	}
+
+	/**
+	 * ターンが終わったら、待っているビルドをもう一度走らせる（T-106）。
+	 * 走らせるのは**利用者が自分で打ったコマンドそのもの**で、新しいコマンドは組み立てない。
+	 */
+	onTurnFinished(): void {
+		const retry = this.retry;
+		if (!retry) {
+			return;
+		}
+		const limit = this.config().get<number>('terminal.maxBuildRetries') ?? 2;
+		if (retry.rounds >= limit) {
+			this.retry = undefined;
+			return;
+		}
+		retry.rounds++;
+		this.deps.log(`[terminal] 再実行（${retry.rounds}/${limit}）: ${retry.commandLine}`);
+		retry.terminal.sendText(retry.commandLine);
 	}
 
 	/** 直近の失敗を投入する（`nimbus.sendLastTerminalFailure`） */
@@ -93,11 +118,23 @@ export class TerminalWatcher implements vscode.Disposable {
 		const output = this.buffers.get(event.execution) ?? '';
 		this.buffers.delete(event.execution);
 
+		const commandLine = event.execution.commandLine.value;
+
+		// 自動リトライで回していたビルドが通ったら、そこで終わり（T-106）
+		if (event.exitCode === 0 && this.retry?.commandLine === commandLine) {
+			const rounds = this.retry.rounds;
+			this.retry = undefined;
+			this.deps.log(`[terminal] ${commandLine} が通りました（自動リトライ ${rounds} 回）`);
+			void vscode.window.showInformationMessage(
+				`Nimbus: ${commandLine} が通りました（自動で ${rounds} 回やり直しました）。`
+			);
+			return;
+		}
+
 		const config = this.config();
 		if (config.get<boolean>('terminal.captureFailures') === false) {
 			return;
 		}
-		const commandLine = event.execution.commandLine.value;
 		if (!shouldOfferCapture(commandLine, event.exitCode)) {
 			return;
 		}
@@ -112,6 +149,25 @@ export class TerminalWatcher implements vscode.Disposable {
 		const headline = failureHeadline(commandLine, failure.exitCode);
 		this.lastFailure = { prompt: buildFailurePrompt(failure), headline };
 		this.deps.log(`[terminal] ${headline}`);
+
+		// ビルドの自動リトライ（T-106）。既定は無効で、有効なときだけ人を待たせずに回す
+		if (config.get<boolean>('terminal.autoRetryBuilds') === true && isRetriableBuild(commandLine)) {
+			const limit = config.get<number>('terminal.maxBuildRetries') ?? 2;
+			if (this.retry?.commandLine !== commandLine) {
+				this.retry = { terminal: event.terminal, commandLine, rounds: 0 };
+			}
+			if (this.retry.rounds < limit) {
+				this.deps.log(`[terminal] 自動リトライで直させます（${this.retry.rounds + 1}/${limit}）: ${commandLine}`);
+				this.sendLastFailure();
+				return;
+			}
+			// 直らないまま回り続けるのが一番高くつく。上限で人に戻す
+			this.retry = undefined;
+			void vscode.window.showWarningMessage(
+				`Nimbus: ${headline}。自動リトライは上限（${limit} 回）に達したので止めました。`
+			);
+			return;
+		}
 
 		const SEND = 'セッションに投入';
 		const NEVER = '今後は知らせない';

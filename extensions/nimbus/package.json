@@ -635,6 +635,18 @@
           "maximum": 2000,
           "description": "セッションに投入するターミナル出力の行数の上限（末尾から数えます）。"
         },
+        "nimbus.terminal.autoRetryBuilds": {
+          "type": "boolean",
+          "default": false,
+          "description": "ビルド・型チェックが失敗したら、確認なしでセッションに直させ、同じコマンドを同じターミナルで走らせ直します（回数上限つき）。走らせ直すのは利用者が自分で打ったコマンドだけです。"
+        },
+        "nimbus.terminal.maxBuildRetries": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "ビルドを自動でやり直す回数の上限。直らないまま回り続けるのを止めます。"
+        },
         "nimbus.tests.captureFailures": {
           "type": "boolean",
           "default": true,

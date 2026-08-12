@@ -12,6 +12,7 @@ import {
 	buildFailurePrompt,
 	collapseCarriageReturns,
 	failureHeadline,
+	isRetriableBuild,
 	normalizeOutput,
 	shouldOfferCapture,
 	stripAnsi,
@@ -58,6 +59,25 @@ test('成功・中断・雑多なコマンドには声をかけない', () => {
 			shouldOfferCapture('   ', 1)
 		],
 		[true, false, false, false, false, false, false]
+	);
+});
+
+test('自動リトライの対象は、直して打ち直す意味があるものだけ（T-106）', () => {
+	assert.deepStrictEqual(
+		[
+			'npm run build',
+			'npm run typecheck',
+			'tsc -p .',
+			'./gradlew assembleDebug',
+			'flutter build ios',
+			'make',
+			'cargo check'
+		].map(isRetriableBuild),
+		[true, true, true, true, true, true, true]
+	);
+	assert.deepStrictEqual(
+		['npm install', 'rm -rf build', 'git push', 'npm run deploy', ''].map(isRetriableBuild),
+		[false, false, false, false, false]
 	);
 });
 
