@@ -62,6 +62,7 @@ import { openEnvCheck } from './envCheck';
 import { auditDependency } from './depAudit';
 import { openVulnFixPlan } from './vulnFix';
 import { checkSql } from './sqlSafety';
+import { openCiRepro } from './ciRepro';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflicts } from './conflicts';
@@ -181,6 +182,7 @@ import { checkApiDocs } from './apiDocs';
 import { trackSchemaImpact } from './schemaImpact';
 import { noticeUpgrade } from './versionWatch';
 import { ClipboardHints } from './clipboardHints';
+import { SessionRepeats } from './sessionRepeats';
 import { exploreHistory } from './archaeology';
 import { reverseSpec } from './reverseSpec';
 import { chooseScope, currentScope } from './monorepo';
@@ -1921,6 +1923,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			// 使っているライブラリのバージョンを添える（T-083）。記憶で書かせない
 			const grounding = await buildGroundingForPrompt(text);
 			text = grounding ? `${text}\n\n${grounding}` : text;
+			repeats.record(rawText);
 			// 利用者が新しい指示を出したら、自動リロードの周回数を戻す
 			reloadRounds = 0;
 			const attachments = toAttachments(images);
@@ -2090,6 +2093,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		activityView.update([]);
 		mcpView.clear();
 		verifier.reset();
+		repeats.reset();
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
@@ -2306,6 +2310,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	// 関数の上に「Nimbus に頼む」を出す（T-172）。右クリックからも同じ入口（T-171）
 	const codeLens = new NimbusCodeLensProvider();
+
+	// 走っている最中に「また同じことを言っている」に気づく（T-237）
+	const repeats = new SessionRepeats({
+		promote: (text) => promoteInstruction(claudeMdView, text),
+		log
+	});
 
 	// コピーしたエラー文に気づいて聞く（T-170・既定は無効）
 	const clipboardHints = new ClipboardHints({
@@ -2548,6 +2558,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.auditDependency', () => auditDependency()),
 		vscode.commands.registerCommand('nimbus.openVulnFixPlan', () => openVulnFixPlan()),
 		vscode.commands.registerCommand('nimbus.checkSql', () => checkSql()),
+		vscode.commands.registerCommand('nimbus.openCiRepro', () => openCiRepro()),
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
