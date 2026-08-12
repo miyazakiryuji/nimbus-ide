@@ -558,6 +558,12 @@
         "title": "いまのようすを見る",
         "category": "Nimbus",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "nimbus.openPlatformChannels",
+        "title": "Platform Channel を突き合わせる",
+        "category": "Nimbus",
+        "icon": "$(plug)"
       }
     ],
     "menus": {

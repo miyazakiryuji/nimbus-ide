@@ -274,7 +274,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [ ] T-073 シミュレータ操作 — タップ操作を代行し、UI が実際に動くところまで確認させる [P2]
 - [ ] T-074 実機ログの取り込み — クラッシュログをドロップしたら該当箇所まで一直線 [P2]
-- [ ] T-200 Platform Channel（ネイティブ ⇄ Dart）の橋渡し支援 [P2]
 
 ### 🔐 コンプラ・機密
 
@@ -490,6 +489,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-200 Platform Channel の突き合わせ（受け口の無い呼び出しを実機の前に見つける）— 2026-08-13 / 仕様 [platform-channel](nimbus/docs/specs/platform-channel.md)
 - [x] T-089 / T-053 いまのようす（続けすぎの区切り・待ち時間の使い道）— 2026-08-13 / 仕様 [rhythm](nimbus/docs/specs/rhythm.md)
 - [x] T-210 古くなっているコメントの検出（`@param` の食い違い・存在しない参照）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-160 レビューの進み（見たあとに変わったら見ていない扱いに戻す）— 2026-08-13 / 仕様 [review-progress](nimbus/docs/specs/review-progress.md)
