@@ -420,8 +420,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 📊 コード品質
 
-- [ ] T-136 複雑度の高い箇所の可視化 — エージェントに手を入れさせる優先度づけに使う [P2]
-- [ ] T-138 アーキテクチャ違反の検知 — 「UI 層から直接 DB 層を呼んでいる」ようなレイヤ違反を止める [P2]
 
 ### 🧬 型・生成コード
 
@@ -495,6 +493,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       診断を `mcp__nimbus_lsp__*` として渡す）— 2026-08-13 / 仕様 [lsp-tools](nimbus/docs/specs/lsp-tools.md) /
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
+- [x] T-136 / T-138 重いところの可視化と、層の逆流の検知（core/ は vscode に依存しない）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-112 使われていない export を挙げる（死骸と「export を外せるだけ」を分ける）— 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-178 / T-137 命名のゆれとそっくりな実装を見せる — 2026-08-13 / 仕様 [code-health](nimbus/docs/specs/code-health.md)
 - [x] T-159 / T-082 変更のようす（統計と、テストが伴っていないときの指摘）— 2026-08-13 / 仕様 [change-stats](nimbus/docs/specs/change-stats.md)

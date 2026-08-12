@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { findDuplicateBlocks, findNamingIssues, renderCodeHealth } from './core/codeHealth';
 import { findDeadExports, renderDeadExports } from './core/deadCode';
+import { findLayerViolations, rankComplexity, renderStructure } from './core/structure';
 
 /** 一度に読むファイル数の上限（大きなリポジトリで固まらせない） */
 const MAX_FILES = 400;
@@ -58,8 +59,14 @@ export async function openCodeHealth(): Promise<void> {
 
 	// 使われていない export も同じ面に出す（T-112）。どれも「増えていること」を見せる話なので、
 	// コマンドを分けるより 1 枚にまとめたほうが読まれる
-	const markdown =
-		renderCodeHealth(findNamingIssues(names), findDuplicateBlocks(files)) + '\n' + renderDeadExports(findDeadExports(files));
+	// 層の逆流は先に出す。約束を破っているものは、読みにくさより先に直したい（T-138）
+	const markdown = [
+		renderStructure(rankComplexity(files), findLayerViolations(files)),
+		renderCodeHealth(findNamingIssues(names), findDuplicateBlocks(files)),
+		renderDeadExports(findDeadExports(files))
+	]
+		.filter(Boolean)
+		.join('\n');
 	const document = await vscode.workspace.openTextDocument({ content: markdown, language: 'markdown' });
 	await vscode.window.showTextDocument(document, { preview: false });
 }
