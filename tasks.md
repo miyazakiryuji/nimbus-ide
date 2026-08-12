@@ -40,6 +40,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
+- [ ] T-132 ローカルで CI を再現（ワークフローから手順を起こす）— 実装中 @yua 2026-08-13
+
 - [ ] T-130 改善前後のベンチ比較 — ばらつきを超えたときだけ「速くなった」と言う。
       `core/benchmark.ts` を骨格＋テストで確保済み @session-b 2026-08-13 [P2]
 
@@ -257,7 +259,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ### 🌏 日本語まわり
 
-- [ ] T-090 日本語プロンプトの補助 — 曖昧な指示を検知して「これって〇〇のこと？」と聞き返す [P2]
 - [ ] T-091 UI とドキュメントの多言語化 — 日本語圏の初学者に強い IDE は、まだ空いている椅子。
       ※Nimbus 側の文字列は今すべて日本語の直書き。`nls` に載せ替えるかの判断が要る（T-002 とは逆方向の作業）[P2]
 
@@ -545,6 +546,9 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 - [x] T-154 圧縮前に何を残すかを選ぶ（/compact への指示として渡す・選ばなければ従来どおり）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-232 サブエージェントごとのモデル指定（割り当てたものだけを差し替える）— 2026-08-13 / 仕様 [agent-models](nimbus/docs/specs/agent-models.md)
+- [x] T-090 日本語プロンプトの補助（曖昧でも止めない・候補は決めつけない）— 2026-08-13 / 仕様 [japanese-and-history](nimbus/docs/specs/japanese-and-history.md)
+- [x] T-095 設定のバージョン管理（同じ中身は足さない・何行変わったかを出す）— 2026-08-13 / 仕様 [japanese-and-history](nimbus/docs/specs/japanese-and-history.md)
+- [x] T-097 今週のふりかえり（盛らない・無かったものは書かない）— 2026-08-13 / 仕様 [japanese-and-history](nimbus/docs/specs/japanese-and-history.md)
 - [x] T-071 設定のワンクリック導入（https だけ・押しただけで入らない）— 2026-08-13 / 仕様 [migration-and-crashlog](nimbus/docs/specs/migration-and-crashlog.md)
 - [x] T-074 実機ログの取り込み（自分のコードのフレームだけ先に出す）— 2026-08-13 / 仕様 [migration-and-crashlog](nimbus/docs/specs/migration-and-crashlog.md)
 - [x] T-077 ローカル完結モード（何が止まらないかを必ず見せる）— 2026-08-13 / 仕様 [local-and-recovery](nimbus/docs/specs/local-and-recovery.md)
