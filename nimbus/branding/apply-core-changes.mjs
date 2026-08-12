@@ -21,10 +21,63 @@ const CHAT_CONTRIB = 'src/vs/workbench/contrib/chat/browser/chat.shared.contribu
 const EXTENSIONS_CONTRIB = 'src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts'
 const GULPFILE_VSCODE = 'build/gulpfile.vscode.ts'
 const THEME_SERVICE = 'src/vs/workbench/services/themes/common/workbenchThemeService.ts'
+const NLS = 'src/vs/nls.ts'
 const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extensionManagementService.ts'
+
+// 置き換える製品名は product.json から取る（改名しても追随する）
+const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
+  // upstream の文言には製品名が直書きされている（`localize()` の中だけで 152 箇所・約 90 ファイル）。
+  // ファイルごとに直すとコア差分が 90 ファイルへ広がり、追従が現実的でなくなる。
+  // 文言が組み立てられる唯一の場所（`_format`）で置き換えれば、1 ファイルの変更で全部に効き、
+  // upstream が新しい文言を足しても自動的に追随する。
+  [
+    NLS,
+    `	if (isPseudo) {
+		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
+		result = '\\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\\uFF3D';
+	}
+
+	return result;
+}`,
+    `	if (isPseudo) {
+		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
+		result = '\\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\\uFF3D';
+	}
+
+	// --- Start Nimbus ---
+	result = nimbusRebrand(result);
+	// --- End Nimbus ---
+
+	return result;
+}
+
+// --- Start Nimbus ---
+/**
+ * upstream の文言に直書きされた製品名を、この製品の名前に置き換える。
+ *
+ * ここは \`localize\` / \`localize2\` の両方が必ず通る唯一の場所。ファイルごとに直すと
+ * コア差分が 90 ファイルへ広がって追従できなくなるため、集約点で 1 回だけ行う。
+ * nls.ts は最下層で product.json を読むモジュールに依存できないので、名前は
+ * \`nimbus/branding/apply-core-changes.mjs\` が product.json から差し込む。
+ *
+ * ほとんどの文言は製品名を含まないので、置換の前に含有チェックで抜ける。
+ */
+const NIMBUS_PRODUCT_NAME = '${productName}';
+
+function nimbusRebrand(message: string): string {
+	if (message.indexOf('Visual Studio Code') !== -1) {
+		message = message.replace(/Visual Studio Code/g, NIMBUS_PRODUCT_NAME);
+	}
+	if (message.indexOf('VS Code') !== -1) {
+		message = message.replace(/VS Code/g, NIMBUS_PRODUCT_NAME);
+	}
+	return message;
+}
+// --- End Nimbus ---`
+  ],
   [
     WELCOME_CONTENT,
     `localize('gettingStarted.setup.title', "Get started with VS Code")`,

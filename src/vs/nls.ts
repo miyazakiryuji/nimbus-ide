@@ -45,11 +45,51 @@ function _format(message: string, args: (string | number | boolean | undefined |
 
 	if (isPseudo) {
 		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
+		result = '\uFF3B' + result.replace(/[aouei]/g, '	if (isPseudo) {
+		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
 		result = '\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\uFF3D';
 	}
 
 	return result;
+}	if (isPseudo) {
+		// FF3B and FF3D is the Unicode zenkaku representation for [ and ]
+		result = '\uFF3B' + result.replace(/[aouei]/g, '$&$&') + '\uFF3D';
+	}
+
+	return result;
+}') + '\uFF3D';
+	}
+
+	// --- Start Nimbus ---
+	result = nimbusRebrand(result);
+	// --- End Nimbus ---
+
+	return result;
 }
+
+// --- Start Nimbus ---
+/**
+ * upstream の文言に直書きされた製品名を、この製品の名前に置き換える。
+ *
+ * ここは `localize` / `localize2` の両方が必ず通る唯一の場所。ファイルごとに直すと
+ * コア差分が 90 ファイルへ広がって追従できなくなるため、集約点で 1 回だけ行う。
+ * nls.ts は最下層で product.json を読むモジュールに依存できないので、名前は
+ * `nimbus/branding/apply-core-changes.mjs` が product.json から差し込む。
+ *
+ * ほとんどの文言は製品名を含まないので、置換の前に含有チェックで抜ける。
+ */
+const NIMBUS_PRODUCT_NAME = 'Nimbus';
+
+function nimbusRebrand(message: string): string {
+	if (message.indexOf('Visual Studio Code') !== -1) {
+		message = message.replace(/Visual Studio Code/g, NIMBUS_PRODUCT_NAME);
+	}
+	if (message.indexOf('VS Code') !== -1) {
+		message = message.replace(/VS Code/g, NIMBUS_PRODUCT_NAME);
+	}
+	return message;
+}
+// --- End Nimbus ---
 
 /**
  * Marks a string to be localized. Returns the localized string.
