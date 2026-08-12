@@ -22,6 +22,7 @@ import {
 	type TouchedFile
 } from './core/activity';
 import { collectEvidence } from './core/evidence';
+import type { SessionSnapshot } from './core/sessionFiles';
 
 type Node = {
 	label: string;
@@ -151,12 +152,24 @@ function group(label: string, icon: string, children: Node[], emptyLabel: string
 
 export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 	private events: readonly NimbusEvent[] = [];
+	/** 他のセッションの俯瞰（T-012）。並列で走らせると、ここにしか出ない情報になる */
+	private others: readonly SessionSnapshot[] = [];
+	/** セッション ID を読める名前にする（タスク名など） */
+	private nameOf: (sessionId: string) => string = (id) => id.slice(0, 8);
 	private readonly emitter = new vscode.EventEmitter<Node | undefined>();
 	readonly onDidChangeTreeData = this.emitter.event;
 
 	/** 表示のもとになるイベント列を差し替える（拡張側が保持しているものをそのまま渡す） */
-	update(events: readonly NimbusEvent[]): void {
+	update(
+		events: readonly NimbusEvent[],
+		others: readonly SessionSnapshot[] = [],
+		nameOf?: (sessionId: string) => string
+	): void {
 		this.events = events;
+		this.others = others;
+		if (nameOf) {
+			this.nameOf = nameOf;
+		}
 		this.emitter.fire(undefined);
 	}
 
@@ -219,6 +232,28 @@ export class ActivityViewProvider implements vscode.TreeDataProvider<Node> {
 				})),
 				'（テストを実行していません）'
 			),
+			// 並列で走らせているときだけ出す。1 本しか動いていないなら邪魔なだけ（T-012）
+			...(this.others.length > 0
+				? [
+					group(
+						'他のセッション',
+						'organization',
+						this.others.map((snapshot) => ({
+							label: this.nameOf(snapshot.sessionId),
+							description: `${snapshot.files.length} ファイル · ${time(snapshot.lastAt)}`,
+							icon: 'radio-tower',
+							children: snapshot.files.slice(0, 10).map((file) => ({
+								label: file.path.split('/').pop() ?? file.path,
+								description: `${file.kind === 'write' ? '編集' : '読み'} · ${time(file.at)}`,
+								tooltip: file.path,
+								icon: file.kind === 'write' ? 'edit' : 'file',
+								resource: vscode.Uri.file(file.path)
+							}))
+						})),
+						'（他に動いているセッションはありません）'
+					)
+				]
+				: []),
 			group(
 				'コンパクション',
 				'fold',

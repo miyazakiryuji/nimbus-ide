@@ -43,8 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-011 同じファイルを触っているセッションを検出して知らせる。実装前に claim @session-a 2026-08-13 [P2]
-- [ ] T-012 いま誰が何をしているかの俯瞰。実装前に claim @session-a 2026-08-13 [P2]
 
 
 
@@ -199,6 +197,7 @@ LSP・型情報・デバッガ・テストはフォークならプロセス内�
 - [ ] T-111 段階的リファクタの進捗管理 — 「全 120 箇所中 48 箇所置換済み」のようにチェックリスト化して、
       途中から再開できるように [P2]
 - [ ] T-112 デッドコード検出と削除提案 [P3]
+- [ ] T-175 **型定義の自動添付** — 使おうとしている API の実際のシグネチャを渡す（T-101 の前段）[P1]
 - [ ] T-176 リポジトリを開いた瞬間の構造要約カード — 何のプロジェクトで、どこに何があるか [P2]
 - [ ] T-177 スニペット化 — 生成された定型パターンを保存して使い回す [P3]
 - [ ] T-178 命名の一貫性チェック [P3]
@@ -457,9 +456,6 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
 
-- [x] T-175 型定義の自動添付（指示で名指しした API の実物のシグネチャを、送る前に見出しつきで添える）
-      — 2026-08-13 / 仕様 [signature-attachment](nimbus/docs/specs/signature-attachment.md)
-
 - [x] T-104 デバッガ連携（止まっている位置のコールスタックと変数の値を `mcp__nimbus_debug__*` で渡す。
       式の評価は入れない）— 2026-08-13 / 仕様 [debug-tools](nimbus/docs/specs/debug-tools.md)
 
@@ -521,6 +517,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-003 現行機能の仕様を書き起こす（セッション / 承認と差分 / 文脈 / 並列タスク / スキルとヘルプ /
       テーマ / 配布と追従の 6 本）— 2026-08-13 / [`nimbus/docs/specs/`](nimbus/docs/specs/README.md)
 
+- [x] T-011 同じファイルを触っているセッションの検出（書く前に知らせる・読みと書きを区別）— 2026-08-13 / 仕様 [parallel-awareness](nimbus/docs/specs/parallel-awareness.md)
+- [x] T-012 いま誰が何をしているかの俯瞰（並列時だけ「他のセッション」を出す）— 2026-08-13 / 仕様 [parallel-awareness](nimbus/docs/specs/parallel-awareness.md)
 - [x] T-152 コンテキストのピン留め（常に含めるファイル・上限つき・preset に append）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-153 コンテキスト予算の割り当て（8 割で警告・超過で圧縮を促す・止めない）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)
 - [x] T-156 コンテキスト効率のスコア表示（読み直しの重複だけを数える）— 2026-08-13 / 仕様 [context-control](nimbus/docs/specs/context-control.md)

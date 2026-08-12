@@ -29,6 +29,8 @@ import { editProtectedPaths } from './protectedPaths';
 import { openDigest } from './digest';
 import { explainLockDiff } from './lockDiff';
 import { openFromStackTrace } from './stackTrace';
+import { draftReleaseNotes } from './releaseNotes';
+import { openChangeStats } from './changeStats';
 import { UsageViewProvider } from './usageView';
 import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
@@ -41,6 +43,7 @@ import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from
 import { captureAfterReload, readHotReloadConfig } from './hotReload';
 import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile } from './core/pinned';
 import { thresholdLevel } from './core/usage';
+import { describeConflict, SessionFilesTracker } from './core/sessionFiles';
 import { collectEvidence } from './core/evidence';
 import { buildNotifyCommand, oneLine } from './core/notify';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
@@ -51,6 +54,9 @@ import { TestWatcher } from './testWatcher';
 import { EditVerifier } from './editVerifier';
 import { ApprovalsViewProvider } from './approvalsView';
 import type { ApprovalDecision, PendingApproval } from './permissions';
+
+/** 書き込み系ツール（衝突判定に使う。T-011） */
+const WRITE_TOOL_NAMES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
@@ -69,6 +75,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const usageView = new UsageViewProvider();
 	const activityView = new ActivityViewProvider();
 	const mcpView = new McpViewProvider();
+	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
+	const sessionFiles = new SessionFilesTracker();
 	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
 	const approvalsView = new ApprovalsViewProvider();
 	const approvals = vscode.window.createTreeView('nimbus.approvals', { treeDataProvider: approvalsView });
@@ -153,6 +161,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 
 	sessions.on('event', (event: NimbusEvent) => {
+		// 触ったファイルは全セッションぶん覚える。絞り込みの前に置く（T-011 / T-012）
+		sessionFiles.record(event);
 		if (event.sessionId === helpSessionId) {
 			helpEvents.push(event);
 			help.post({ type: 'event', event });
@@ -176,7 +186,12 @@ export function activate(context: vscode.ExtensionContext): void {
 			verifier.noteToolUse(event.toolName, event.input);
 		}
 		cockpit.post({ type: 'event', event });
-		activityView.update(retained);
+		warnOnConflict(event);
+		activityView.update(
+			retained,
+			sessionFiles.snapshots().filter((snapshot) => snapshot.sessionId !== activeSessionId),
+			sessionName
+		);
 		updateStatus(sessions.get(event.sessionId));
 		logEvent(event);
 		if (event.kind === 'turn-result') {
@@ -382,6 +397,41 @@ export function activate(context: vscode.ExtensionContext): void {
 			vscode.ConfigurationTarget.Workspace
 		);
 		log(`[pinned] 削除: ${chosen.label}`);
+	}
+
+	/** セッション ID を読める名前にする。タスクとして走っているならタスク名を出す */
+	function sessionName(sessionId: string): string {
+		return tasks.list().find((task) => task.sessionId === sessionId)?.title ?? `セッション ${sessionId.slice(0, 8)}`;
+	}
+
+	/** 同じファイルを二重に触っていることを一度だけ知らせる（同じ組み合わせで鳴らし続けない） */
+	const warnedConflicts = new Set<string>();
+
+	/**
+	 * 同じファイルを触っているセッションを知らせる（tasks.md T-011）。
+	 * コンフリクトになってから解くより、書く前に知るほうが安い。
+	 */
+	function warnOnConflict(event: NimbusEvent): void {
+		if (event.kind !== 'tool-use' || !WRITE_TOOL_NAMES.has(event.toolName)) {
+			return;
+		}
+		const input = event.input as { file_path?: unknown } | null;
+		const path = typeof input?.file_path === 'string' ? input.file_path : undefined;
+		if (!path) {
+			return;
+		}
+		const conflict = sessionFiles.conflictFor(event.sessionId, path);
+		if (!conflict) {
+			return;
+		}
+		const key = `${event.sessionId}:${path}`;
+		if (warnedConflicts.has(key)) {
+			return;
+		}
+		warnedConflicts.add(key);
+		const message = describeConflict(conflict, sessionName);
+		log(`[conflict] ${message}`);
+		void vscode.window.showWarningMessage(`Nimbus: ${message}`);
 	}
 
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
@@ -1084,6 +1134,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('nimbus.openDigest', () => openDigest()),
 		vscode.commands.registerCommand('nimbus.explainLockDiff', () => explainLockDiff()),
 		vscode.commands.registerCommand('nimbus.openFromStackTrace', () => openFromStackTrace()),
+		vscode.commands.registerCommand('nimbus.draftReleaseNotes', () => draftReleaseNotes()),
+		vscode.commands.registerCommand('nimbus.openChangeStats', () => openChangeStats()),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')
 		),
