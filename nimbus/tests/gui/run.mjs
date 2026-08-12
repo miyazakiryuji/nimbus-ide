@@ -118,6 +118,16 @@ async function main() {
 
 	const env = { ...process.env, NIMBUS_SMOKE: '1' };
 	delete env.NODE_OPTIONS; // 子プロセスに引き継ぐと無言で止まる（実測）
+	if (devMain) {
+		// ソースから起動するときは開発モードの環境変数が要る（scripts/code.sh と同じ）。
+		// これが無いと本番ビルドとして読み込みにいき、CSS が JS モジュールとして
+		// 取得されて MIME で弾かれ、workbench.desktop.main.js ごと読み込めない。
+		// 症状は「.monaco-workbench が現れないまま 120 秒でタイムアウト」で、
+		// 原因が分かりにくいので、ここで必ず付ける（実測で確認）
+		env.VSCODE_DEV = '1';
+		env.NODE_ENV = 'development';
+		env.VSCODE_CLI = '1';
+	}
 	if (flag('with-claude')) {
 		env.NIMBUS_SMOKE_PROMPT = 'Reply with exactly: NIMBUS_GUI_OK';
 	}
