@@ -43,7 +43,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 - [ ] T-030 フロントマター補完つきエディタ。実装前に claim @session-a 2026-08-13 [P2]
 - [ ] T-031 プレビュー実行。実装前に claim @session-a 2026-08-13 [P2]
 
-- [ ] T-116 PR レビューの取り込み — 指摘を file:line つきでセッションに渡し、返信も下書きする。
       実装前に claim @session-b 2026-08-13 [P2]
 
 
@@ -473,6 +472,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       確認 [testing/lsp-tools](nimbus/docs/testing/lsp-tools.md)（画面確認 §2 は未実施）
 
 - [x] T-008 / T-009 CLAUDE.md 専用のタブ（階層別の一覧・節単位で開く・ひな形から足す）— 2026-08-13 / 仕様 [claude-md](nimbus/docs/specs/claude-md.md) / GUI テスト `14-claude-md.mjs`
+- [x] T-116 レビューコメントの取り込み（感想を依頼として扱わない・1 件ずつ渡す）— 2026-08-13 / 仕様 [review-comments](nimbus/docs/specs/review-comments.md)
 - [x] T-045 何をしたかを並べ直す（理由は書かれたものだけ・推測で補わない）— 2026-08-13 / 仕様 [explain](nimbus/docs/specs/explain.md)
 - [x] T-211 レビューを頼む文（読む順はテストから・テスト無しは自分から言う）— 2026-08-13 / 仕様 [pr-description](nimbus/docs/specs/pr-description.md)
 - [x] T-214 やり取りの切り出し（切り出す時点で伏せる・保存しない）— 2026-08-13 / 仕様 [highlights](nimbus/docs/specs/highlights.md)
