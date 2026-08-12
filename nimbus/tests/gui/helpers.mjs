@@ -74,6 +74,18 @@ export async function searchCommands(page, query) {
 	return text;
 }
 
+/** コマンドパレットからコマンドを 1 つ実行する */
+export async function runCommand(page, title) {
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(300);
+	await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
+	await page.waitForTimeout(1000);
+	await page.keyboard.type(title, { delay: 20 });
+	await page.waitForTimeout(1200);
+	await page.keyboard.press('Enter');
+	await page.waitForTimeout(1500);
+}
+
 /**
  * Webview（iframe の入れ子）の中身を読む。
  * 指定した語がすべて入っているフレームが見つかるまで待つ。
