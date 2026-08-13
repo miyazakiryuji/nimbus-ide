@@ -167,7 +167,13 @@ suite('SessionBrowsersControl', () => {
 
 	test('renders single and aggregate labels, icons, and fallback', () => {
 		const cases: IControlSpec[] = [
-			{ browsers: [{ title: 'Visual Studio Code' }] },
+			// --- Start Nimbus ---
+			// upstream はここに 'Visual Studio Code' を置いていたが、`nls.ts` の `_format()` が
+			// 文言中の製品名を差し替えるため（core-changes #19）、`localize()` を通る aria-label だけが
+			// 'Open Nimbus' になり、`localize()` を通らない表示文字列とずれて落ちていた。
+			// 確かめたいのは「題名があればそれを出す」ことなので、製品名でない題名にする。
+			{ browsers: [{ title: 'Docs' }] },
+			// --- End Nimbus ---
 			{ browsers: [{}] },
 			{ browsers: [{ title: 'Docs' }, { title: 'Preview' }] },
 		];
@@ -178,7 +184,7 @@ suite('SessionBrowsersControl', () => {
 			disabledVisible: disabled.control.isVisible.get(),
 		}, {
 			enabled: [
-				{ text: 'Visual Studio Code', ariaLabel: 'Open Visual Studio Code', icons: ['globe'] },
+				{ text: 'Docs', ariaLabel: 'Open Docs', icons: ['globe'] }, // Nimbus: 上の題名に合わせた
 				{ text: 'Browser', ariaLabel: 'Open Browser', icons: ['globe'] },
 				{ text: '2 Active Browsers', ariaLabel: 'Show 2 browsers', icons: ['globe', 'chevron-down'] },
 			],
