@@ -12,7 +12,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { labels, runCommand } from '../helpers.mjs';
+import { closeAllEditors, labels, runCommand } from '../helpers.mjs';
 
 /** `node --cpu-prof` が出す形（実物から起こした最小の 1 枚） */
 function sampleProfile() {
@@ -53,6 +53,9 @@ async function waitForHeading(page, heading, { attempts = 12 } = {}) {
 export default {
 	name: '計測結果とターミナルの多分割',
 	async run(page, ctx) {
+		// 前のケースが残した文書を読まないように、先に片付ける
+		await closeAllEditors(page);
+
 		writeFileSync(join(ctx.workspace, 'run.cpuprofile'), sampleProfile());
 		await page.waitForTimeout(1200);
 
@@ -103,5 +106,7 @@ export default {
 		ctx.expect(after > before, `ターミナルが増えていない（前 ${before} / 後 ${after}）`);
 
 		await ctx.shot('profile-and-terminals');
+		const leftover = await closeAllEditors(page);
+		ctx.expect(leftover === 0, `文書を閉じきれていない（${leftover} 個。次のケースを汚す）`);
 	}
 };

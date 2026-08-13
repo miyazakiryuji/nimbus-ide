@@ -201,3 +201,24 @@ export async function activeEditorText(page) {
 	});
 	return text.replace(/\u00a0/g, ' ');
 }
+
+/**
+ * 開いている文書を全部閉じる。**残った数を返す**。
+ *
+ * ケースはアプリを共有しているので、**開きっぱなしは次のケースに効く**
+ * （前のケースの文書を読んで、通るはずのものが落ちる）。
+ *
+ * `openTextDocument({ content })` で作った無題文書は普通に閉じると保存を聞かれるため、
+ * **「Revert and Close Editor」で捨てる**。`Close All Editors` では閉じきれない。
+ */
+export async function closeAllEditors(page, { attempts = 10 } = {}) {
+	const count = () => page.evaluate(() => document.querySelectorAll('.editor-instance .view-lines').length);
+	for (let i = 0; i < attempts; i++) {
+		if ((await count()) === 0) {
+			return 0;
+		}
+		await runCommand(page, 'Revert and Close Editor');
+		await page.waitForTimeout(600);
+	}
+	return count();
+}

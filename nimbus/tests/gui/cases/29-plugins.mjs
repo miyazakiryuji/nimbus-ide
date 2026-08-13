@@ -12,11 +12,13 @@
  * 名前を期待値に書くと、そのまま個人の環境が公開リポジトリに残る。
  * **形（一覧が出ること・入れる導線があること）だけ**を見る。
  */
-import { labels, runCommand } from '../helpers.mjs';
+import { closeAllEditors, labels, runCommand } from '../helpers.mjs';
 
 export default {
 	name: 'プラグインの一覧が出て、入れる導線がある',
 	async run(page, ctx) {
+		await closeAllEditors(page);
+
 		await runCommand(page, labels('command.managePlugins')[0]);
 
 		let picker = '';

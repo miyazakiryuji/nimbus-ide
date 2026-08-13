@@ -12,7 +12,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { git, labels, runCommand } from '../helpers.mjs';
+import { closeAllEditors, git, labels, runCommand } from '../helpers.mjs';
 
 /** 開いているエディタを全部読む（タブが積み上がるので、最初の 1 枚だけでは足りない） */
 async function allEditorsText(page) {
@@ -38,6 +38,9 @@ async function waitForHeading(page, heading, { attempts = 12 } = {}) {
 export default {
 	name: 'マイグレーションと「出す前に」が、作業ツリーの中身で動く',
 	async run(page, ctx) {
+		// 前のケースが残した文書を読まないように、先に片付ける
+		await closeAllEditors(page);
+
 		// 1 つ前の版を HEAD に置く（スキーマ差分は HEAD といまを見比べる）
 		const schema = join(ctx.workspace, 'schema.sql');
 		writeFileSync(
@@ -96,5 +99,7 @@ export default {
 		);
 
 		await ctx.shot('migration-and-preflight');
+		const leftover = await closeAllEditors(page);
+		ctx.expect(leftover === 0, `文書を閉じきれていない（${leftover} 個。次のケースを汚す）`);
 	}
 };
