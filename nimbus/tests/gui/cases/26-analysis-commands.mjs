@@ -78,5 +78,20 @@ export default {
 		}
 		ctx.expect(missing.length === 0, `開かなかったコマンドがある:\n${missing.join('\n')}`);
 		await ctx.shot('analysis-commands');
+
+		// **開いた文書を片付ける。** ケースはアプリを共有しているので、
+		// 開きっぱなしにすると次のケースが読んでしまう（実際に別ケースを落とした）。
+		// 無題文書は普通に閉じると保存を聞かれるので、「戻して閉じる」で捨てる
+		for (let i = 0; i < 8; i++) {
+			const left = await page.evaluate(() => document.querySelectorAll('.editor-instance .view-lines').length);
+			if (left === 0) {
+				break;
+			}
+			await runCommand(page, 'Revert and Close Editor');
+			await page.waitForTimeout(600);
+		}
+		const leftover = await page.evaluate(() => document.querySelectorAll('.editor-instance .view-lines').length);
+		ctx.expect(leftover === 0, `文書を閉じきれていない（${leftover} 個残った。次のケースを汚す）`);
+
 	}
 };

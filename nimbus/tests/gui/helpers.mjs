@@ -188,10 +188,16 @@ export function git(cwd, args) {
  * 画面上は同じに見えるのに一致しない、といういちばん分かりにくい壊れかたをする（実測）。
  */
 export async function activeEditorText(page) {
-	// エディタ本体は仮想化されているので、見えている行をつなぐ
+	// エディタ本体は仮想化されているので、見えている行をつなぐ。
+	//
+	// **いま開いているグループの中から探す。** 単に最初の `.editor-instance` を読むと、
+	// 前のケースが開いたままの文書を読んでしまう（無題文書は保存を聞かれるので閉じきれず、
+	// 実際に別のケースを落とした）。見つからないときだけ従来どおり先頭に落とす。
 	const text = await page.evaluate(() => {
-		const editor = document.querySelector('.editor-instance .view-lines');
-		return editor ? editor.innerText : '';
+		const active = document.querySelector('.editor-group-container.active .editor-instance .view-lines')
+			?? document.querySelector('.monaco-editor.focused .view-lines')
+			?? document.querySelector('.editor-instance .view-lines');
+		return active ? active.innerText : '';
 	});
 	return text.replace(/\u00a0/g, ' ');
 }
