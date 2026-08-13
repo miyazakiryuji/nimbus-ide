@@ -48,7 +48,7 @@
 - [x] 無名関数を場所で呼べるようにする
 - [x] 直させる前に、測り直す手順を書かせる
 - [x] 実物の `.cpuprofile` で確認（`node --cpu-prof` の出力）
-- [ ] 画面確認（未実施）
+- [x] 画面確認 — GUI 28（ランタイムの関数が「直しに行ける場所」に混ざらない）
 
 単体テスト: `extensions/nimbus/src/test/cpuProfile.test.ts`（9 件）
 

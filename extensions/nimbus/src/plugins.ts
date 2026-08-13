@@ -100,10 +100,13 @@ export async function managePlugins(deps: PluginsDeps): Promise<void> {
 	}
 
 	const inUse = rows.filter((row) => stateOf(row) !== 'not-installed');
+	// **「入れる…」は先頭に置く。** 画面確認で分かったこと（GUI 29）:
+	// 入っているものが 10 件あると一覧が埋まり、末尾に置いた導線は**画面の下に隠れる**。
+	// これは操作であってデータではないので、上にあるほうが筋も通る
 	const items: PluginPick[] = [
-		...inUse.map((row) => ({ ...describeRow(row), row })),
+		{ label: '$(cloud-download) 入れる…', detail: '目録から選びます', install: true },
 		{ label: '', kind: vscode.QuickPickItemKind.Separator },
-		{ label: '$(cloud-download) 入れる…', detail: '目録から選びます', install: true }
+		...inUse.map((row) => ({ ...describeRow(row), row }))
 	];
 
 	const picked = await vscode.window.showQuickPick(items, {
