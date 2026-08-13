@@ -43,7 +43,8 @@
 - [x] `semanticLabel` / `tooltip` が無いものを拾う
 - [x] 引数が複数行に散っていても誤検知しない
 - [x] `.arb` の候補を重複なく出す
-- [ ] 画面確認（実際の Flutter プロジェクトで開く・未実施）
+- [x] 画面確認: 実際の Flutter プロジェクトで開き、置いた問題を拾う
+      — GUI ケース `35-flutter-commands.mjs`（食い違いのある `pubspec` と直書き文言のある `.dart` を置いて開く。Flutter SDK は要らない）
 
 単体テスト: `extensions/nimbus/src/test/flutterLint.test.ts`（10 件）
 

@@ -33,7 +33,8 @@ Flutter では「`pubspec.yaml` を触ったのに `pub get` していない」�
 - [x] lock に無い依存を挙げ、`flutter pub get` を案内する
 - [x] プラグイン名を寄せて比べる
 - [x] 材料が無ければ何も言わない
-- [ ] 画面確認（実際の Flutter プロジェクトで開く・未実施）
+- [x] 画面確認: 実際の Flutter プロジェクトで開き、置いた問題を拾う
+      — GUI ケース `35-flutter-commands.mjs`（食い違いのある `pubspec` と直書き文言のある `.dart` を置いて開く。Flutter SDK は要らない）
 
 単体テスト: `extensions/nimbus/src/test/depConsistency.test.ts`（7 件）
 
