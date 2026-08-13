@@ -34,6 +34,13 @@
           "title": "Nimbus",
           "icon": "resources/nimbus.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "nimbusDiagnostics",
+          "title": "%viewsContainers.nimbusDiagnostics%",
+          "icon": "resources/nimbus.svg"
+        }
       ]
     },
     "views": {
@@ -46,7 +53,8 @@
         {
           "id": "nimbus.board",
           "name": "%view.nimbus.board%",
-          "type": "webview"
+          "type": "webview",
+          "visibility": "collapsed"
         },
         {
           "id": "nimbus.approvals",
@@ -59,48 +67,48 @@
           "visibility": "collapsed"
         },
         {
-          "id": "nimbus.skills",
-          "name": "%view.nimbus.skills%"
-        },
-        {
-          "id": "nimbus.claudeMd",
-          "name": "%view.nimbus.claudeMd%"
-        },
-        {
           "id": "nimbus.context",
           "name": "%view.nimbus.context%",
           "visibility": "collapsed"
         },
         {
-          "id": "nimbus.activity",
-          "name": "%view.nimbus.activity%",
-          "visibility": "collapsed"
+          "id": "nimbus.skills",
+          "name": "%view.nimbus.skills%",
+          "visibility": "hidden"
         },
         {
-          "id": "nimbus.timeline",
-          "name": "%view.nimbus.timeline%",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "nimbus.usage",
-          "name": "%view.nimbus.usage%",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "nimbus.mcp",
-          "name": "%view.nimbus.mcp%",
-          "visibility": "collapsed"
+          "id": "nimbus.claudeMd",
+          "name": "%view.nimbus.claudeMd%",
+          "visibility": "hidden"
         },
         {
           "id": "nimbus.settings",
           "name": "%view.nimbus.settings%",
-          "visibility": "collapsed"
+          "visibility": "hidden"
         },
         {
           "id": "nimbus.help",
           "name": "%view.nimbus.help%",
           "type": "webview",
           "visibility": "collapsed"
+        }
+      ],
+      "nimbusDiagnostics": [
+        {
+          "id": "nimbus.activity",
+          "name": "%view.nimbus.activity%"
+        },
+        {
+          "id": "nimbus.timeline",
+          "name": "%view.nimbus.timeline%"
+        },
+        {
+          "id": "nimbus.usage",
+          "name": "%view.nimbus.usage%"
+        },
+        {
+          "id": "nimbus.mcp",
+          "name": "%view.nimbus.mcp%"
         }
       ]
     },
@@ -1093,6 +1101,31 @@
       {
         "command": "nimbus.pluginActions",
         "title": "%command.pluginActions%",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showSkills",
+        "title": "スキル一覧を開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showClaudeMd",
+        "title": "CLAUDE.md を開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showSettings",
+        "title": "設定ビューを開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showDiagnostics",
+        "title": "診断パネルを開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showHelp",
+        "title": "ヘルプを開く",
         "category": "Nimbus"
       }
     ],

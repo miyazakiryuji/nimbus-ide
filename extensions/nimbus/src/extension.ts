@@ -2680,6 +2680,24 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				void vscode.commands.executeCommand('setContext', 'nimbus.approvalQueueMode', isApprovalQueueMode());
 			}
 		}),
+		// 既定では出していないビューを開く（サイドバーに 13 段並べると、どれも見なくなる）。
+		// 隠してあるビューでも `<viewId>.focus` で出せる
+		vscode.commands.registerCommand('nimbus.showHelp', () =>
+			vscode.commands.executeCommand('nimbus.help.focus')
+		),
+		vscode.commands.registerCommand('nimbus.showSkills', () =>
+			vscode.commands.executeCommand('nimbus.skills.focus')
+		),
+		vscode.commands.registerCommand('nimbus.showClaudeMd', () =>
+			vscode.commands.executeCommand('nimbus.claudeMd.focus')
+		),
+		vscode.commands.registerCommand('nimbus.showSettings', () =>
+			vscode.commands.executeCommand('nimbus.settings.focus')
+		),
+		// 診断は下部パネルにまとめてある
+		vscode.commands.registerCommand('nimbus.showDiagnostics', () =>
+			vscode.commands.executeCommand('workbench.view.extension.nimbusDiagnostics')
+		),
 		vscode.commands.registerCommand('nimbus.askYua', async () => {
 			await vscode.commands.executeCommand('nimbus.help.focus');
 		}),

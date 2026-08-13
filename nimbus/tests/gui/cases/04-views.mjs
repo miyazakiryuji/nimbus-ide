@@ -9,7 +9,8 @@ export default {
 
 		const sidebar = await sidebarText(page);
 		// ビュー名は翻訳される（T-091）。キーで書き、候補は package.nls*.json から引く
-		for (const key of ['view.nimbus.cockpit', 'view.nimbus.board', 'view.nimbus.skills', 'view.nimbus.context']) {
+		// 既定で出すのは常用の 5 段だけ（T-239）。スキル等はコマンドから開く
+		for (const key of ['view.nimbus.cockpit', 'view.nimbus.board', 'view.nimbus.approvals', 'view.nimbus.review', 'view.nimbus.context']) {
 			ctx.expect(
 				includesAny(sidebar, labels(key)),
 				`サイドバーに ${key}（${labels(key).join(' / ')}）が無い:\n${sidebar.slice(0, 300)}`

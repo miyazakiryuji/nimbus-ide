@@ -150,7 +150,8 @@ function checkContributesDrift() {
 	}
 
 	// ビュー: 宣言 ⇄ プロバイダ登録
-	const declaredViews = (contributes.views?.nimbus ?? []).map((v) => v.id);
+	// ビューは複数のコンテナに分かれている（サイドバーと下部パネル）
+	const declaredViews = Object.values(contributes.views ?? {}).flat().map((v) => v.id);
 	const providerIds = new Set([
 		...[...sources.matchAll(/register(?:WebviewViewProvider|TreeDataProvider)\(\s*'([^']+)'/g)].map((m) => m[1]),
 		// `X.viewType` 経由の登録は定数の中身を見る

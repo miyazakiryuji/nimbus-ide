@@ -99,6 +99,7 @@ IDE 基礎機能:
 - [`quality-commands.md`](quality-commands.md) — ドクター（健康診断）とテストコマンド
 - [`pre-send-confirmation.md`](pre-send-confirmation.md) — 着手前の確認（曖昧な指示を止める）
 - [`assumptions.md`](assumptions.md) — 置いた仮定の表示
+- [`views-layout.md`](views-layout.md) — 画面の置きかた（サイドバー・パネル・コマンド）
 
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 

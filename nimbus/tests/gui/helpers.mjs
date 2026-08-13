@@ -222,3 +222,17 @@ export async function closeAllEditors(page, { attempts = 10 } = {}) {
 	}
 	return count();
 }
+
+/**
+ * 下部パネル（Nimbus 診断）の中身を読む。
+ * サイドバーに 13 段並べると、どれも見なくなる。診断系はパネルへ移した（T-239）。
+ */
+export async function panelText(page) {
+	return page.evaluate(() => document.querySelector('.part.panel')?.innerText ?? '');
+}
+
+/** 既定では出していないビューを、コマンドから開く（`nimbus.showXxx`） */
+export async function openHiddenView(page, commandTitle) {
+	await runCommand(page, commandTitle);
+	await page.waitForTimeout(1500);
+}

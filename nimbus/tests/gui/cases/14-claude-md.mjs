@@ -11,7 +11,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expandPane, labels, openNimbusSidebar, runCommand, sidebarText } from '../helpers.mjs';
+import { expandPane, labels, openHiddenView, openNimbusSidebar, runCommand, sidebarText } from '../helpers.mjs';
 
 /** 節・コードブロック・重複見出し（指摘を出すため）を仕込んだ CLAUDE.md */
 const CONTENT = [
@@ -43,6 +43,8 @@ export default {
 		await runCommand(page, labels('command.refreshClaudeMd')[0]);
 
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
+		// CLAUDE.md は既定で出していない（T-239）。コマンドから開く
+		await openHiddenView(page, 'CLAUDE.md を開く');
 		await expandPane(page, labels('view.nimbus.claudeMd')[0]);
 		await page.waitForTimeout(1500);
 

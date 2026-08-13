@@ -40,7 +40,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
-- [ ] T-239 **サイドバーの整理** — 13 ビューが 1 コンテナに詰まっている。常用 5 段だけ残し、診断系（セッションの中身・時系列・使用量・MCP）は下部パネルへ、スキル・CLAUDE.md・設定・ヘルプは既定非表示にしてコマンドから開く @session-doctor 2026-08-13 [P1]
 
       聞き間違える前提で、危ないことは音声で実行しない。`core/voiceCommands.ts` `src/voiceCommands.ts` を確保
       @yua が進めています（`core/voiceInput.ts` で録音＋書き起こしまで）。
@@ -713,3 +712,4 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-005 Copilot をソースとビルドスクリプトからも除去 — 2026-08-13 / `extensions/copilot/`（4193 ファイル・1.8GB）を削除し、npm スクリプトとビルド配線からも外した。**依存 `@github/copilot-sdk` `@vscode/copilot-api` はコアの agent host が使うため残す**（台帳に理由を記載）
 - [x] T-185 着手前の確認強制（曖昧な指示を走らせる前に止める）— 2026-08-13 / 仕様 [pre-send-confirmation](nimbus/docs/specs/pre-send-confirmation.md) / 判定は `src/core/clarify.ts`・テスト 12 件
 - [x] T-186 前提・仮定のリスト表示 — 2026-08-13 / 仕様 [assumptions](nimbus/docs/specs/assumptions.md) / 抽出は `src/core/assumptions.ts`・テスト 12 件
+- [x] T-239 サイドバーの整理（13 ビュー → 常用 5 段＋ヘルプ／診断は下部パネル／たまに使うものはコマンド）— 2026-08-13 / 仕様 [views-layout](nimbus/docs/specs/views-layout.md)

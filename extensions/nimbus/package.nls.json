@@ -240,5 +240,6 @@
   "config.managedPolicy": "組織が決めた権限の上限。ここに書いた制限は利用者の設定では緩められません（狭める方向だけが効きます）。MDM などでマシン単位に配ることを想定しています。",
   "command.packageSkills": "スキルを配れる形にする",
   "command.dictateInstruction": "声で指示する",
-  "config.voice.modelPath": "whisper.cpp を使うときのモデルの場所。ほかの書き起こしツールでは要りません。"
+  "config.voice.modelPath": "whisper.cpp を使うときのモデルの場所。ほかの書き起こしツールでは要りません。",
+  "viewsContainers.nimbusDiagnostics": "Nimbus 診断"
 }
