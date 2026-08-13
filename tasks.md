@@ -30,8 +30,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
-
-
+- [ ] T-238 **右の CHAT パネル（Build with Agent）が出ている** — `chat.disableAIFeatures` の既定は true のままなのに、素の profile で起動すると右側に upstream のエージェント UI が出る（GUI テストのスクショで発見）。どの経路で出ているかを特定して塞ぐ。塞いだら `cases/02-branding.mjs` に「Build with Agent が出ない」を足す [P2]
 
 ## 進行中
 
