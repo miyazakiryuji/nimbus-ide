@@ -11,7 +11,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { git, labels, runCommand } from '../helpers.mjs';
+import { closeAllEditors, git, labels, runCommand } from '../helpers.mjs';
 
 /**
  * 開いているエディタを**すべて**読む。
@@ -44,6 +44,9 @@ async function openAndRead(page, title, heading, { attempts = 12 } = {}) {
 export default {
 	name: '分析コマンドが、実際の作業ツリーから中身を出す',
 	async run(page, ctx) {
+		// 前のケースが落ちて片付けに到達しなかったときのために、始めにも片付ける
+		await closeAllEditors(page);
+
 		// git の履歴と、未コミットの変更を作る（どのコマンドもここを読む）
 		mkdirSync(join(ctx.workspace, 'src'), { recursive: true });
 		writeFileSync(join(ctx.workspace, 'src/a.ts'), 'export function alpha() {\n\treturn 1;\n}\n');
@@ -79,19 +82,10 @@ export default {
 		ctx.expect(missing.length === 0, `開かなかったコマンドがある:\n${missing.join('\n')}`);
 		await ctx.shot('analysis-commands');
 
-		// **開いた文書を片付ける。** ケースはアプリを共有しているので、
-		// 開きっぱなしにすると次のケースが読んでしまう（実際に別ケースを落とした）。
-		// 無題文書は普通に閉じると保存を聞かれるので、「戻して閉じる」で捨てる
-		for (let i = 0; i < 8; i++) {
-			const left = await page.evaluate(() => document.querySelectorAll('.editor-instance .view-lines').length);
-			if (left === 0) {
-				break;
-			}
-			await runCommand(page, 'Revert and Close Editor');
-			await page.waitForTimeout(600);
-		}
-		const leftover = await page.evaluate(() => document.querySelectorAll('.editor-instance .view-lines').length);
-		ctx.expect(leftover === 0, `文書を閉じきれていない（${leftover} 個残った。次のケースを汚す）`);
-
+		// 片付けは共有ヘルパへ寄せた（同じ処理が 2 か所にあると片方だけ直る事故になる）
+		ctx.expect(
+			(await closeAllEditors(page)) === 0,
+			'文書を閉じきれていない（次のケースを汚す）'
+		);
 	}
 };
