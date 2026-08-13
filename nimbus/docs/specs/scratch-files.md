@@ -73,17 +73,17 @@ Nimbus Dark / Nimbus Light（T-001 の Claude を思わせる配色）に自動�
 
 ## 受け入れ条件
 
-- [ ] `Cmd+Alt+Shift+S` で言語ピッカーが出て、選ぶと空ファイルがエディタで開く
-- [ ] 開いたファイルが選んだ言語として色付けされ、補完が効く
-- [ ] 同じ言語で 2 回作ると `scratch.ts` → `scratch_1.ts` と採番される
-- [ ] 別の言語で作ると `scratch.py` から始まる（`.ts` の番号に影響されない）
-- [ ] `scratch_1.ts` を消してもう一度作ると `scratch_1.ts` が再利用される
-- [ ] 書いた内容を保存し、**ワークスペースを切り替えて** Open Scratch File で開き直せる
-- [ ] 一覧が更新の新しい順で、言語名と「Modified 〜」が出る
-- [ ] スクラッチが 0 件のとき Open を実行すると New のピッカーが出る
-- [ ] Delete は確認ダイアログを出し、キャンセルすると消えない
-- [ ] File メニューに New Scratch File... と Open Scratch File... が出る
-- [ ] リポジトリの `git status` が汚れない
+- [ ] 画面確認: `Cmd+Alt+Shift+S` で言語ピッカーが出て、選ぶと空ファイルがエディタで開く
+- [ ] 画面確認: 開いたファイルが選んだ言語として色付けされ、補完が効く
+- [x] 同じ言語で 2 回作ると `scratch.ts` → `scratch_1.ts` と採番される — `numbers files the way IntelliJ IDEA does as they accumulate` （`scratchFiles.test.ts`）
+- [x] 別の言語で作ると `scratch.py` から始まる — `reuses the gap left by a deleted file and keeps extensions apart` （`scratchFiles.test.ts`）
+- [x] `scratch_1.ts` を消してもう一度作ると再利用される — `reuses the gap left by a deleted file and keeps extensions apart` （`scratchFiles.test.ts`）
+- [ ] 画面確認: 書いた内容を保存し、**ワークスペースを切り替えて** Open Scratch File で開き直せる
+- [x] 一覧が更新の新しい順（同着は名前順） — `puts the most recently modified first and breaks ties by name` （`scratchFiles.test.ts`）。※表示の文言は画面確認
+- [ ] 画面確認: スクラッチが 0 件のとき Open を実行すると New のピッカーが出る
+- [ ] 画面確認: Delete は確認ダイアログを出し、キャンセルすると消えない
+- [ ] 画面確認: File メニューに New Scratch File... と Open Scratch File... が出る
+- [ ] 画面確認: リポジトリの `git status` が汚れない
 
 確認記録は `../testing/scratch-files.md`。
 

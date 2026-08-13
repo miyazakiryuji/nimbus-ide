@@ -76,16 +76,16 @@ IntelliJ IDEA のブックマークと同じく、行に印を付けて一発で
 
 ## 受け入れ条件
 
-- [ ] `Cmd+Alt+Shift+B` でガターに丸が出て、もう一度で消える
-- [ ] Toggle Bookmark with Mnemonic で `1` を選ぶとガターに `1` が出る
-- [ ] 別の行に同じ `1` を付けると、元の行の `1` が消えて丸になる
-- [ ] `goToMnemonic` にキーを割り当てると、1 打鍵でその行へ飛ぶ
-- [ ] Go to Bookmark... の一覧がファイル順・行順で、キー付きは `[1]` が頭に出る
-- [ ] 分割ビューの両側にガターの印が出る
-- [ ] ウィンドウを再起動しても残っている
-- [ ] 別のワークスペースを開くと出てこない
-- [ ] Clear All が件数付きで確認を出し、キャンセルすると消えない
-- [ ] Nimbus Dark / Light の両方でガターの字が読める
+- [ ] 画面確認: `Cmd+Alt+Shift+B` でガターに丸が出て、もう一度で消える
+- [ ] 画面確認: Toggle Bookmark with Mnemonic で `1` を選ぶとガターに `1` が出る
+- [x] 別の行に同じ `1` を付けると、元の行の `1` が消えて丸になる — `a mnemonic points at exactly one place, so reusing it moves it` / `upgrades a plain bookmark in place and upper-cases the key` （`bookmarks.test.ts`）
+- [ ] 画面確認: `goToMnemonic` にキーを割り当てると、1 打鍵でその行へ飛ぶ
+- [x] 一覧がファイル順・行順 — `groups by file then by line` （`bookmarks.test.ts`）。※`[1]` の見せかたは画面確認
+- [ ] 画面確認: 分割ビューの両側にガターの印が出る
+- [x] 保存した形で往復でき、壊れた項目は捨てる（＝再起動しても残る） — `round-trips through storage` / `drops malformed entries and demotes a duplicated mnemonic` （`bookmarks.test.ts`）。※実際の再起動は画面確認
+- [ ] 画面確認: 別のワークスペースを開くと出てこない
+- [ ] 画面確認: Clear All が件数付きで確認を出し、キャンセルすると消えない
+- [ ] 画面確認: Nimbus Dark / Light の両方でガターの字が読める
 
 確認記録は `../testing/bookmarks.md`。
 

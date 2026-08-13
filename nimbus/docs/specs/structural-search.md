@@ -86,15 +86,15 @@ C 系言語と主要なスクリプト言語を 1 つの実装でカバーする
 
 ## 受け入れ条件
 
-- [ ] `foo($x$)` が `foo(bar(1, 2))` 全体に当たる
-- [ ] 文字列・行コメント・`#` コメント・ブロックコメントの中には当たらない
-- [ ] `$a$ + $a$` が `x + x` に当たり `x + y` に当たらない
-- [ ] `if ($c$)` が `if(ready)` と `if  (  ready  )` の両方に当たる
-- [ ] `i f (ready)` には当たらない
-- [ ] 一覧から選ぶとその範囲が選択される
-- [ ] 置換の確認に 1 件目の置換前後が出る
-- [ ] 置換後、Undo 一回で全部戻る
-- [ ] `foo($x)` のような不正なパターンで警告が出る
+- [x] `foo($x$)` が `foo(bar(1, 2))` 全体に当たる — `a placeholder takes a whole balanced expression, not up to the first bracket` （`structuralSearch.test.ts`）
+- [x] 文字列・コメントの中には当たらない — `never matches structure that only exists inside a string or a comment` （`structuralSearch.test.ts`）
+- [x] `$a$ + $a$` が `x + x` に当たり `x + y` に当たらない — `the same placeholder twice means the same code twice` （`structuralSearch.test.ts`）
+- [x] `if ($c$)` が空白の違いを超えて当たる — `formatting differences do not break a match, but words are not split` （`structuralSearch.test.ts`）
+- [x] `i f (ready)` には当たらない（語は割らない） — 同上 （`structuralSearch.test.ts`）
+- [ ] 画面確認: 一覧から選ぶとその範囲が選択される
+- [ ] 画面確認: 置換の確認に 1 件目の置換前後が出る
+- [ ] 画面確認: 置換後、Undo 一回で全部戻る
+- [x] 不正なパターンは推測せず何も見つけない — `a malformed pattern finds nothing rather than guessing` （`structuralSearch.test.ts`）。※警告の見せかたは画面確認
 
 確認記録は `../testing/structural-search.md`。
 

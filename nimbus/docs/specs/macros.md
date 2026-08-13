@@ -79,17 +79,17 @@ Nimbus Dark / Light（T-001 の Claude 配色）にそのまま乗る。
 
 ## 受け入れ条件
 
-- [ ] Start Recording でステータスバーに `Recording macro (0)` が出る
-- [ ] 編集するたびに手数が増える
-- [ ] ステータスバーをクリックすると名前の入力が出る
-- [ ] 保存したマクロが Play Macro... の一覧に手数付きで出る
-- [ ] 再生すると記録どおりの編集が起きる
-- [ ] 同じ名前で 2 回保存すると ` (2)` が付いて両方残る
-- [ ] 記録中にコマンドパレットを開いても、その操作は記録されない
-- [ ] Cancel Recording で破棄され、ステータスバーが消える
-- [ ] 名前の入力をキャンセルしても記録が続いている
-- [ ] Delete は確認ダイアログを出し、キャンセルすると消えない
-- [ ] ウィンドウを再起動してもマクロが残っている
+- [ ] 画面確認: Start Recording でステータスバーに `Recording macro (0)` が出る
+- [ ] 画面確認: 編集するたびに手数が増える
+- [ ] 画面確認: ステータスバーをクリックすると名前の入力が出る
+- [ ] 画面確認: 保存したマクロが Play Macro... の一覧に手数付きで出る
+- [ ] 画面確認: 再生すると記録どおりの編集が起きる
+- [x] 同じ名前で 2 回保存すると ` (2)` が付いて両方残る — `suffixes a counter so saving twice never silently replaces` （`macros.test.ts`）
+- [x] 記録中にコマンドパレットを開いても、その操作は記録されない — `records editor work but never recursion, window teardown, or blocking pickers` （`macros.test.ts`）
+- [ ] 画面確認: Cancel Recording で破棄され、ステータスバーが消える
+- [ ] 画面確認: 名前の入力をキャンセルしても記録が続いている
+- [ ] 画面確認: Delete は確認ダイアログを出し、キャンセルすると消えない
+- [x] 保存した形で往復できる（＝再起動しても残る） — `round-trips through storage` / `drops malformed entries instead of losing every macro` （`macros.test.ts`）。※実際の再起動は画面確認
 
 確認記録は `../testing/macros.md`。
 

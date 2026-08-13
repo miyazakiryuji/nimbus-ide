@@ -78,19 +78,19 @@ Quick Open の作法に合わせた接頭辞を使う。
 
 ## 受け入れ条件
 
-- [ ] Shift 2 回でピッカーが開く
-- [ ] 大文字を続けて打っても開かない（`AB` と入力しても出ない）
-- [ ] `Cmd+Alt+O` でも開く
+- [ ] 画面確認: Shift 2 回でピッカーが開く（キー入力の受け取りは単体では見られない）
+- [ ] 画面確認: 大文字を続けて打っても開かない（`AB` と入力しても出ない）
+- [ ] 画面確認: `Cmd+Alt+O` でも開く
 - [ ] 何か打つと Actions / Files / Symbols が区切り付きで出る
-- [ ] `>` を付けるとアクションだけになる
-- [ ] `#` を付けるとシンボルだけになる
-- [ ] `2 + 3 * 4` と打つと先頭に `14` が出て、Enter でコピーされる
-- [ ] `0xff + 1` が `256` になる
-- [ ] `42` だけでは電卓の行が出ない
-- [ ] ファイルを選ぶとエディタで開く
-- [ ] シンボルを選ぶとその位置にジャンプする
-- [ ] 素早く打ち替えても古い結果が出ない
-- [ ] Nimbus Dark / Light の両方で配色が破綻しない
+- [x] `>` を付けるとアクションだけになる — `parseQuery('>')` （`searchEverywhere.test.ts`）
+- [x] `#` を付けるとシンボルだけになる — `splits the Quick Open sigils off the search term` （`searchEverywhere.test.ts`）
+- [x] `2 + 3 * 4` が `14` になる — `precedence: 14` （`searchEverywhere.test.ts`）。※Enter でコピーされるところは画面確認が要る
+- [x] `0xff + 1` が `256` になる — `hexArithmetic: 256` （`searchEverywhere.test.ts`）
+- [x] `42` だけでは電卓の行が出ない — `bareInteger` / `treats a bare number or plain text as a search term, not a sum` （`searchEverywhere.test.ts`）
+- [ ] 画面確認: ファイルを選ぶとエディタで開く
+- [ ] 画面確認: シンボルを選ぶとその位置にジャンプする
+- [ ] 画面確認: 素早く打ち替えても古い結果が出ない
+- [ ] 画面確認: Nimbus Dark / Light の両方で配色が破綻しない
 
 確認記録は `../testing/search-everywhere.md`。
 
