@@ -100,6 +100,7 @@ IDE 基礎機能:
 - [`pre-send-confirmation.md`](pre-send-confirmation.md) — 着手前の確認（曖昧な指示を止める）
 - [`assumptions.md`](assumptions.md) — 置いた仮定の表示
 - [`views-layout.md`](views-layout.md) — 画面の置きかた（サイドバー・パネル・コマンド）
+- [`workspace-trust.md`](workspace-trust.md) — 信頼していないフォルダでの振る舞い
 
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 

@@ -26,13 +26,15 @@ async function hasNimbusIcon(page) {
 }
 
 export default {
-	name: '信頼していないフォルダでは出ず、信頼すると出る',
+	name: '信頼していないフォルダでも消えず、実行だけを断る',
 	untrusted: true,
 	async run(page, ctx) {
-		// ここが本体。「出ないこと」を確かめるテストは書き忘れやすい
+		// 以前は「信頼していないと拡張ごと無効になり、アイコンごと消える」ことを正しい振る舞いとしていた。
+		// しかし利用者からは「フォルダを開いたら Nimbus が無くなった」に見え、理由も直しかたも分からない。
+		// 今は制限モードでも画面は開き、実行しようとした時点で断る（untrustedWorkspaces: limited）。
 		ctx.expect(
-			!(await hasNimbusIcon(page)),
-			'信頼していないのに Nimbus のアイコンが出ている（untrustedWorkspaces の設定が効いていない）'
+			await hasNimbusIcon(page),
+			'信頼していないだけで Nimbus のアイコンごと消えている（利用者には「壊れた」と見える）'
 		);
 		await ctx.shot('trust-before');
 
@@ -42,37 +44,5 @@ export default {
 			/制限モード|Restricted Mode/i.test(shell),
 			`制限モードの表示が見当たらない（利用者が理由に気づけない）:\n${shell.slice(0, 300)}`
 		);
-
-		// 信頼して、出るようになることを確かめる
-		await page.keyboard.press('Escape');
-		await page.waitForTimeout(300);
-		await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
-		await page.waitForTimeout(1000);
-		await page.keyboard.type('Workspaces: Manage Workspace Trust', { delay: 20 });
-		await page.waitForTimeout(1200);
-		await page.keyboard.press('Enter');
-		await page.waitForTimeout(2500);
-
-		// 信頼するボタンを押す（コアの文言なので日本語・英語の両方を見る）
-		const trusted = await page.evaluate(() => {
-			const buttons = [...document.querySelectorAll('.workspace-trust-editor button, .monaco-button')];
-			const target = buttons.find((b) => /信頼|Trust/i.test(b.textContent ?? ''));
-			if (!target) {
-				return false;
-			}
-			target.click();
-			return true;
-		});
-		ctx.expect(trusted, '信頼するボタンが見つからない（信頼の画面が開いていない可能性）');
-
-		// 拡張が読み込まれるまで待つ
-		for (let i = 0; i < 15; i++) {
-			if (await hasNimbusIcon(page)) {
-				break;
-			}
-			await page.waitForTimeout(1000);
-		}
-		ctx.expect(await hasNimbusIcon(page), '信頼したのに Nimbus のアイコンが出てこない');
-		await ctx.shot('trust-after');
 	}
 };

@@ -15,7 +15,11 @@ EXT=/tmp/nimbus-smoke-ext
 WS=/tmp/nimbus-smoke-ws
 
 mkdir -p "$OUT"
-pkill -f "Nimbus-darwin-arm64/Nimbus.app" 2>/dev/null
+# 自分が起動したものだけを止める。アプリのパスで撃つと、別セッションが走らせている
+# 同じアプリ（統合テストなど）まで巻き添えにする。実際にそれで mocha の runner が
+# EPIPE で落ちた報告があったため、使い捨ての user-data-dir で絞る
+pkill -f "user-data-dir=${UD}" 2>/dev/null
+pkill -f "user-data-dir ${UD}" 2>/dev/null
 sleep 2
 rm -rf "$UD" "$EXT" "$WS"
 mkdir -p "$UD/User" "$EXT" "$WS"

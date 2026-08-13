@@ -1982,8 +1982,41 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		return attachments;
 	}
 
+	/**
+	 * 信頼していないフォルダでは Claude を動かさない。
+	 *
+	 * 以前は `untrustedWorkspaces.supported: false` にしていたが、それだと**拡張ごと無効になり、
+	 * アクティビティバーから Nimbus が消える**。利用者からは「フォルダを開いたら無くなった」に見え、
+	 * 理由も直しかたも分からない（実際にそう報告された）。
+	 * 画面は開けるようにして、実行しようとした時点で理由と直しかたを出す。
+	 */
+	async function requireTrust(): Promise<boolean> {
+		if (vscode.workspace.isTrusted) {
+			return true;
+		}
+		const TRUST = 'このフォルダを信頼する';
+		const choice = await vscode.window.showWarningMessage(
+			'Nimbus: このフォルダは信頼されていないため、Claude を実行できません。',
+			{
+				modal: true,
+				detail:
+					'Claude はこのフォルダの中でコマンドを実行し、ファイルを書き換えます。\n' +
+					'中身を確認できているフォルダだけで信頼してください。'
+			},
+			TRUST
+		);
+		if (choice === TRUST) {
+			await vscode.commands.executeCommand('workbench.trust.manage');
+		}
+		log('[trust] 信頼していないフォルダのため実行しなかった');
+		return false;
+	}
+
 	async function send(rawText: string, images?: { name: string; dataUrl: string }[]): Promise<void> {
 		try {
+			if (!(await requireTrust())) {
+				return;
+			}
 			let text = await checkBeforeSending(rawText);
 			if (text === undefined) {
 				return;
@@ -2199,6 +2232,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	async function askYua(rawText: string): Promise<void> {
 		try {
+			if (!(await requireTrust())) {
+				return;
+			}
 			const text = await checkBeforeSending(rawText);
 			if (text === undefined) {
 				return;
@@ -2252,6 +2288,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	/** タスクを作る。タイトルと指示は 2 段階で聞く（後から編集できないので、ここは丁寧に） */
 	async function newTask(): Promise<void> {
+		if (!(await requireTrust())) {
+			return;
+		}
 		const cwd = workspaceCwd(currentScope(context.workspaceState));
 		if (!cwd) {
 			void vscode.window.showErrorMessage('Nimbus: フォルダを開いてからタスクを作成してください。');

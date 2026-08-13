@@ -22,8 +22,8 @@
   "capabilities": {
     "virtualWorkspaces": false,
     "untrustedWorkspaces": {
-      "supported": false,
-      "description": "Nimbus はワークスペース内で Claude Code を実行するため、信頼されたフォルダでのみ動作します。"
+      "supported": "limited",
+      "description": "信頼していないフォルダでは Claude を実行しません（画面は開けるので、理由と信頼のしかたが分かります）。"
     }
   },
   "contributes": {
