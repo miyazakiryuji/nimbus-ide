@@ -83,6 +83,22 @@
 				},
 				"publisherDisplayName": "Microsoft"
 			}
+		},
+		{
+			"name": "MS-CEINTL.vscode-language-pack-ja",
+			"version": "1.131.0",
+			"sha256": "fae5a90170d48121bd8fe246d7d8ecbdab5bf88f21a0d58c94a3cc3af8c0f601",
+			"repo": "https://github.com/Microsoft/vscode-loc",
+			"metadata": {
+				"id": "",
+				"publisherId": {
+					"publisherId": "",
+					"publisherName": "MS-CEINTL",
+					"displayName": "Microsoft",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "Microsoft"
+			}
 		}
 	],
 	"defaultChatAgent": {

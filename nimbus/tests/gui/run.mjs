@@ -78,9 +78,16 @@ async function main() {
 	const only = value('only');
 	// 信頼を確かめるケースは起動のしかたが違うので、既定の一覧からは外す
 	const forThisRun = cases.filter((c) => Boolean(c.untrusted) === flag('untrusted'));
+	// 開発ビルドでは成り立たないものがある（表示言語は `VSCODE_DEV` があると upstream 側で
+	// 英語に短絡する）。素通りさせると「確かめた」ことになってしまうので、**外したことを言う**
+	const skipped = flag('packaged') ? [] : forThisRun.filter((c) => c.packagedOnly);
+	const runnable = forThisRun.filter((c) => !skipped.includes(c));
 	const selected = only
-		? forThisRun.filter((c) => c.name.includes(only) || c.file.includes(only))
-		: forThisRun;
+		? runnable.filter((c) => c.name.includes(only) || c.file.includes(only))
+		: runnable;
+	for (const c of skipped) {
+		console.log(`  － ${c.name}（パッケージ版でだけ確かめる。--packaged で走ります）`);
+	}
 
 	if (flag('list')) {
 		for (const c of cases) {
@@ -151,6 +158,8 @@ async function main() {
 		workspace,
 		userDataDir,
 		withClaude: flag('with-claude'),
+		// 開発ビルドとパッケージ版で振る舞いが変わるものがある（表示言語など）
+		packaged: flag('packaged'),
 		expect(condition, description) {
 			if (!condition) {
 				throw new Error(description);

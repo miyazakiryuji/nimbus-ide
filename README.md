@@ -81,6 +81,10 @@ bash nimbus/scripts/make-dmg.sh 0.6.0   # .dmg にする
 | `nimbus.permissions.showDiffBeforeApproval` | true | 承認の前に差分を開く |
 | `nimbus.tasks.maxConcurrent` | 2 | 同時に走らせるタスクの上限 |
 
+**表示言語は日本語が既定です。** 英語で使いたいときは `--locale en` で起動するか、
+`argv.json` に `"locale": "en"` を書きます。真っさらな設定フォルダでは、
+言語パックの読み込みの都合で**1 回目の起動だけ英語**になります（2 回目から日本語）。
+
 ## 拡張機能について
 
 Nimbus は拡張機能を **[Open VSX](https://open-vsx.org/)**（Eclipse Foundation）から取得します。

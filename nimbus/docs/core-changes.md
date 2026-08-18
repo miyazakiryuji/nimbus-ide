@@ -40,6 +40,8 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 19 | `src/vs/nls.ts` | `_format()` の末尾で、文言中の "Visual Studio Code" / "VS Code" を製品名に置き換える | upstream の文言には製品名が直書きされている（`localize()` 内だけで 152 箇所・約 90 ファイル）。ファイルごとに直すと差分が広がって追従できない。`localize` / `localize2` が必ず通る集約点で 1 回だけ行えば、新しい文言にも自動で効く | `nimbus/branding/apply-core-changes.mjs` |
 | 20 | `extensions/copilot/`（削除）・`package.json`・`build/npm/dirs.ts`・`build/gulpfile.vscode.ts` | Copilot 拡張をソースごと削除し、ビルド・npm の対象からも外す | Nimbus は Claude の操縦席で Copilot を同梱しない。パッケージからの除去だけでは 1.8GB・4193 ファイルがソースに残り続ける（T-005） | 削除は手作業。ビルド側は `apply-core-changes.mjs` |
 | 21 | `src/.../chat/test/browser/sessionBrowsersControl.test.ts` | テストの題名データ `'Visual Studio Code'` を `'Docs'` に変える | #19 が `localize()` を通る文言だけ製品名に差し替えるため、aria-label だけ 'Open Nimbus' になり、`localize()` を通らない表示文字列とずれてテストが落ちていた。確かめたいのは「題名があればそれを出す」ことなので、製品名でない題名にする。**一般形: `'Visual Studio Code'` / `'VS Code'` を「値」として持つテストは #19 の影響を受ける。とくに `localize()` を通る文字列（aria-label など）と通らない文字列（テンプレートリテラルなど）が同じ値を期待している箇所は、追従のたびに非対称にずれる** | 手当て（追従時は衝突しうる） |
+| 22 | `src/main.ts` | `getUserDefinedLocale()` が、指定が無いとき返す値を `undefined` → `'ja'` に | 日本語で使う道具なのに画面が英語で立ち上がっていた。upstream は `undefined` を返し、そうすると NLS の解決自体が行われないので、OS が日本語でも英語のまま。`--locale` と `argv.json` の `locale` は今までどおり優先されるので、変えたい人は変えられる（T-245） | `nimbus/branding/apply-core-changes.mjs` |
+| 23 | `product.json` | `builtInExtensions` に `MS-CEINTL.vscode-language-pack-ja` を追加 | #22 だけでは訳文の実体が無く英語に落ちる。日本語の文言は言語パックが持つ。**Open VSX から取得し、VSIX の中身で publisher / name / version を確かめてからハッシュを固定する**（T-245） | `nimbus/branding/sync-builtin-extension-hashes.mjs`（ハッシュ） |
 
 > **依存 `@github/copilot-sdk` と `@vscode/copilot-api` は消せない。** コアの agent host
 > （`src/vs/platform/agentHost/`）が import している（それぞれ 35 箇所・14 箇所）。

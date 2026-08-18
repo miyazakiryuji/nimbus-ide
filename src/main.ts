@@ -732,7 +732,14 @@ function getUserDefinedLocale(argvConfig: IArgvConfig): string | undefined {
 		return locale.toLowerCase(); // a directly provided --locale always wins
 	}
 
-	return typeof argvConfig?.locale === 'string' ? argvConfig.locale.toLowerCase() : undefined;
+	// --- Start Nimbus ---
+	// 指定が無いときの既定を日本語にする。upstream はここで undefined を返し、そうすると
+	// NLS の解決自体が行われないため、画面が英語のままになる。
+	// `--locale` と argv.json の `locale` は今までどおり優先されるので、変えたい人は変えられる。
+	// 文言の実体は同梱の言語パック（MS-CEINTL.vscode-language-pack-ja）が持つ。
+	// パックが無いときは upstream どおり英語に落ちるだけで、壊れない。
+	return typeof argvConfig?.locale === 'string' ? argvConfig.locale.toLowerCase() : 'ja';
+	// --- End Nimbus ---
 }
 
 //#endregion

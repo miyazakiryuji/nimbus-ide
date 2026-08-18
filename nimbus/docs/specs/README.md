@@ -101,6 +101,7 @@ IDE 基礎機能:
 - [`assumptions.md`](assumptions.md) — 置いた仮定の表示
 - [`views-layout.md`](views-layout.md) — 画面の置きかた（サイドバー・パネル・コマンド）
 - [`workspace-trust.md`](workspace-trust.md) — 信頼していないフォルダでの振る舞い
+- [`display-language.md`](display-language.md) — 表示言語（既定を日本語にする）
 
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 

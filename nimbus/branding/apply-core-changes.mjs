@@ -23,12 +23,30 @@ const GULPFILE_VSCODE = 'build/gulpfile.vscode.ts'
 const THEME_SERVICE = 'src/vs/workbench/services/themes/common/workbenchThemeService.ts'
 const NLS = 'src/vs/nls.ts'
 const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extensionManagementService.ts'
+const MAIN = 'src/main.ts'
 
 // 置き換える製品名は product.json から取る（改名しても追随する）
 const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
+  // 既定の表示言語。upstream は指定が無いと undefined を返し、NLS の解決自体を行わないので
+  // 画面が英語のままになる。日本語で使う道具なので、既定を ja にしておく。
+  // 明示の `--locale` と argv.json の `locale` は今までどおり優先される。
+  [
+    MAIN,
+    `	return typeof argvConfig?.locale === 'string' ? argvConfig.locale.toLowerCase() : undefined;
+}`,
+    `	// --- Start Nimbus ---
+	// 指定が無いときの既定を日本語にする。upstream はここで undefined を返し、そうすると
+	// NLS の解決自体が行われないため、画面が英語のままになる。
+	// \`--locale\` と argv.json の \`locale\` は今までどおり優先されるので、変えたい人は変えられる。
+	// 文言の実体は同梱の言語パック（MS-CEINTL.vscode-language-pack-ja）が持つ。
+	// パックが無いときは upstream どおり英語に落ちるだけで、壊れない。
+	return typeof argvConfig?.locale === 'string' ? argvConfig.locale.toLowerCase() : 'ja';
+	// --- End Nimbus ---
+}`
+  ],
   // upstream の文言には製品名が直書きされている（`localize()` の中だけで 152 箇所・約 90 ファイル）。
   // ファイルごとに直すとコア差分が 90 ファイルへ広がり、追従が現実的でなくなる。
   // 文言が組み立てられる唯一の場所（`_format`）で置き換えれば、1 ファイルの変更で全部に効き、

@@ -728,3 +728,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       仕様には「押すと切り替え」と書いてあったのに 1 行も押せない状態が続いた — 2026-08-18 /
       仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)。
       **受け入れ条件が「並ぶ」だったのが原因**。GUI ケース 37 で「押して、開くところまで」を見るようにした
+- [x] T-245 表示言語の既定を日本語にする（コアの `getUserDefinedLocale()` ＋ 言語パックの同梱）—
+      2026-08-18 / 仕様 [display-language](nimbus/docs/specs/display-language.md)。
+      真っさらな設定では 1 回目だけ英語（言語パックの所在が書かれるのが拡張の走査後のため）。
+      `--locale en` は今までどおり効く。GUI ケース 38 で実際に起ち上げて画面の文字を読む
