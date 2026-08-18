@@ -340,9 +340,8 @@ export function git(cwd, args) {
  * ノーブレークスペース（U+00A0）を使うので、素の `includes(' ')` が当たらない。
  * 画面上は同じに見えるのに一致しない、といういちばん分かりにくい壊れかたをする（実測）。
  */
-export async function activeEditorText(page) {
-	// エディタ本体は仮想化されているので、見えている行をつなぐ。
-	//
+/** いま見えている行だけを読む（仮想化されているので、これが 1 画面ぶん） */
+async function visibleEditorText(page) {
 	// **いま開いているグループの中から探す。** 単に最初の `.editor-instance` を読むと、
 	// 前のケースが開いたままの文書を読んでしまう（無題文書は保存を聞かれるので閉じきれず、
 	// 実際に別のケースを落とした）。見つからないときだけ従来どおり先頭に落とす。
@@ -353,6 +352,48 @@ export async function activeEditorText(page) {
 		return active ? active.innerText : '';
 	});
 	return text.replace(/\u00a0/g, ' ');
+}
+
+/** 重なっているところで継ぎ足す（同じ行が 2 度出てこないように） */
+function stitch(lines, chunk) {
+	const next = chunk.split('\n');
+	for (let overlap = Math.min(lines.length, next.length); overlap > 0; overlap--) {
+		if (lines.slice(lines.length - overlap).join('\n') === next.slice(0, overlap).join('\n')) {
+			return lines.concat(next.slice(overlap));
+		}
+	}
+	return lines.concat(next);
+}
+
+/**
+ * いま開いている文書の中身。
+ *
+ * Monaco は**見えている行しか DOM に置かない**。1 画面に収まらない文書を 1 回読むだけだと、
+ * 下のほうが「無かったこと」になる。**単独では通るのにフル実行では落ちる**の正体がこれだった
+ * （T-240）— 前のケースが下部パネルを開いていると、その分だけ見える行が減り、
+ * 文書の後半が読めなくなる。
+ *
+ * なので先頭へ戻してから、**行が増えなくなるまで読み進めて継ぎ足す**。
+ */
+export async function activeEditorText(page) {
+	const top = process.platform === 'darwin' ? 'Meta+ArrowUp' : 'Control+Home';
+	await page.keyboard.press(top);
+	await page.waitForTimeout(250);
+	let lines = [];
+	let previous = '';
+	for (let i = 0; i < 20; i++) {
+		const chunk = await visibleEditorText(page);
+		if (chunk === previous) {
+			break; // これ以上スクロールしない＝末尾まで来た
+		}
+		previous = chunk;
+		lines = i === 0 ? chunk.split('\n') : stitch(lines, chunk);
+		await page.keyboard.press('PageDown');
+		await page.waitForTimeout(200);
+	}
+	// 読み終わったら先頭へ戻す。次のケースが同じ文書を見るとき、位置で結果が変わらないように
+	await page.keyboard.press(top);
+	return lines.join('\n');
 }
 
 /**
