@@ -61,6 +61,24 @@ test('2 つのウィンドウが同時に書いても、どちらの記録も消
 	assert.strictEqual(seen.length, 40);
 });
 
+test('自分が書いた直後でも、他のウィンドウの記録を見失わない', async () => {
+	// 同期で参照する snapshot() が「自分の分だけ」に痩せると、
+	// 板の枠計算（T-251）が他ウィンドウを数え落として上限を超える
+	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
+	const now = () => 1_000_000;
+	const other = storeIn(dir, 'win-other', now);
+	other.upsert('theirs', { cwd: '/w/app', status: 'running' });
+	await other.flush();
+	other.dispose();
+
+	const mine = storeIn(dir, 'win-mine', now);
+	await mine.list({ fresh: true });
+	mine.upsert('mine', { cwd: '/w/app', status: 'running' });
+	const seen = mine.snapshot().map((record) => record.sessionId).sort();
+	mine.dispose();
+	assert.deepStrictEqual(seen, ['mine', 'theirs']);
+});
+
 test('閉じるときに手放した記録は、開き直したときの「続きから」に出る', async () => {
 	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
 	const now = 1_000_000;

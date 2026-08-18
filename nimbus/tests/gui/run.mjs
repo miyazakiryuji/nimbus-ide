@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
 const OUT = join(HERE, 'out');
+/** 使い捨てワークスペースの「素の状態」。ケースの間でここへ戻す（T-240） */
+const BASELINE_TAG = 'nimbus-gui-baseline';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -67,10 +69,47 @@ function makeWorkspace() {
 	);
 	try {
 		execFileSync('git', ['init', '-q'], { cwd: ws });
+		// 置いたものを全部入れた「素の状態」を 1 つ作っておく（T-240）。
+		// ケースの間でここへ戻せば、前のケースが残したファイルを次のケースが拾わない
+		gitIn(ws, ['add', '-A']);
+		gitIn(ws, ['commit', '-q', '-m', 'baseline']);
+		gitIn(ws, ['tag', BASELINE_TAG]);
 	} catch {
 		// git が無くても大半のケースは動く
 	}
 	return ws;
+}
+
+/** ケースと同じ素性でコミットする（利用者の git 設定に依らない） */
+function gitIn(cwd, args) {
+	return execFileSync('git', args, {
+		cwd,
+		env: {
+			...process.env,
+			GIT_AUTHOR_NAME: 'nimbus-gui',
+			GIT_AUTHOR_EMAIL: 'gui@example.invalid',
+			GIT_COMMITTER_NAME: 'nimbus-gui',
+			GIT_COMMITTER_EMAIL: 'gui@example.invalid'
+		}
+	});
+}
+
+/**
+ * ケースの間で作業ツリーを素の状態へ戻す（T-240）。
+ *
+ * ケースは 1 つの使い捨てワークスペースを共有している。前のケースが置いたファイルが
+ * 残っていると、git の状態を読むケース（コミットの分けかた・差分の要約・レビュー）は
+ * **単独では通るのにフル実行では落ちる**。実際にそれが起きていた。
+ *
+ * 戻せない（git が無い）ときは黙って先へ進む — 戻せないこと自体でテストを落とさない。
+ */
+function resetWorkspace(ws) {
+	try {
+		gitIn(ws, ['reset', '-q', '--hard', BASELINE_TAG]);
+		gitIn(ws, ['clean', '-qfd']);
+	} catch {
+		// git が無い・baseline が作れていない場合は何もしない
+	}
 }
 
 async function main() {
@@ -175,6 +214,8 @@ async function main() {
 	const results = [];
 	for (const c of selected) {
 		const started = Date.now();
+		// 前のケースが残したものを持ち越さない（T-240）
+		resetWorkspace(workspace);
 		try {
 			await c.run(page, ctx);
 			results.push({ name: c.name, ok: true, ms: Date.now() - started });

@@ -48,7 +48,9 @@ export class SessionStore {
 	private readonly log: (message: string) => void;
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
 	private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
-	private cache: { at: number; records: SessionRecord[] } | undefined;
+	/** 最後に読んだ他ウィンドウぶんの記録と、その時刻 */
+	private lastRead: SessionRecord[] = [];
+	private lastReadAt = 0;
 	private disposed = false;
 
 	readonly windowId: string;
@@ -67,16 +69,14 @@ export class SessionStore {
 
 	/** 台帳の全部（他のウィンドウの分も含む）。壊れた記録は数に入れず読み飛ばす */
 	async list(options?: { fresh?: boolean }): Promise<SessionRecord[]> {
-		const cached = this.cache;
-		if (!options?.fresh && cached && this.now() - cached.at < READ_CACHE_MS) {
-			return cached.records;
+		if (!options?.fresh && this.now() - this.lastReadAt < READ_CACHE_MS) {
+			return this.merged();
 		}
-		let names: string[];
+		let names: string[] = [];
 		try {
 			names = await readdir(this.dir);
 		} catch {
 			// まだ 1 つも書いていない
-			return [];
 		}
 		const records: SessionRecord[] = [];
 		for (const name of names) {
@@ -86,20 +86,24 @@ export class SessionStore {
 			try {
 				const parsed = JSON.parse(await readFile(join(this.dir, name), 'utf8')) as SessionRecord;
 				if (parsed?.sessionId && parsed.owner) {
-					// 自分の持ちものは、書き出し前の最新をそのまま使う（読み直しの遅れで古く見せない）
-					records.push(this.mine.get(parsed.sessionId) ?? parsed);
+					records.push(parsed);
 				}
 			} catch {
 				// 書きかけ・壊れた記録は無かったことにする。台帳が読めないことを、動かない理由にしない
 			}
 		}
-		for (const record of this.mine.values()) {
-			if (!records.some((existing) => existing.sessionId === record.sessionId)) {
-				records.push(record);
-			}
-		}
-		this.cache = { at: this.now(), records };
-		return records;
+		this.lastRead = records;
+		this.lastReadAt = this.now();
+		return this.merged();
+	}
+
+	/**
+	 * 読んだものと、自分がいま持っているものを重ねる。
+	 * **自分の分はディスクより手元が新しい**（書き出しは間引いてある）ので、手元で上書きする。
+	 */
+	private merged(): SessionRecord[] {
+		const others = this.lastRead.filter((record) => !this.mine.has(record.sessionId));
+		return [...others, ...this.mine.values()];
 	}
 
 	/** このウィンドウが持っている記録 */
@@ -109,10 +113,11 @@ export class SessionStore {
 
 	/**
 	 * 最後に読んだ横断の一覧。**同期で**参照したいところ（ステータスバー・板の枠計算）用。
-	 * 読み直しは心拍のついでに行うので、最大でも心拍 1 回ぶんしか古くならない。
+	 * 他ウィンドウの読み直しは心拍のついでに行うので、最大でも心拍 1 回ぶんしか古くならない。
+	 * 自分の分は常にいまの値。
 	 */
 	snapshot(): SessionRecord[] {
-		return this.cache?.records ?? this.own();
+		return this.merged();
 	}
 
 	/** 読み直して覚える。始めてよいかを決める前など、古い数で判断したくないときに使う */
@@ -152,7 +157,8 @@ export class SessionStore {
 	async forget(sessionId: string): Promise<void> {
 		this.mine.delete(sessionId);
 		this.dirty.delete(sessionId);
-		this.cache = undefined;
+		this.lastRead = this.lastRead.filter((record) => record.sessionId !== sessionId);
+		this.lastReadAt = 0;
 		try {
 			await rm(join(this.dir, `${sessionId}.json`), { force: true });
 		} catch (error) {
@@ -172,7 +178,7 @@ export class SessionStore {
 			}
 		}
 		if (targets.length > 0) {
-			this.cache = undefined;
+			this.lastReadAt = 0;
 		}
 		return targets.length;
 	}
@@ -201,7 +207,6 @@ export class SessionStore {
 			}
 			await this.write(record);
 		}
-		this.cache = undefined;
 	}
 
 	/**
@@ -231,7 +236,8 @@ export class SessionStore {
 
 	private markDirty(sessionId: string): void {
 		this.dirty.add(sessionId);
-		this.cache = undefined;
+		// 他のウィンドウの分は読み直す。自分の分は merged() で常に手元が勝つ
+		this.lastReadAt = 0;
 		if (this.flushTimer || this.disposed) {
 			return;
 		}
