@@ -22,7 +22,7 @@ import {
 	HEARTBEAT_INTERVAL_MS,
 	OWNER_TTL_MS,
 	forgettable,
-	isFinished,
+	isFinishedStatus,
 	type SessionRecord
 } from './core/sessionRegistry';
 
@@ -254,7 +254,7 @@ export class SessionStore {
 		const at = this.now();
 		// **終わったセッションは打たない。** 持ち主がいる意味が無いうえ、
 		// 1 日使うと記録が溜まるので、全件を 5 秒ごとに書き直すのは無駄な負荷になる（T-248）
-		const living = [...this.mine.values()].filter((record) => !isFinished(record.status));
+		const living = [...this.mine.values()].filter((record) => !isFinishedStatus(record.status));
 		if (living.length > 0) {
 			for (const record of living) {
 				record.owner = { ...record.owner, heartbeatAt: at };

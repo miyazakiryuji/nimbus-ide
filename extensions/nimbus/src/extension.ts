@@ -105,7 +105,7 @@ import {
 	describeRunning,
 	isMine,
 	isOwnerAlive,
-	occupiesSlot,
+	isRunningStatus,
 	overlappingSessions,
 	resumeCandidates,
 	runningSessions,
@@ -2012,7 +2012,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			.sort((a, b) => b.updatedAt - a.updatedAt)
 			.map((record) => {
 				const alive = isOwnerAlive(record, now);
-				const icon = !alive ? '$(debug-disconnect)' : occupiesSlot(record.status) ? '$(sync~spin)' : '$(cloud)';
+				const icon = !alive ? '$(debug-disconnect)' : isRunningStatus(record.status) ? '$(sync~spin)' : '$(cloud)';
 				const where = !alive ? '持ち主なし' : isMine(record, sessionStore.windowId) ? 'このウィンドウ' : '別のウィンドウ';
 				const cost = record.totalCostUsd !== undefined ? ` · $${record.totalCostUsd.toFixed(4)}` : '';
 				return {

@@ -60,12 +60,12 @@ export interface SessionRecord {
 }
 
 /** 同時実行の枠を使っている状態か。入力待ちは人間の番なので数えない */
-export function occupiesSlot(status: SessionStatus): boolean {
+export function isRunningStatus(status: SessionStatus): boolean {
 	return status === 'starting' || status === 'running';
 }
 
 /** 終わった状態か */
-export function isFinished(status: SessionStatus): boolean {
+export function isFinishedStatus(status: SessionStatus): boolean {
 	return status === 'completed' || status === 'error';
 }
 
@@ -89,7 +89,7 @@ export function heldByOther(record: SessionRecord, windowId: string, now: number
 
 /** いま走っているセッション（全ウィンドウ合計）。持ち主が死んでいるものは走っていない */
 export function runningSessions(records: readonly SessionRecord[], now: number, ttlMs = OWNER_TTL_MS): SessionRecord[] {
-	return records.filter((record) => occupiesSlot(record.status) && isOwnerAlive(record, now, ttlMs));
+	return records.filter((record) => isRunningStatus(record.status) && isOwnerAlive(record, now, ttlMs));
 }
 
 export interface Admission {
@@ -157,14 +157,14 @@ export function resumeCandidates(
 	const ttlMs = options.ttlMs ?? OWNER_TTL_MS;
 	return records
 		.filter((record) => !isOwnerAlive(record, options.now, ttlMs))
-		.filter((record) => !isFinished(record.status))
+		.filter((record) => !isFinishedStatus(record.status))
 		.filter((record) => Boolean(record.claudeSessionId))
 		.filter((record) => !options.cwd || pathOverlap(record.cwd, options.cwd) !== undefined)
 		.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 /** パスの重なりかた（自分から見た相手） */
-export type Overlap =
+export type PathOverlap =
 	/** 同じフォルダ */
 	| 'same'
 	/** 自分の中に相手がいる */
@@ -183,7 +183,7 @@ function normalizePath(value: string): string {
  * 重ならなければ undefined。文字の前方一致だけで見ると `/w/app` と `/w/app2` を
  * 重なりと誤判定するので、区切りの境目まで見る。
  */
-export function pathOverlap(a: string, b: string): Overlap | undefined {
+export function pathOverlap(a: string, b: string): PathOverlap | undefined {
 	const left = normalizePath(a);
 	const right = normalizePath(b);
 	if (left === right) {
@@ -200,7 +200,7 @@ export function pathOverlap(a: string, b: string): Overlap | undefined {
 
 export interface OverlapHit {
 	record: SessionRecord;
-	overlap: Overlap;
+	overlap: PathOverlap;
 }
 
 /**
@@ -220,7 +220,7 @@ export function overlappingSessions(
 		if (record.sessionId === options.ignoreSessionId) {
 			continue;
 		}
-		if (!isOwnerAlive(record, options.now, ttlMs) || isFinished(record.status)) {
+		if (!isOwnerAlive(record, options.now, ttlMs) || isFinishedStatus(record.status)) {
 			continue;
 		}
 		const overlap = pathOverlap(options.cwd, record.cwd);
