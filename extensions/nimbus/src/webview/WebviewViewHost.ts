@@ -69,6 +69,15 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 		});
 	}
 
+	/**
+	 * 面が生きているか（サイドバーかタブのどちらかが作られている）。
+	 * 承認をこの面で受け取ってよいかの判断に使う（T-266）— 面が無いのにカードを出すと、
+	 * 誰も見られないところで待ち続けることになる。
+	 */
+	isLive(): boolean {
+		return this.view !== undefined || this.panel !== undefined;
+	}
+
 	/** ビューの HTML。CSP の nonce は `createNonce()` を使う */
 	protected abstract render(webview: vscode.Webview): string;
 

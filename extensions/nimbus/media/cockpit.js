@@ -172,6 +172,65 @@
 		});
 	}
 
+	/**
+	 * いま答えを待っている承認（T-266）。
+	 *
+	 * **読んでいる場所と決める場所を同じにする。** 別の一覧へ目を移して、
+	 * どのツールの話だったか思い出して、戻ってくる — その往復が要らなくなる。
+	 * 入力欄のすぐ上に置くのは、手がもう そこにあるから（人間工学 E2）。
+	 */
+	function renderApprovals(items) {
+		let area = document.getElementById('approvals');
+		if (!area) {
+			area = document.createElement('div');
+			area.id = 'approvals';
+			area.className = 'approvals';
+			input.parentElement.insertBefore(area, input);
+		}
+		area.textContent = '';
+		area.hidden = items.length === 0;
+		for (const item of items) {
+			const card = document.createElement('div');
+			card.className = `approval risk-${item.risk}`;
+
+			const title = document.createElement('div');
+			title.className = 'approval-title';
+			title.textContent = `${item.toolName} を実行してよいか待っています`;
+			card.appendChild(title);
+
+			const summary = document.createElement('div');
+			summary.className = 'approval-summary';
+			summary.textContent = item.summary;
+			card.appendChild(summary);
+
+			const actions = document.createElement('div');
+			actions.className = 'approval-actions';
+			const add = (label, decision, secondary) => {
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.textContent = label;
+				if (secondary) {
+					button.className = 'secondary';
+				}
+				button.addEventListener('click', () => {
+					vscode.postMessage({ type: 'approve', id: item.id, decision });
+					// 押した手応えはその場で返す。拡張側の更新を待つと、押せたのか分からない
+					card.remove();
+					area.hidden = area.childElementCount === 0;
+				});
+				actions.appendChild(button);
+			};
+			add('許可', 'allow');
+			add('このセッションは許可', 'allow-session', true);
+			if (item.rule) {
+				add('常に許可', 'always-allow', true);
+			}
+			add('拒否', 'deny', true);
+			card.appendChild(actions);
+			area.appendChild(card);
+		}
+	}
+
 	function addFile(file) {
 		if (!file || !file.type.startsWith('image/')) {
 			return;
@@ -241,6 +300,8 @@
 				setRunning(false);
 			}
 			log.scrollTop = log.scrollHeight;
+		} else if (message.type === 'approvals') {
+			renderApprovals(message.pending ?? []);
 		} else if (message.type === 'event') {
 			renderEvent(message.event);
 			if (message.assumptions && message.assumptions.length > 0) {

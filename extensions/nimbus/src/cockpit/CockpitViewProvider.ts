@@ -6,6 +6,7 @@
  */
 import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
+import type { ApprovalDecision, PendingApproval } from '../permissions';
 import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
 import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
@@ -16,20 +17,26 @@ export type InboundMessage =
 	// images は貼り付け・ドロップで添えた画像のデータ URL（T-040）
 	| { type: 'send'; text: string; images?: { name: string; dataUrl: string }[] }
 	| { type: 'interrupt' }
-	| { type: 'newSession' };
+	| { type: 'newSession' }
+	/** 会話の中で承認に答える（T-266） */
+	| { type: 'approve'; id: string; decision: ApprovalDecision };
 
 /** 拡張 → Webview */
 export type OutboundMessage =
 	/** `assumptions` は本文から抜き出した「置かれた仮定」。本文とは別に目立たせて出す */
 	| { type: 'event'; event: NimbusEvent; assumptions?: string[] }
 	| { type: 'history'; events: NimbusEvent[]; session?: SessionSummary }
-	| { type: 'session'; session?: SessionSummary };
+	| { type: 'session'; session?: SessionSummary }
+	/** いま答えを待っている承認（T-266）。空配列で「もう無い」を表す */
+	| { type: 'approvals'; pending: readonly PendingApproval[] };
 
 export interface CockpitHandlers {
 	/** @param images 貼り付け・ドロップで添えた画像（T-040）。省略時の振る舞いは従来どおり */
 	onSend(text: string, images?: { name: string; dataUrl: string }[]): void | Promise<void>;
 	onInterrupt(): void | Promise<void>;
 	onNewSession(): void | Promise<void>;
+	/** 会話の中で承認に答えたとき（T-266） */
+	onApprove?(id: string, decision: ApprovalDecision): void;
 	/** Webview が（再）生成されたときに現在の状態を復元するための材料 */
 	snapshot(): { events: NimbusEvent[]; session?: SessionSummary };
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
@@ -78,6 +85,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'newSession':
 					await this.handlers.onNewSession();
+					break;
+				case 'approve':
+					this.handlers.onApprove?.(message.id, message.decision);
 					break;
 			}
 		});

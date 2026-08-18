@@ -166,6 +166,46 @@ button:disabled {
 }
 
 /* 貼り付け・ドロップで添えた画像（T-040） */
+/* 承認のカード（T-266）。会話を読んでいる場所で、そのまま決められるようにする */
+.approvals {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 6px;
+}
+
+.approval {
+	padding: 8px;
+	border-radius: 4px;
+	background: var(--vscode-input-background);
+	border-left: 2px solid var(--vscode-focusBorder);
+}
+
+/* 危ないものは色ではなく「太さ」で強める。新しい配色は足さない */
+.approval.risk-high {
+	border-left-color: var(--vscode-errorForeground);
+	border-left-width: 4px;
+}
+
+.approval-title {
+	font-weight: 600;
+	margin-bottom: 2px;
+}
+
+.approval-summary {
+	font-family: var(--vscode-editor-font-family);
+	color: var(--vscode-descriptionForeground);
+	white-space: pre-wrap;
+	word-break: break-all;
+	margin-bottom: 6px;
+}
+
+.approval-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
 .attachments {
 	display: flex;
 	flex-wrap: wrap;

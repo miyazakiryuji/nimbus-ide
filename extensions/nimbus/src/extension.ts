@@ -321,6 +321,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				notify('Nimbus — 承認待ち', oneLine(latest.summary), true);
 			}
 			pendingApprovals = pending.length;
+			// 会話の中にカードで出す（T-266）。ここが本命の入口で、
+			// コックピットが無いときだけ今までどおりモーダルへ落ちる
+			cockpit.post({ type: 'approvals', pending });
+			if (pending.length > 0) {
+				cockpit.reveal();
+			}
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
 			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
 			// 横断キュー（T-010）。並列で走らせると「誰が何で止まっているか」がここにしか出ない
@@ -330,7 +336,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				: undefined;
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		},
-		queueMode: () => isApprovalQueueMode(),
+		// コックピットが開いていれば、モーダルで窓ごと止めずに会話の中で受ける（T-266）。
+		// 面が無い（一度も開いていない）ときだけ、今までどおりモーダルを出す —
+		// 誰も見られないところに出しても、待ち続けるだけになる
+		queueMode: () => isApprovalQueueMode() || cockpit.isLive(),
 		alwaysAllowRules: () => {
 			// 組織が認めていないルールは、設定に書いてあっても効かせない（T-212）
 			const decided = applyToAlwaysAllow(
@@ -400,6 +409,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		onSend: (text, images) => void send(text, images),
 		onInterrupt: () => void interrupt(),
 		onNewSession: () => void newSession(),
+		// 会話の中で承認に答える（T-266）。読んでいる場所と決める場所を同じにする
+		onApprove: (id, decision) => {
+			if (!broker.decide(id, decision)) {
+				log(`[permission] もう答えられない承認でした（${id}）`);
+			}
+		},
 		snapshot: () => ({
 			events: retained,
 			session: activeSessionId ? sessions.get(activeSessionId) : undefined
