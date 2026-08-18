@@ -417,7 +417,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		},
 		snapshot: () => ({
 			events: retained,
-			session: activeSessionId ? sessions.get(activeSessionId) : undefined
+			session: activeSessionId ? sessions.get(activeSessionId) : undefined,
+			// 面を畳んで開き直しても、答え待ちのカードが消えないように（T-266）
+			approvals: broker.pending()
 		}),
 		log
 	});

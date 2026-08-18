@@ -37,8 +37,12 @@ export interface CockpitHandlers {
 	onNewSession(): void | Promise<void>;
 	/** 会話の中で承認に答えたとき（T-266） */
 	onApprove?(id: string, decision: ApprovalDecision): void;
-	/** Webview が（再）生成されたときに現在の状態を復元するための材料 */
-	snapshot(): { events: NimbusEvent[]; session?: SessionSummary };
+	/**
+	 * Webview が（再）生成されたときに現在の状態を復元するための材料。
+	 * **答え待ちの承認も含める**（T-266）— 面を畳んで開き直したときにカードが消えると、
+	 * セッションは待ったままなのに答える場所が無くなる
+	 */
+	snapshot(): { events: NimbusEvent[]; session?: SessionSummary; approvals?: readonly PendingApproval[] };
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
 	log(message: string): void;
 }
@@ -72,9 +76,12 @@ export class CockpitViewProvider extends WebviewViewHost {
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
-					const { events, session } = this.handlers.snapshot();
+					const { events, session, approvals } = this.handlers.snapshot();
 					this.handlers.log(`[cockpit] Webview から ready（復元イベント ${events.length} 件）`);
 					this.post({ type: 'history', events, session });
+					if (approvals && approvals.length > 0) {
+						this.post({ type: 'approvals', pending: approvals });
+					}
 					break;
 				}
 				case 'send':
