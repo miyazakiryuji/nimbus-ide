@@ -89,6 +89,8 @@
   "command.branchSession": "Branch This Work (Plan A / Plan B)",
   "command.showSessions": "Show Running Sessions",
   "command.checkTasks": "Check Tasks for Stalls",
+  "command.openCockpitTab": "Open Cockpit in a Tab",
+  "command.openBoardTab": "Open Task Board in a Tab",
   "command.showTaskProgress": "Show Task Progress",
   "command.restoreSession": "Resume a Past Session",
   "command.openCodeHealth": "See Naming and Duplication",

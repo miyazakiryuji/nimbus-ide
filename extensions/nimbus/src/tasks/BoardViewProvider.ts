@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import type { KanbanTask } from '../core/tasks';
 import { renderWebviewPage } from '../webview/page';
-import { WebviewViewHost } from '../webview/WebviewViewHost';
+import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
 import { KANBAN_COLUMNS } from '../core/tasks';
 
 export type BoardInbound =
@@ -43,10 +43,10 @@ export class BoardViewProvider extends WebviewViewHost {
 		super(extensionUri);
 	}
 
-	protected onResolved(webviewView: vscode.WebviewView): void {
+	protected onResolved(surface: WebviewSurface): void {
 		this.handlers.log('[board] Webview を生成しました');
 
-		webviewView.webview.onDidReceiveMessage(async (message: BoardInbound) => {
+		surface.webview.onDidReceiveMessage(async (message: BoardInbound) => {
 			switch (message.type) {
 				case 'ready':
 					this.refresh();

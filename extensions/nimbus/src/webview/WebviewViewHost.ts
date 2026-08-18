@@ -9,8 +9,18 @@
  */
 import * as vscode from 'vscode';
 
+/**
+ * サイドバーのビューと、エディタタブのパネルに共通する部分（T-258）。
+ * どちらも `webview` を持つだけなので、面の種類を意識せずに扱える。
+ */
+export interface WebviewSurface {
+	readonly webview: vscode.Webview;
+}
+
 export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 	protected view?: vscode.WebviewView;
+	/** エディタタブとして開いた面（T-258）。開いていなければ undefined */
+	private panel?: vscode.WebviewPanel;
 
 	constructor(protected readonly extensionUri: vscode.Uri) { }
 
@@ -31,15 +41,44 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 		});
 	}
 
+	/**
+	 * エディタタブで開く（T-258）。既に開いていれば前面に出すだけ。
+	 *
+	 * サイドバーの幅では狭い面（コックピット・タスク板）を、タブとして広く使えるようにする。
+	 * **状態は二重に持たない** — 増えるのは `postMessage` の宛先だけで、
+	 * 中身の持ち主は今までどおり拡張ホスト側。だから両方開いても片方だけ古くならない。
+	 */
+	openInEditor(viewType: string, title: string): void {
+		if (this.panel) {
+			this.panel.reveal(vscode.ViewColumn.Active);
+			return;
+		}
+		const panel = vscode.window.createWebviewPanel(viewType, title, vscode.ViewColumn.Active, {
+			enableScripts: true,
+			// タブを切り替えるたびに作り直すと、打ちかけの文や表示位置が消える
+			retainContextWhenHidden: true,
+			localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')]
+		});
+		panel.webview.html = this.render(panel.webview);
+		this.panel = panel;
+		this.onResolved(panel);
+		panel.onDidDispose(() => {
+			if (this.panel === panel) {
+				this.panel = undefined;
+			}
+		});
+	}
+
 	/** ビューの HTML。CSP の nonce は `createNonce()` を使う */
 	protected abstract render(webview: vscode.Webview): string;
 
-	/** メッセージの購読など、ビュー固有の準備 */
-	protected abstract onResolved(webviewView: vscode.WebviewView): void;
+	/** メッセージの購読など、面ごとの準備。サイドバーからもタブからも呼ばれる */
+	protected abstract onResolved(surface: WebviewSurface): void;
 
 	/** 閉じているときは捨ててよい（再表示時に状態を送り直す作りにしてある） */
 	protected postMessage(message: unknown): void {
 		void this.view?.webview.postMessage(message);
+		void this.panel?.webview.postMessage(message);
 	}
 
 	/** 同梱アセットの URI */

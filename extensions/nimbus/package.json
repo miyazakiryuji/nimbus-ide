@@ -606,6 +606,18 @@
         "icon": "$(pulse)"
       },
       {
+        "command": "nimbus.openCockpitTab",
+        "title": "%command.openCockpitTab%",
+        "category": "Nimbus",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "nimbus.openBoardTab",
+        "title": "%command.openBoardTab%",
+        "category": "Nimbus",
+        "icon": "$(link-external)"
+      },
+      {
         "command": "nimbus.showTaskProgress",
         "title": "%command.showTaskProgress%",
         "category": "Nimbus",

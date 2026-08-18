@@ -2956,6 +2956,14 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// サイドバーの幅では狭い面を、エディタタブで広く使う（T-258）。
+		// 中身の持ち主は拡張ホスト側のままなので、サイドバーと同時に開いても食い違わない
+		vscode.commands.registerCommand('nimbus.openCockpitTab', () =>
+			cockpit.openInEditor('nimbus.cockpitTab', 'Nimbus コックピット')
+		),
+		vscode.commands.registerCommand('nimbus.openBoardTab', () =>
+			board.openInEditor('nimbus.boardTab', 'Nimbus タスク')
+		),
 		// 止まっているタスクを洗い出す（T-262）
 		vscode.commands.registerCommand('nimbus.checkTasks', () => checkTasks()),
 		// タスクの進捗を開く（T-261）

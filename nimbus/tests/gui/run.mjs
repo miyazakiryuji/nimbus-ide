@@ -49,8 +49,14 @@ async function loadCases() {
 
 function resolveApp() {
 	if (flag('packaged')) {
-		const app = join(dirname(ROOT), 'Nimbus-darwin-arm64', 'Nimbus.app', 'Contents', 'MacOS', 'Nimbus');
-		return { executablePath: app, label: 'パッケージ版' };
+		// 複数のセッションが同じリポジトリで作業していると、走らせている最中に
+		// 別のセッションが `../Nimbus-darwin-arm64` を作り直してしまう（実際に起きた）。
+		// 自分の写しを指せるように env で差し替えられるようにしておく（T-240 と同じ「独立して走る」話）
+		const custom = process.env['NIMBUS_APP'];
+		const app = custom
+			? join(custom, 'Contents', 'MacOS', 'Nimbus')
+			: join(dirname(ROOT), 'Nimbus-darwin-arm64', 'Nimbus.app', 'Contents', 'MacOS', 'Nimbus');
+		return { executablePath: app, label: custom ? 'パッケージ版（写し）' : 'パッケージ版' };
 	}
 	// 開発ビルド。scripts/code.sh が用意する Electron をそのまま使う
 	const app = join(ROOT, '.build', 'electron', 'Nimbus.app', 'Contents', 'MacOS', 'Nimbus');
@@ -106,9 +112,13 @@ function gitIn(cwd, args) {
 function resetWorkspace(ws) {
 	try {
 		gitIn(ws, ['reset', '-q', '--hard', BASELINE_TAG]);
-		gitIn(ws, ['clean', '-qfd']);
-	} catch {
-		// git が無い・baseline が作れていない場合は何もしない
+		// `-ff` まで付けるのは、入れ子の git リポジトリを置いていくケースがあるため。
+		// `-x` は無視されるファイルも落とす。使い捨てのワークスペースなので惜しむものが無い
+		gitIn(ws, ['clean', '-qffdx']);
+	} catch (error) {
+		// 戻せないこと自体でテストは落とさない。ただし**黙らない** —
+		// 黙って戻らないと、後のケースが前のケースの残骸を拾って落ち、原因が分からなくなる
+		console.log(`  ！ 作業ツリーを戻せませんでした: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 

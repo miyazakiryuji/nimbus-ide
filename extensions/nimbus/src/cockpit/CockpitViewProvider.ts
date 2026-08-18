@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
 import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
-import { WebviewViewHost } from '../webview/WebviewViewHost';
+import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
 export type InboundMessage =
@@ -59,10 +59,10 @@ export class CockpitViewProvider extends WebviewViewHost {
 		super(extensionUri);
 	}
 
-	protected onResolved(webviewView: vscode.WebviewView): void {
+	protected onResolved(surface: WebviewSurface): void {
 		this.handlers.log('[cockpit] Webview を生成しました');
 
-		webviewView.webview.onDidReceiveMessage(async (message: InboundMessage) => {
+		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
 					const { events, session } = this.handlers.snapshot();

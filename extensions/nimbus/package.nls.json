@@ -89,6 +89,8 @@
   "command.branchSession": "いまの作業を分岐する（A 案・B 案）",
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
+  "command.openCockpitTab": "コックピットをタブで開く",
+  "command.openBoardTab": "タスク板をタブで開く",
   "command.showTaskProgress": "タスクの進捗を見る",
   "command.restoreSession": "過去のセッションを再開する",
   "command.openCodeHealth": "命名と重複を見る",
