@@ -98,6 +98,7 @@ import { describeSessionConflict, SessionFilesTracker } from './core/sessionFile
 import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
+import { stoppedSnapshot } from './debugTools';
 import {
 	admit,
 	describeOverlap,
@@ -2090,6 +2091,26 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	/**
+	 * デバッガが止まった場所を、そのままセッションへ渡す（T-254）。
+	 *
+	 * MCP の `debug_stack` / `debug_variables`（T-104）は **Claude 側から取りに行く**口だった。
+	 * 例外で止まった直後は、こちらから差し出したほうが早い —
+	 * 「例外が出た」とだけ伝えて、エージェントに探させるのは往復が多い。
+	 */
+	async function sendDebugStop(): Promise<void> {
+		const snapshot = await stoppedSnapshot();
+		if (!snapshot) {
+			void vscode.window.showInformationMessage(
+				'Nimbus: いまデバッガは止まっていません。ブレークポイントか例外で止めてから押してください。'
+			);
+			return;
+		}
+		cockpit.reveal();
+		await send(`${snapshot.text}\n\nここで何が起きているのか、原因の見当と次に見るべき場所を教えてください。`);
+		log(`[debug] 止まった場所（${snapshot.where}）をセッションへ渡しました`);
+	}
+
+	/**
 	 * 板の点検（T-262）。止まっているタスクを 1 つのボタンで洗い出す。
 	 *
 	 * 並列で走らせると、**止まったことに誰も気づかない**のがいちばん損をする。
@@ -2964,6 +2985,29 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.openBoardTab', () =>
 			board.openInEditor('nimbus.boardTab', 'Nimbus タスク')
 		),
+		// 止まった場所をセッションへ渡す（T-254）。デバッグツールバーからも押せる
+		vscode.commands.registerCommand('nimbus.sendDebugStop', () => sendDebugStop()),
+		// 例外で止まったときだけ、こちらから声をかける（ブレークポイントのたびに出すと邪魔になる）
+		vscode.debug.registerDebugAdapterTrackerFactory('*', {
+			createDebugAdapterTracker: () => ({
+				onDidSendMessage: (message: { type?: string; event?: string; body?: { reason?: string } }) => {
+					if (message?.type !== 'event' || message.event !== 'stopped' || message.body?.reason !== 'exception') {
+						return;
+					}
+					if (vscode.workspace.getConfiguration('nimbus').get<boolean>('debug.notifyOnException') === false) {
+						return;
+					}
+					const SEND = 'セッションへ渡す';
+					void vscode.window
+						.showWarningMessage('Nimbus: 例外で止まりました。', SEND)
+						.then((choice) => {
+							if (choice === SEND) {
+								void sendDebugStop();
+							}
+						});
+				}
+			})
+		}),
 		// 止まっているタスクを洗い出す（T-262）
 		vscode.commands.registerCommand('nimbus.checkTasks', () => checkTasks()),
 		// タスクの進捗を開く（T-261）

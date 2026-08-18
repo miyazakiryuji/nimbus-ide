@@ -606,6 +606,12 @@
         "icon": "$(pulse)"
       },
       {
+        "command": "nimbus.sendDebugStop",
+        "title": "%command.sendDebugStop%",
+        "category": "Nimbus",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "nimbus.openCockpitTab",
         "title": "%command.openCockpitTab%",
         "category": "Nimbus",
@@ -1202,6 +1208,13 @@
       }
     ],
     "menus": {
+      "debug/toolBar": [
+        {
+          "command": "nimbus.sendDebugStop",
+          "when": "inDebugMode",
+          "group": "nimbus@1"
+        }
+      ],
       "editor/context": [
         {
           "command": "nimbus.askAboutSelection",
@@ -1466,6 +1479,11 @@
           "type": "boolean",
           "default": true,
           "description": "%config.debug.exposeState%"
+        },
+        "nimbus.debug.notifyOnException": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.debug.notifyOnException%"
         },
         "nimbus.lsp.verifyEdits": {
           "type": "string",

@@ -181,6 +181,45 @@ function defineTools() {
 	];
 }
 
+/**
+ * いま止まっている場所を、そのままセッションへ渡せる形にする（T-254）。
+ *
+ * MCP のツール（T-104）は **Claude 側から取りに行く**口。こちらは **こちらから渡す**口で、
+ * 例外やテスト失敗で止まったときに、聞かれる前にその場の事実を差し出すためのもの。
+ * 止まっていなければ undefined。
+ */
+export async function stoppedSnapshot(): Promise<{ where: string; text: string } | undefined> {
+	const at = stoppedAt();
+	if (!at) {
+		return undefined;
+	}
+	const frames = await fetchFrames(at);
+	if (frames.length === 0) {
+		return undefined;
+	}
+	const frameId = at.frameId ?? frames[0].id;
+	const chosen = frames.find((frame) => frame.id === frameId) ?? frames[0];
+	const scopes = await fetchScopes(at.session, frameId);
+	const where = roots();
+	const at_ = chosen.source?.path
+		? `${displayPath(where, chosen.source.path)}${chosen.line === undefined ? '' : `:${chosen.line}`}`
+		: chosen.name;
+	return {
+		where: at_,
+		text: [
+			`デバッガが ${at_} で止まっています（${at.session.name} / ${at.session.type}）。`,
+			'',
+			'## コールスタック',
+			'',
+			renderStack(frames.map(toFrame), (file) => displayPath(where, file)),
+			'',
+			'## その場の変数',
+			'',
+			renderScopes(scopes)
+		].join('\n')
+	};
+}
+
 let cached: McpSdkServerConfigWithInstance | undefined;
 
 /** セッションに渡す MCP サーバー。ツールの定義しか持たないので 1 つを共有する */
