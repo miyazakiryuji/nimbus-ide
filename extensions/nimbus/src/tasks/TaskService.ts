@@ -10,6 +10,9 @@ import type { Memento } from 'vscode';
 import type { NimbusEvent } from '../events';
 import type { SessionManager } from '../session/SessionManager';
 import { WorktreeManager } from '../core/worktree';
+import type { TaskStore } from '../taskStore';
+import { mergeTasks } from '../core/taskSync';
+import { filePathOf, WRITE_TOOLS } from '../core/toolInput';
 import {
 	deriveState,
 	nextStartable,
@@ -44,18 +47,73 @@ export class TaskService extends EventEmitter {
 	 */
 	private autoStartPaused = false;
 
+	/** 前回の突き合わせでディスクに在った ID。消されたのか、まだ書いていないのかを分ける（T-259） */
+	private knownIds = new Set<string>();
+	/** taskId → 直近の進捗の 1 行（T-261）。他のウィンドウのぶんは突き合わせのときに拾う */
+	private readonly progressText = new Map<string, string>();
+
 	constructor(
 		private readonly storage: Memento,
 		private readonly worktrees: WorktreeManager,
 		private readonly sessions: SessionManager,
 		private readonly maxConcurrent: () => number,
-		private readonly log: (message: string) => void
+		private readonly log: (message: string) => void,
+		/** ウィンドウ横断で板を共有するための置き場（T-259）。無ければ今までどおり Memento だけ */
+		private readonly store?: TaskStore,
+		/** このウィンドウの印（T-260）。担当を残すのに使う */
+		private readonly windowId?: string
 	) {
 		super();
 		for (const task of storage.get<KanbanTask[]>(STORAGE_KEY, [])) {
 			this.tasks.set(task.taskId, { ...task, state: restoreState(task.state) });
 		}
 		this.sessions.on('event', (event: NimbusEvent) => this.onSessionEvent(event));
+	}
+
+	/**
+	 * ディスクの板と突き合わせる（T-259）。
+	 *
+	 * 板の状態はウィンドウの中にしか無かったので、別のウィンドウで足したタスクが見えなかった。
+	 * ファイルを正として、**新しいほうを勝たせる**。定期的に呼ぶ前提で、変わったときだけ知らせる。
+	 */
+	async syncWithStore(): Promise<void> {
+		if (!this.store) {
+			return;
+		}
+		const disk = await this.store.load();
+		// 他のウィンドウが書いた進捗も拾う（自分が動かしていないタスクの様子が分かる）
+		for (const [taskId, entry] of await this.store.lastProgress()) {
+			this.progressText.set(taskId, entry.text);
+		}
+		const merged = mergeTasks(this.list(), disk, this.knownIds);
+		this.knownIds = new Set(disk.map((task) => task.taskId));
+		for (const task of merged.toWrite) {
+			await this.store.write(task);
+			this.knownIds.add(task.taskId);
+		}
+		if (!merged.changed) {
+			return;
+		}
+		this.tasks.clear();
+		for (const task of merged.tasks) {
+			this.tasks.set(task.taskId, task);
+		}
+		if (merged.removed.length > 0) {
+			this.log(`[task] 他のウィンドウで ${merged.removed.length} 件が消されました`);
+		}
+		void this.storage.update(STORAGE_KEY, this.list());
+		this.emit('changed', this.list());
+	}
+
+	/** 進捗を 1 行残す（T-261）。途中で止まったとき、どこまで進んだかの手がかりになる */
+	private noteProgress(taskId: string, kind: 'start' | 'turn' | 'file' | 'note' | 'done', text: string): void {
+		this.progressText.set(taskId, text);
+		void this.store?.appendProgress(taskId, { at: Date.now(), kind, text });
+	}
+
+	/** 直近の進捗（板のカードに 1 行だけ出す。T-261） */
+	lastProgress(): Record<string, string> {
+		return Object.fromEntries(this.progressText);
 	}
 
 	list(): KanbanTask[] {
@@ -96,7 +154,8 @@ export class TaskService extends EventEmitter {
 		};
 		this.tasks.set(task.taskId, task);
 		this.log(`[task] 作成 ${task.title} → ${task.branch}`);
-		this.persistAndEmit();
+		this.persistAndEmit(task);
+		this.noteProgress(task.taskId, 'note', `作成（${task.branch}）`);
 		if (input.autoStart) {
 			// 自動開始の失敗でタスク作成自体を失敗させない（worktree はもうある）。
 			// 待機中のまま残るので、利用者が手で開始できる
@@ -114,7 +173,7 @@ export class TaskService extends EventEmitter {
 		const task = this.mustGet(taskId);
 		task.pinned = !task.pinned;
 		task.updatedAt = Date.now();
-		this.persistAndEmit();
+		this.persistAndEmit(task);
 	}
 
 	/** タグを付け替える（T-147）。空文字は落とし、重複は 1 つにまとめる */
@@ -122,7 +181,7 @@ export class TaskService extends EventEmitter {
 		const task = this.mustGet(taskId);
 		task.tags = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
 		task.updatedAt = Date.now();
-		this.persistAndEmit();
+		this.persistAndEmit(task);
 	}
 
 	/** 待機中タスクの優先度を変える（T-233）。走り出したあとに変えても意味がないので待機中だけ */
@@ -133,7 +192,7 @@ export class TaskService extends EventEmitter {
 		}
 		task.priority = priority;
 		task.updatedAt = Date.now();
-		this.persistAndEmit();
+		this.persistAndEmit(task);
 	}
 
 	/** 待機タスクの自動開始を止める。緊急停止から呼ぶ */
@@ -158,12 +217,16 @@ export class TaskService extends EventEmitter {
 		try {
 			const sessionId = randomUUID();
 			task.sessionId = sessionId;
+			// 誰が持っているかを残す（T-260）。板を横断で持つようになったので、
+			// 「別の窓が走らせている」ことが分からないと二重に開始できてしまう
+			task.ownerWindowId = this.windowId;
 			await this.sessions.createSession({
 				cwd: task.worktreePath,
 				firstMessage: task.prompt,
 				reuseSessionId: sessionId
 			});
 			this.setState(task, 'running');
+			this.noteProgress(taskId, 'start', `開始（セッション ${sessionId.slice(0, 8)}）`);
 			this.log(`[task] 開始 ${task.title}`);
 			return { started: true };
 		} finally {
@@ -195,6 +258,7 @@ export class TaskService extends EventEmitter {
 			this.log(`[task] worktree の破棄に失敗: ${error instanceof Error ? error.message : String(error)}`);
 		}
 		this.setState(task, 'done');
+		this.noteProgress(taskId, 'done', `完了${wipCommit ? `（WIP ${wipCommit.slice(0, 8)}）` : ''}`);
 		this.log(`[task] 完了 ${task.title}${wipCommit ? `（WIP ${wipCommit.slice(0, 8)} に保存）` : ''}`);
 		await this.startNextPending();
 		return { wipCommit };
@@ -203,6 +267,8 @@ export class TaskService extends EventEmitter {
 	/** 一覧から取り除く（完了済みの掃除用。worktree には触れない） */
 	forget(taskId: string): void {
 		this.tasks.delete(taskId);
+		this.knownIds.delete(taskId);
+		void this.store?.remove(taskId);
 		this.persistAndEmit();
 	}
 
@@ -225,7 +291,16 @@ export class TaskService extends EventEmitter {
 		if (!task || task.state === 'done') {
 			return;
 		}
+		if (event.kind === 'tool-use' && WRITE_TOOLS.has(event.toolName)) {
+			// 何を触ったかは、止まったあとに一番効く手がかりになる（T-261）
+			const path = filePathOf(event.input);
+			if (path) {
+				this.noteProgress(task.taskId, 'file', path);
+			}
+			return;
+		}
 		if (event.kind === 'turn-result') {
+			this.noteProgress(task.taskId, 'turn', oneLine(event.resultText) ?? 'ターンが終わりました');
 			this.setState(task, 'review');
 			void this.startNextPending();
 		} else if (event.kind === 'status' && (event.status === 'error' || event.status === 'completed')) {
@@ -242,11 +317,16 @@ export class TaskService extends EventEmitter {
 		}
 		task.state = state;
 		task.updatedAt = Date.now();
-		this.persistAndEmit();
+		this.persistAndEmit(task);
 	}
 
-	private persistAndEmit(): void {
+	/** @param changed 変わったタスク。渡されたぶんだけ台帳へ書く（全件書き直さない・T-250 と同じ理由） */
+	private persistAndEmit(changed?: KanbanTask): void {
 		void this.storage.update(STORAGE_KEY, this.list());
+		if (changed) {
+			void this.store?.write(changed);
+			this.knownIds.add(changed.taskId);
+		}
 		this.emit('changed', this.list());
 	}
 
@@ -257,4 +337,10 @@ export class TaskService extends EventEmitter {
 		}
 		return task;
 	}
+}
+
+/** 進捗は一覧で読むものなので、1 行に畳んでから残す */
+function oneLine(text: string | undefined): string | undefined {
+	const folded = text?.replace(/\s+/g, ' ').trim().slice(0, 200);
+	return folded ? folded : undefined;
 }

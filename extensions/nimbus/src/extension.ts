@@ -7,6 +7,7 @@
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
 import { appendFile } from 'fs/promises';
+import { existsSync } from 'fs';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
 import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
@@ -95,6 +96,8 @@ import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile 
 import { thresholdLevel } from './core/usage';
 import { describeSessionConflict, SessionFilesTracker } from './core/sessionFiles';
 import { SessionStore } from './sessionStore';
+import { TaskStore } from './taskStore';
+import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
 import {
 	admit,
 	describeOverlap,
@@ -285,6 +288,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 落ちれば消えるし、別のウィンドウからは見えない。プロセスの外に置くことで
 	// 「続きから」（T-252）・横断の同時実行数（T-251）・作業場所の重なり（T-253）が成り立つ
 	const sessionStore = new SessionStore(vscode.Uri.joinPath(context.globalStorageUri, 'sessions').fsPath, { log });
+	// 板の置き場（T-259）。板の状態もウィンドウの中にしか無かったので、
+	// 別のウィンドウで足したタスクが見えず、進捗（T-261）も残らなかった
+	const taskStore = new TaskStore(vscode.Uri.joinPath(context.globalStorageUri, 'tasks').fsPath, { log });
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
 	const outbox = new Outbox();
 	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
@@ -363,7 +369,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		worktrees,
 		sessions,
 		() => boardSlots(),
-		log
+		log,
+		taskStore,
+		sessionStore.windowId
 	);
 
 	/** 現在前面で操作しているセッション。並列セッションは F4 で本格対応する */
@@ -2081,6 +2089,72 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		return across > 0 ? describeRunning(across, concurrentLimit()) : '';
 	}
 
+	/**
+	 * 板の点検（T-262）。止まっているタスクを 1 つのボタンで洗い出す。
+	 *
+	 * 並列で走らせると、**止まったことに誰も気づかない**のがいちばん損をする。
+	 * 材料は 4 つ — 担当セッションが生きているか（T-260）・進捗の記録（T-261）・
+	 * 最終更新・worktree が残っているか。**直しはしない**。出すところまで。
+	 */
+	async function checkTasks(): Promise<void> {
+		await tasks.syncWithStore();
+		const live = new Set(runningSessions(await sessionStore.refresh(), Date.now()).map((record) => record.sessionId));
+		const found = checkTaskHealth(tasks.list(), {
+			now: Date.now(),
+			liveSessionIds: live,
+			lastProgressAt: await taskStore.lastProgressAt(),
+			hasWorktree: (task) => existsSync(task.worktreePath)
+		});
+		if (found.length === 0) {
+			void vscode.window.showInformationMessage(
+				`Nimbus: 止まっているタスクはありません（${tasks.list().length} 件を点検）。`
+			);
+			return;
+		}
+		const chosen = await vscode.window.showQuickPick(
+			found.map((entry) => ({
+				label: `$(warning) ${entry.task.title}`,
+				description: entry.detail,
+				detail: `${entry.task.branch} · 最後の動きから ${describeIdle(entry.idleMs)}`,
+				taskId: entry.task.taskId
+			})),
+			{ title: `止まっているタスク ${found.length} 件`, placeHolder: '選ぶと、そのタスクの進捗を開きます' }
+		);
+		if (chosen) {
+			await showTaskProgress(chosen.taskId);
+		}
+	}
+
+	/**
+	 * タスクの進捗を開く（T-261）。
+	 * 途中で止まったとき、「どこまで何をしたか」が残っていないと、拾い直す手がかりが無い。
+	 */
+	async function showTaskProgress(taskId?: string): Promise<void> {
+		const target = taskId ?? (await pickTask('進捗を見るタスク'));
+		if (!target) {
+			return;
+		}
+		const task = tasks.get(target);
+		const entries = await taskStore.readProgress(target);
+		if (entries.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: このタスクにはまだ進捗の記録がありません。');
+			return;
+		}
+		const summary = summarizeProgress(entries);
+		const lines = [
+			`# ${task?.title ?? target} の進捗`,
+			'',
+			`ターン ${summary.turns} 回・触ったファイル ${summary.files.length} 件`,
+			'',
+			...entries.map((entry) => `- ${new Date(entry.at).toLocaleString()} \`${entry.kind}\` ${entry.text}`)
+		];
+		const document = await vscode.workspace.openTextDocument({
+			content: sanitizer.sanitizeString(lines.join('\n')),
+			language: 'markdown'
+		});
+		await vscode.window.showTextDocument(document, { preview: false });
+	}
+
 	function updateStatus(summary: SessionSummary | undefined): void {
 		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
@@ -2550,7 +2624,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		onComplete: (taskId) => completeTask(taskId),
 		onOpen: (taskId) => openTaskWorktree(taskId),
 		onForget: (taskId) => tasks.forget(taskId),
+		// 止まっているタスクを 1 つのボタンで洗い出す（T-262）
+		onCheck: () => checkTasks(),
 		tasks: () => tasks.list(),
+		// カードに直近の進捗を 1 行だけ出す（T-261）
+		progress: () => tasks.lastProgress(),
 		log
 	});
 	tasks.on('changed', () => board.refresh());
@@ -2878,6 +2956,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// 止まっているタスクを洗い出す（T-262）
+		vscode.commands.registerCommand('nimbus.checkTasks', () => checkTasks()),
+		// タスクの進捗を開く（T-261）
+		vscode.commands.registerCommand('nimbus.showTaskProgress', (node?: { taskId?: string }) =>
+			showTaskProgress(node?.taskId)
+		),
 		// 証跡つき完了報告（T-081）。「できました」だけの報告を無くす
 		vscode.commands.registerCommand('nimbus.completionReport', () => openCompletionReport(retained)),
 		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
@@ -3481,6 +3565,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			sessionStore.dispose();
 		})
 	);
+
+	// 別のウィンドウが足した・消したタスクを拾う（T-259）。板は人が見るものなので
+	// 秒単位で追いつけば十分。ファイルを読むだけで、実測でも軽い（testing/parallel-load.md）
+	const boardSync = setInterval(() => void tasks.syncWithStore(), 5000);
+	boardSync.unref?.();
+	context.subscriptions.push(new vscode.Disposable(() => clearInterval(boardSync)));
+	void tasks.syncWithStore();
 
 	// 置き去りの記録を掃除してから、前回の続きを出す（T-252）。
 	// 自動確認（GUI テスト）のときは黙っている — 画面に出す知らせが操作の邪魔になる

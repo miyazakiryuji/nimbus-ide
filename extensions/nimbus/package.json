@@ -600,6 +600,18 @@
         "icon": "$(server-process)"
       },
       {
+        "command": "nimbus.checkTasks",
+        "title": "%command.checkTasks%",
+        "category": "Nimbus",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "nimbus.showTaskProgress",
+        "title": "%command.showTaskProgress%",
+        "category": "Nimbus",
+        "icon": "$(list-ordered)"
+      },
+      {
         "command": "nimbus.openCodeHealth",
         "title": "%command.openCodeHealth%",
         "category": "Nimbus",

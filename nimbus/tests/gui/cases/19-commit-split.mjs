@@ -33,7 +33,11 @@ export default {
 		// 同じ機能の実装とテストが 1 つの束に寄る
 		ctx.expect(text.includes('usage まわり'), `機能ごとの束が出ていない:\n${text.slice(0, 600)}`);
 		// 台帳は別の束として出る
-		ctx.expect(text.includes('台帳'), `台帳の束が出ていない:\n${text.slice(0, 600)}`);
+		// 落ちたときに原因が分かるように、そのとき git が何を見ていたかも添える
+		ctx.expect(
+			text.includes('台帳'),
+			`台帳の束が出ていない:\n${text.slice(0, 900)}\n--- git status ---\n${git(ws, ['status', '--porcelain'])}`
+		);
 		// 出すコマンドは必ずパス指定。`-A` は他セッションの変更を巻き込む。
 		// ただし本文には「`git add -A` を使わない」という**注意書き**が入るので、
 		// 文書全体ではなく「実際に出しているコマンド行」だけを見る

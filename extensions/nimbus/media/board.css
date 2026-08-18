@@ -66,6 +66,15 @@ body {
 	word-break: break-all;
 }
 
+/* 直近の進捗（T-261）。1 行に収め、あふれたら省略する（カードの高さを揺らさない） */
+.card .progress {
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .card .actions {
 	display: flex;
 	gap: 6px;

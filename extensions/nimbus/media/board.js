@@ -9,6 +9,11 @@
 		vscode.postMessage({ type: 'newTask' });
 	});
 
+	// 止まっているタスクの点検（T-262）。並列で走らせると、止まったことに誰も気づかない
+	document.getElementById('check')?.addEventListener('click', () => {
+		vscode.postMessage({ type: 'check' });
+	});
+
 	function button(label, kind, taskId, secondary) {
 		const el = document.createElement('button');
 		el.textContent = label;
@@ -19,7 +24,7 @@
 		return el;
 	}
 
-	function card(task) {
+	function card(task, progress) {
 		const el = document.createElement('div');
 		el.className = `card ${task.state}`;
 
@@ -32,6 +37,15 @@
 		branch.className = 'branch';
 		branch.textContent = task.branch;
 		el.appendChild(branch);
+
+		// 直近の進捗（T-261）。止まっているのか進んでいるのかは、これが無いと分からない
+		if (progress) {
+			const line = document.createElement('div');
+			line.className = 'progress';
+			line.textContent = progress;
+			line.title = progress;
+			el.appendChild(line);
+		}
 
 		const actions = document.createElement('div');
 		actions.className = 'actions';
@@ -75,7 +89,7 @@
 			heading.textContent = `${column.label}（${tasks.length}）`;
 			board.appendChild(heading);
 			for (const task of tasks) {
-				board.appendChild(card(task));
+				board.appendChild(card(task, (message.progress ?? {})[task.taskId]));
 			}
 		}
 	});

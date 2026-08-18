@@ -16,7 +16,8 @@ export type BoardInbound =
 	| { type: 'start'; taskId: string }
 	| { type: 'complete'; taskId: string }
 	| { type: 'open'; taskId: string }
-	| { type: 'forget'; taskId: string };
+	| { type: 'forget'; taskId: string }
+	| { type: 'check' };
 
 export interface BoardHandlers {
 	onNewTask(): void | Promise<void>;
@@ -24,7 +25,11 @@ export interface BoardHandlers {
 	onComplete(taskId: string): void | Promise<void>;
 	onOpen(taskId: string): void | Promise<void>;
 	onForget(taskId: string): void | Promise<void>;
+	/** 止まっているタスクの点検（T-262）。板から 1 つのボタンで呼べるようにする */
+	onCheck?(): void | Promise<void>;
 	tasks(): KanbanTask[];
+	/** taskId → 直近の進捗の 1 行（T-261）。カードに出す */
+	progress?(): Record<string, string>;
 	log(message: string): void;
 }
 
@@ -61,12 +66,20 @@ export class BoardViewProvider extends WebviewViewHost {
 				case 'forget':
 					await this.handlers.onForget(message.taskId);
 					break;
+				case 'check':
+					await this.handlers.onCheck?.();
+					break;
 			}
 		});
 	}
 
 	refresh(): void {
-		this.postMessage({ type: 'tasks', columns: KANBAN_COLUMNS, tasks: this.handlers.tasks() });
+		this.postMessage({
+			type: 'tasks',
+			columns: KANBAN_COLUMNS,
+			tasks: this.handlers.tasks(),
+			progress: this.handlers.progress?.() ?? {}
+		});
 	}
 
 	protected render(webview: vscode.Webview): string {
@@ -77,6 +90,7 @@ export class BoardViewProvider extends WebviewViewHost {
 			script: this.mediaUri(webview, 'board.js'),
 			body: `	<header class="toolbar">
 		<button id="newTask">新しいタスク</button>
+		<button id="check" class="secondary">点検</button>
 		<span id="summary" class="summary"></span>
 	</header>
 	<main id="board" class="board"></main>`
