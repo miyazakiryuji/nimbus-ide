@@ -715,3 +715,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] T-186 前提・仮定のリスト表示 — 2026-08-13 / 仕様 [assumptions](nimbus/docs/specs/assumptions.md) / 抽出は `src/core/assumptions.ts`・テスト 12 件
 - [x] T-239 サイドバーの整理（13 ビュー → 常用 5 段＋ヘルプ／診断は下部パネル／たまに使うものはコマンド）— 2026-08-13 / 仕様 [views-layout](nimbus/docs/specs/views-layout.md)
 - [x] T-241 **フォルダを開くと Nimbus が消える** — 信頼していないフォルダで拡張ごと無効化されていた（`untrustedWorkspaces.supported: false`）。画面は開いたまま、実行の入口で信頼を求める形に変更 — 2026-08-13 / 仕様 [workspace-trust](nimbus/docs/specs/workspace-trust.md)
+- [x] T-242 人間工学のスキルを足す（`design-philosophy` が見ない「操作の負担」を、手数・距離・モード・記憶・持続の
+      5 原則で数える）— 2026-08-18 / `.agents/skills/ergonomics/SKILL.md`。
+      公式（Anthropic）に人間工学のスキルは無く、upstream の `accessibility` は「到達**できるか**」までなので、
+      「到達に**何手かかるか**」を Nimbus 側の横断レイヤーとして足した。upstream の `.github/skills/` は触っていない
