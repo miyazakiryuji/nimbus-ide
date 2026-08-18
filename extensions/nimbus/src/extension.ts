@@ -140,6 +140,15 @@ import { buildWeeklyReview, describeWeeklyReview } from './core/weeklyReview';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
+import {
+	DebugViewProvider,
+	pickFailure,
+	pickToolCall,
+	showFailure,
+	showToolCall,
+	type DebugNode
+} from './debugView';
+import { failurePrompt, type Failure, type ToolCall } from './core/debugInsight';
 import { toAuditRecord, toJsonLine } from './core/audit';
 import { describeEstimate, estimate } from './core/estimate';
 import { COMPARE_OPTIONS_PROMPT, disagreementPrompt } from './core/dialogue';
@@ -251,6 +260,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const settingsView = new SettingsViewProvider();
 	// 生イベントの時系列（T-015 / T-184）
 	const timelineView = new TimelineViewProvider();
+	// 詰まったときに見るもの（T-249）。失敗の件数をバッジに出すため createTreeView を使う
+	const debugView = new DebugViewProvider();
+	const debugTree = vscode.window.createTreeView('nimbus.debug', { treeDataProvider: debugView });
 	// 書式ミスをその場で見せる（T-030）
 	const authoringDiagnostics = vscode.languages.createDiagnosticCollection('nimbus');
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
@@ -405,6 +417,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		cockpit.post({ type: 'event', event });
 		warnOnConflict(event);
 		timelineView.update(retained);
+		updateDebugView();
 		void appendAudit(event);
 		activityView.update(
 			retained,
@@ -1822,6 +1835,17 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 	}
 
+	/**
+	 * デバッグ面を作り直し、失敗の件数をアクティビティバーのバッジに出す（T-249）。
+	 *
+	 * 失敗は**気づけないと追えない**。面を開いていなくても数字で分かるようにしておく。
+	 */
+	function updateDebugView(): void {
+		debugView.update(retained);
+		const failures = debugView.failureCount();
+		debugTree.badge = failures > 0 ? { value: failures, tooltip: `失敗 ${failures} 件` } : undefined;
+	}
+
 	function updateStatus(summary: SessionSummary | undefined): void {
 		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
@@ -2195,6 +2219,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		skillsView.setSessionSkills([]);
 		usageView.clear();
 		activityView.update([]);
+		debugView.update([]);
+		debugTree.badge = undefined;
 		mcpView.clear();
 		verifier.reset();
 		repeats.reset();
@@ -2737,6 +2763,33 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.showDiagnostics', () =>
 			vscode.commands.executeCommand('workbench.view.extension.nimbusDiagnostics')
 		),
+		// 詰まったときに見るもの（T-249）。アクティビティバーの独立した入口
+		vscode.commands.registerCommand('nimbus.showDebug', () =>
+			vscode.commands.executeCommand('workbench.view.extension.nimbusDebug')
+		),
+		vscode.commands.registerCommand('nimbus.refreshDebug', () => updateDebugView()),
+		// 行から押す経路と、名前で引く経路の両方を持たせる。引数が無ければ一覧から選ばせる
+		vscode.commands.registerCommand('nimbus.showFailure', async (failure?: Failure) => {
+			const chosen = failure ?? (await pickFailure(debugView.failures()));
+			if (chosen) {
+				await showFailure(chosen);
+			}
+		}),
+		vscode.commands.registerCommand('nimbus.showToolCall', async (call?: ToolCall) => {
+			const chosen = call ?? (await pickToolCall(debugView.calls()));
+			if (chosen) {
+				await showToolCall(chosen, (input) => sanitizer.maskSecrets(input));
+			}
+		}),
+		// デバッグの出口は「原因が分かった」ではなく「直った」なので、そのまま投げられるようにする
+		vscode.commands.registerCommand('nimbus.fixFailure', (node: DebugNode) => {
+			if (!node?.failure) {
+				return;
+			}
+			cockpit.reveal();
+			void send(failurePrompt(node.failure));
+		}),
+		debugTree,
 		vscode.commands.registerCommand('nimbus.askYua', async () => {
 			await vscode.commands.executeCommand('nimbus.help.focus');
 		}),

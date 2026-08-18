@@ -38,6 +38,11 @@
           "id": "nimbusSettings",
           "title": "%viewsContainers.nimbusSettings%",
           "icon": "resources/nimbus-settings.svg"
+        },
+        {
+          "id": "nimbusDebug",
+          "title": "%viewsContainers.nimbusDebug%",
+          "icon": "resources/nimbus-debug.svg"
         }
       ],
       "panel": [
@@ -95,6 +100,12 @@
         {
           "id": "nimbus.settings",
           "name": "%view.nimbus.settings%"
+        }
+      ],
+      "nimbusDebug": [
+        {
+          "id": "nimbus.debug",
+          "name": "%view.nimbus.debug%"
         }
       ],
       "nimbusDiagnostics": [
@@ -1131,6 +1142,33 @@
         "command": "nimbus.showHelp",
         "title": "ヘルプを開く",
         "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showDebug",
+        "title": "デバッグを開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.refreshDebug",
+        "title": "デバッグを更新",
+        "category": "Nimbus",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nimbus.showFailure",
+        "title": "失敗の中身を開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showToolCall",
+        "title": "ツール呼び出しの中身を開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.fixFailure",
+        "title": "この失敗を直してもらう",
+        "category": "Nimbus",
+        "icon": "$(wand)"
       }
     ],
     "menus": {
@@ -1172,9 +1210,18 @@
         {
           "command": "nimbus.openReviewDiff",
           "when": "false"
+        },
+        {
+          "command": "nimbus.fixFailure",
+          "when": "false"
         }
       ],
       "view/title": [
+        {
+          "command": "nimbus.refreshDebug",
+          "when": "view == nimbus.debug",
+          "group": "navigation"
+        },
         {
           "command": "nimbus.clearReviewMarks",
           "when": "view == nimbus.review",
@@ -1222,6 +1269,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "nimbus.fixFailure",
+          "when": "view == nimbus.debug && viewItem == nimbusFailure",
+          "group": "inline"
+        },
         {
           "command": "nimbus.useSkill",
           "when": "view == nimbus.skills && viewItem =~ /nimbusSkill/",

@@ -7,6 +7,7 @@
   "view.nimbus.claudeMd": "CLAUDE.md",
   "view.nimbus.context": "文脈",
   "view.nimbus.activity": "セッションの中身",
+  "view.nimbus.debug": "詰まったときに見るもの",
   "view.nimbus.timeline": "時系列（デバッグ）",
   "view.nimbus.usage": "使用量",
   "view.nimbus.mcp": "MCP サーバー",
@@ -242,5 +243,6 @@
   "command.dictateInstruction": "声で指示する",
   "config.voice.modelPath": "whisper.cpp を使うときのモデルの場所。ほかの書き起こしツールでは要りません。",
   "viewsContainers.nimbusDiagnostics": "Nimbus 診断",
+  "viewsContainers.nimbusDebug": "Nimbus デバッグ",
   "viewsContainers.nimbusSettings": "Nimbus 設定"
 }

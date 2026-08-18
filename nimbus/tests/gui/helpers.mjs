@@ -100,12 +100,30 @@ async function openContainer(page, wanted, { attempts = 6, excluded = [] } = {})
  * 「Nimbus 設定」のほうは翻訳されるので、そちらを掴まないように名前で除ける。
  */
 export async function openNimbusSidebar(page, { attempts = 6 } = {}) {
-	return openContainer(page, ['Nimbus'], { attempts, excluded: labels('viewsContainers.nimbusSettings') });
+	return openContainer(page, ['Nimbus'], {
+		attempts,
+		// どちらも見出しに「Nimbus」を含むので、部分一致で掴まないよう名前で除ける
+		excluded: [...labels('viewsContainers.nimbusSettings'), ...labels('viewsContainers.nimbusDebug')]
+	});
 }
 
 /** 設定のほう（歯車雲アイコン）のサイドバーを開く。スキル / CLAUDE.md / 設定 が入っている */
 export async function openNimbusSettingsSidebar(page, { attempts = 6 } = {}) {
 	return openContainer(page, labels('viewsContainers.nimbusSettings'), { attempts });
+}
+
+/**
+ * デバッグのほう（虫雲アイコン）のサイドバーを開く。詰まったときに見るものが入っている（T-249）。
+ *
+ * ビューが 1 つだけのコンテナは、見出しが **「コンテナ名: ビュー名」** になる。
+ * アイコンを探すのはコンテナ名（部分一致）、開けたかを見るのは見出し全体（完全一致）なので、
+ * 両方の形を渡す。片方だけだと `openContainer` が開閉を繰り返して閉じたまま終わる。
+ */
+export async function openNimbusDebugSidebar(page, { attempts = 6 } = {}) {
+	const containers = labels('viewsContainers.nimbusDebug');
+	const views = labels('view.nimbus.debug');
+	const wanted = [...containers, ...containers.flatMap((c) => views.map((v) => `${c}: ${v}`))];
+	return openContainer(page, wanted, { attempts });
 }
 
 /**

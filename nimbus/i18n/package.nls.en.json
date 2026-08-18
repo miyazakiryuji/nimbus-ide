@@ -7,6 +7,7 @@
   "view.nimbus.claudeMd": "CLAUDE.md",
   "view.nimbus.context": "Context",
   "view.nimbus.activity": "Session Activity",
+  "view.nimbus.debug": "When You Are Stuck",
   "view.nimbus.timeline": "Timeline (Debug)",
   "view.nimbus.usage": "Usage",
   "view.nimbus.mcp": "MCP Servers",
