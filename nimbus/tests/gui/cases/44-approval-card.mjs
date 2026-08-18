@@ -31,7 +31,12 @@ export default {
 			return; // 指定が無ければ何もしない（成功扱い）
 		}
 		await page.waitForTimeout(2000);
-		ctx.expect(await sendFromCockpit(page, 'Run the shell command: echo NIMBUS_APPROVAL_TEST'), 'コックピットの入力欄が見つからない');
+		// **書き込みを頼む。** `echo` のような無害なコマンドは Claude Code 側が安全と判断して
+		// 承認を求めないので、承認そのものが起きない（実測でこれに嵌まった）
+		ctx.expect(
+			await sendFromCockpit(page, 'Create a file named approval-test.txt with the text hello. Use the Write tool.'),
+			'コックピットの入力欄が見つからない'
+		);
 
 		const card = await webviewText(page, ['実行してよいか待っています'], { attempts: 60 });
 		ctx.expect(card !== undefined, '承認のカードが会話の中に出てこない（モーダルのままかもしれない）');
