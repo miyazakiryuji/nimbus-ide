@@ -32,7 +32,26 @@ function actionNode(label: string, description: string, command: string, icon: s
 		description,
 		icon,
 		tooltip: tooltip ?? label,
-		contextValue: `nimbusSetting:${command}`
+		contextValue: `nimbusSetting:${command}`,
+		command: { command }
+	};
+}
+
+/**
+ * いま効いている値の行。押すと、その設定を直す場所（設定画面）が開く。
+ *
+ * その場で書き換えないのは、ここが**入口を集める場所**だから（ファイル冒頭の方針）。
+ * 行ごとに「押したら値が変わる／押したら画面が開く」が混ざると、
+ * どちらか分からないまま押すことになる。
+ */
+function settingNode(label: string, description: string, icon: string, setting: string): Node {
+	return {
+		label,
+		description,
+		icon,
+		tooltip: `${label}（${setting}）`,
+		contextValue: `nimbusSetting:${setting}`,
+		command: { command: 'workbench.action.openSettings', arguments: [setting] }
 	};
 }
 
@@ -72,10 +91,10 @@ export class SettingsViewProvider extends NimbusTreeView {
 				'安全',
 				'lock',
 				[
-					{ label: '秘匿ファイルの読み取り遮断', description: onOff(c.get<boolean>('safety.blockProtectedReads') !== false), icon: 'circle-slash' },
-					{ label: '送信前の検査', description: onOff(c.get<boolean>('safety.scanBeforeSend') !== false), icon: 'search' },
-					{ label: '読み取り専用ツールの自動許可', description: onOff(c.get<boolean>('permissions.autoApproveReadOnly')), icon: 'check' },
-					{ label: '承認前に差分を出す', description: onOff(c.get<boolean>('permissions.showDiffBeforeApproval') !== false), icon: 'diff' }
+					settingNode('秘匿ファイルの読み取り遮断', onOff(c.get<boolean>('safety.blockProtectedReads') !== false), 'circle-slash', 'nimbus.safety.blockProtectedReads'),
+					settingNode('送信前の検査', onOff(c.get<boolean>('safety.scanBeforeSend') !== false), 'search', 'nimbus.safety.scanBeforeSend'),
+					settingNode('読み取り専用ツールの自動許可', onOff(c.get<boolean>('permissions.autoApproveReadOnly')), 'check', 'nimbus.permissions.autoApproveReadOnly'),
+					settingNode('承認前に差分を出す', onOff(c.get<boolean>('permissions.showDiffBeforeApproval') !== false), 'diff', 'nimbus.permissions.showDiffBeforeApproval')
 				],
 				'（なし）'
 			),
@@ -104,9 +123,9 @@ export class SettingsViewProvider extends NimbusTreeView {
 				'上限',
 				'law',
 				[
-					{ label: '文脈の予算', description: budget > 0 ? `${budget.toLocaleString('en-US')} トークン` : '上限なし', icon: 'symbol-ruler' },
-					{ label: '費用の上限', description: costLimit > 0 ? `$${costLimit}` : '上限なし', icon: 'credit-card' },
-					{ label: '同時実行の上限', description: String(c.get<number>('tasks.maxConcurrent') ?? 2), icon: 'server-process' }
+					settingNode('文脈の予算', budget > 0 ? `${budget.toLocaleString('en-US')} トークン` : '上限なし', 'symbol-ruler', 'nimbus.context.budgetTokens'),
+					settingNode('費用の上限', costLimit > 0 ? `$${costLimit}` : '上限なし', 'credit-card', 'nimbus.usage.costLimitUsd'),
+					settingNode('同時実行の上限', String(c.get<number>('tasks.maxConcurrent') ?? 2), 'server-process', 'nimbus.tasks.maxConcurrent')
 				],
 				'（なし）'
 			),
@@ -114,13 +133,14 @@ export class SettingsViewProvider extends NimbusTreeView {
 				'その他',
 				'gear',
 				[
-					{ label: '通知', description: onOff(c.get<boolean>('notifications.enabled') !== false), icon: 'bell' },
-					{ label: 'ホットリロード', description: onOff(c.get<boolean>('hotReload.enabled')), icon: 'sync' },
-					{
-						label: 'Claude Code の実行ファイル',
-						description: c.get<string>('claudeCodeExecutable') || '同梱のものを使う',
-						icon: 'terminal'
-					}
+					settingNode('通知', onOff(c.get<boolean>('notifications.enabled') !== false), 'bell', 'nimbus.notifications.enabled'),
+					settingNode('ホットリロード', onOff(c.get<boolean>('hotReload.enabled')), 'sync', 'nimbus.hotReload.enabled'),
+					settingNode(
+						'Claude Code の実行ファイル',
+						c.get<string>('claudeCodeExecutable') || '同梱のものを使う',
+						'terminal',
+						'nimbus.claudeCodeExecutable'
+					)
 				],
 				'（なし）'
 			),

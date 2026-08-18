@@ -108,6 +108,71 @@ export async function openNimbusSettingsSidebar(page, { attempts = 6 } = {}) {
 	return openContainer(page, labels('viewsContainers.nimbusSettings'), { attempts });
 }
 
+/**
+ * サイドバーのツリーの行を、見えている文字で探して**実際に押す**。
+ *
+ * 「行が出ているか」しか見ていないと、**コマンドを持たない飾りの行**を見逃す。
+ * 実際に設定タブが丸ごとその状態（押しても何も起きない）で通っていた（T-244）。
+ * 見えかたではなく、押した結果まで確かめるためのもの。
+ *
+ * 折りたたみの行を押すと開閉するだけなので、束を開くのにも使える。
+ */
+export async function clickTreeRow(page, label) {
+	for (const row of await page.$$('.part.sidebar .monaco-list-row')) {
+		const text = await row.evaluate((el) => el.innerText ?? '');
+		if (!text.includes(label)) {
+			continue;
+		}
+		await row.click();
+		await page.waitForTimeout(1200);
+		return true;
+	}
+	return false;
+}
+
+/** クイックピック／入力欄が開いていれば、その中身。開いていなければ空文字 */
+export async function quickPickText(page) {
+	return page.evaluate(() => {
+		const widget = document.querySelector('.quick-input-widget');
+		if (!widget || widget.style.display === 'none') {
+			return '';
+		}
+		return widget.innerText ?? '';
+	});
+}
+
+/** 出ている通知（トースト）の文字列 */
+export async function notificationText(page) {
+	return page.evaluate(() =>
+		[...document.querySelectorAll('.notifications-toasts .notification-list-item')]
+			.map((el) => el.innerText ?? '')
+			.join('\n')
+	);
+}
+
+/**
+ * 押した結果として画面に出たもの。クイックピックと通知の両方を見る。
+ *
+ * コマンドによって、選択肢が出ることも「見つかりませんでした」と通知が出ることもある。
+ * どちらも**実行された**証拠なので、片方だけ見ると素通りする。
+ */
+export async function feedbackText(page) {
+	return `${await quickPickText(page)}\n${await notificationText(page)}`;
+}
+
+/**
+ * 設定画面（Settings エディタ）が開いていれば、その表示文字列。開いていなければ `undefined`。
+ *
+ * 検索欄は `<input>` ではなく Monaco で描かれているので、`value` では取れない。
+ * 表示されている文字ごと見るのが確実（絞り込みの語も、そこに出ている）。
+ */
+export async function settingsEditor(page) {
+	return page.evaluate(() => {
+		const editor = document.querySelector('.settings-editor');
+		return editor ? (editor.innerText ?? '') : undefined;
+	});
+}
+
 /** 畳まれているセクションを開く。既に開いていれば何もしない */
 export async function expandPane(page, label) {
 	const headers = await page.$$('.pane-header');

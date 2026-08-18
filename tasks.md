@@ -723,3 +723,8 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       「Nimbus 設定」を新設）— 2026-08-18 / 仕様 [views-layout](nimbus/docs/specs/views-layout.md)。
       T-239 で `visibility: hidden` にしたが、**コマンドで一度開くと段として居座り、常用 5 段の枠を食い直していた**。
       置き場所を変えただけで `extension.ts` は無変更（ビュー ID は同じ）。アイコンは雲＋歯車で家族を保つ
+- [x] T-244 **設定タブが丸ごと飾りだった** — 行を押しても何も起きない。`actionNode()` がコマンド名を
+      受け取りながら `TreeItem.command` を設定しておらず、土台の `TreeNode` にコマンドの口が無かった。
+      仕様には「押すと切り替え」と書いてあったのに 1 行も押せない状態が続いた — 2026-08-18 /
+      仕様 [settings-and-bundle](nimbus/docs/specs/settings-and-bundle.md)。
+      **受け入れ条件が「並ぶ」だったのが原因**。GUI ケース 37 で「押して、開くところまで」を見るようにした

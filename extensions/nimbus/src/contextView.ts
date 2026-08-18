@@ -6,6 +6,7 @@
  * ここは init メッセージ（session-init）から得られる事実だけを並べる。
  */
 import { homedir } from 'os';
+import * as vscode from 'vscode';
 import type { SessionInitEvent } from './events';
 import { billingModeLabel } from './billing';
 import { findClaudeMdFiles } from './core/claudeMd';
@@ -88,7 +89,9 @@ export class ContextViewProvider extends NimbusTreeView {
 						label: displayLabel(path, init.cwd, homedir()),
 						// パスの羅列では「どれを直せばいいか」が読み取れない。出どころを添える
 						description: ORIGIN_LABEL[classifyOrigin(path, init.cwd, homedir())],
-						tooltip: path
+						tooltip: path,
+						// 出どころが分かっても、そこへ行けないと直せない
+						resource: vscode.Uri.file(path)
 					}))
 					: [{ label: '（なし）' }]
 			}

@@ -23,6 +23,13 @@ export interface TreeNode {
 	contextValue?: string;
 	/** クリックで開くファイル。指定すると行が開くようになる */
 	resource?: vscode.Uri;
+	/**
+	 * クリックで実行するコマンド。`resource` の自動オープンより優先する。
+	 *
+	 * これが無いと、行は**見えているだけで押しても何も起きない**。
+	 * 実際に設定タブが丸ごとその状態になっていた（T-244）。
+	 */
+	command?: { command: string; arguments?: unknown[] };
 }
 
 /**
@@ -60,6 +67,9 @@ export abstract class NimbusTreeView implements vscode.TreeDataProvider<TreeNode
 			item.resourceUri = node.resource;
 			// 一覧から辿れないと「見えているだけ」で終わる
 			item.command = { command: 'vscode.open', title: '開く', arguments: [node.resource] };
+		}
+		if (node.command) {
+			item.command = { title: node.label, ...node.command };
 		}
 		return item;
 	}
