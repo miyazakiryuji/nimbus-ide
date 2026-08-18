@@ -518,16 +518,21 @@ export class PaneCompositeBar extends Disposable {
 	/**
 	 * アクティビティバーに出さないビューコンテナ。
 	 *
-	 * 標準のデバッグは、Claude 用のものを用意するまで出さない（T-246）。
-	 * **登録は消していない** — F5・ブレークポイント・デバッグコンソール・`workbench.view.debug`
-	 * （⇧⌘D）は今までどおり動き、デバッグ中はサイドバーも開く。アイコンが出なくなるだけなので、
-	 * この集合から外せばそのまま戻る。
+	 * - `workbench.view.debug` — 標準のデバッグ。Claude 用のものを用意するまで出さない（T-246）
+	 * - `workbench.panel.chat` — VS Code 内蔵のチャット。Nimbus のチャットはコックピットなので、
+	 *   似て非なるものが右に常駐していると、どちらに書けばよいのか分からない（T-238）
+	 *
+	 * **登録は消していない** — F5・ブレークポイント・⇧⌘D も、内蔵チャットのコマンドも
+	 * 今までどおり呼べる。アイコンが出なくなるだけなので、この集合から外せばそのまま戻る。
 	 *
 	 * ここで外すのは、バーがコンテナを引く口がこの 2 つしかないため。
 	 * 「このバーの担当ではない」を表す既存の道すじにそのまま乗るので、
 	 * 表示・非表示の判定を各所に足すより副作用が少ない。
 	 */
-	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set(['workbench.view.debug']);
+	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set([
+		'workbench.view.debug',
+		'workbench.panel.chat'
+	]);
 	// --- End Nimbus ---
 
 	private getViewContainer(id: string): ViewContainer | undefined {

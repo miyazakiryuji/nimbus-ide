@@ -26,12 +26,30 @@ const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extension
 const MAIN = 'src/main.ts'
 const PANE_COMPOSITE_BAR = 'src/vs/workbench/browser/parts/paneCompositeBar.ts'
 const EDITOR_WATERMARK = 'src/vs/workbench/browser/parts/editor/editorGroupWatermark.ts'
+const WORKBENCH_CONTRIB = 'src/vs/workbench/browser/workbench.contribution.ts'
 
 // 置き換える製品名は product.json から取る（改名しても追随する）
 const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
+  // 内蔵チャットを出さないので、右の補助バーは既定では開かない（T-238）。
+  [
+    WORKBENCH_CONTRIB,
+    `			'workbench.secondarySideBar.defaultVisibility': {
+				'type': 'string',
+				'enum': ['hidden', 'visibleInWorkspace', 'visible', 'maximizedInWorkspace', 'maximized'],
+				'default': 'visibleInWorkspace',`,
+    `			'workbench.secondarySideBar.defaultVisibility': {
+				'type': 'string',
+				'enum': ['hidden', 'visibleInWorkspace', 'visible', 'maximizedInWorkspace', 'maximized'],
+				// --- Start Nimbus ---
+				// upstream の既定 \`visibleInWorkspace\` は、右の補助バーに内蔵チャットを置く前提。
+				// Nimbus はそのチャットを出さないので、**中身が無いまま帯だけ残る**（実測・T-238）。
+				// 開きたい人は今までどおり ⌥⌘B で開ける。
+				'default': 'hidden',
+				// --- End Nimbus ---`
+  ],
   // 空のエディタの案内からも標準のデバッグを外す。アイコンだけ消しても、
   // 一番よく見る画面に出ていては隠したことにならない（T-246）。
   [

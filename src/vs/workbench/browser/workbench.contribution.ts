@@ -601,7 +601,12 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			'workbench.secondarySideBar.defaultVisibility': {
 				'type': 'string',
 				'enum': ['hidden', 'visibleInWorkspace', 'visible', 'maximizedInWorkspace', 'maximized'],
-				'default': 'visibleInWorkspace',
+				// --- Start Nimbus ---
+				// upstream の既定 `visibleInWorkspace` は、右の補助バーに内蔵チャットを置く前提。
+				// Nimbus はそのチャットを出さないので、**中身が無いまま帯だけ残る**（実測・T-238）。
+				// 開きたい人は今までどおり ⌥⌘B で開ける。
+				'default': 'hidden',
+				// --- End Nimbus ---
 				'description': localize('secondarySideBarDefaultVisibility', "Controls the default visibility of the secondary side bar in workspaces or empty windows that are opened for the first time. Can be overridden by the agent sessions startup editor setting."),
 				'enumDescriptions': [
 					localize('workbench.secondarySideBar.defaultVisibility.hidden', "The secondary side bar is hidden by default."),

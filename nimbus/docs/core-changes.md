@@ -44,6 +44,8 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 23 | `product.json` | `builtInExtensions` に `MS-CEINTL.vscode-language-pack-ja` を追加 | #22 だけでは訳文の実体が無く英語に落ちる。日本語の文言は言語パックが持つ。**Open VSX から取得し、VSIX の中身で publisher / name / version を確かめてからハッシュを固定する**（T-245） | `nimbus/branding/sync-builtin-extension-hashes.mjs`（ハッシュ） |
 | 24 | `src/vs/workbench/browser/parts/paneCompositeBar.ts` | `getViewContainer()` / `getViewContainers()` で `NIMBUS_HIDDEN_VIEW_CONTAINERS`（いまは `workbench.view.debug` のみ）を除く | 標準のデバッグは、Claude 用のものを用意するまでアイコンを出さない。**登録は消さない** — 消すとビューの登録先が無くなり、F5・ブレークポイント・`openPaneComposite` まで巻き添えになる。バーがコンテナを引く口はこの 2 つだけなので、「このバーの担当ではない」を表す既存の道すじにそのまま乗せる（T-246） | `nimbus/branding/apply-core-changes.mjs` |
 | 25 | `src/vs/workbench/browser/parts/editor/editorGroupWatermark.ts` | 空のエディタの案内から `workbench.action.debug.start`（Start Debugging）を外す | #24 でアイコンを消しても、**一番よく見る画面**に 「Start Debugging F5」が出ていては隠したことにならない。F5 自体は今までどおり効く（T-246） | `nimbus/branding/apply-core-changes.mjs` |
+| 26 | `src/vs/workbench/browser/parts/paneCompositeBar.ts` | #24 の除外集合に `workbench.panel.chat` を追加 | VS Code 内蔵のチャットを出さない。Nimbus のチャットはコックピットなので、**似て非なるものが右に常駐していると、どちらに書けばよいのか分からない**。`chat.disableAIFeatures` はエージェントホストの有効・無効を決めるだけで、この UI は別に登録されている（T-238） | `nimbus/branding/apply-core-changes.mjs` |
+| 27 | `src/vs/workbench/browser/workbench.contribution.ts` | `workbench.secondarySideBar.defaultVisibility` の既定を `visibleInWorkspace` → `hidden` | upstream の既定は右の補助バーに内蔵チャットを置く前提。#26 でチャットを外すと、**中身が無いまま帯だけ残る**（実測）。開きたい人は ⌥⌘B で開ける（T-238） | 同上 |
 
 > **依存 `@github/copilot-sdk` と `@vscode/copilot-api` は消せない。** コアの agent host
 > （`src/vs/platform/agentHost/`）が import している（それぞれ 35 箇所・14 箇所）。
