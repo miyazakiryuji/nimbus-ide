@@ -329,10 +329,16 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
 			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
-			// 横断キュー（T-010）。並列で走らせると「誰が何で止まっているか」がここにしか出ない
-			approvalsView.update(pending);
-			approvals.badge = pending.length > 0
-				? { value: pending.length, tooltip: `承認待ち ${pending.length} 件` }
+			// 横断キュー（T-010）。並列で走らせると「誰が何で止まっているか」がここにしか出ない。
+			// ただし**前面のセッションのぶんは会話のカードに出る**（T-266）ので、
+			// カードで受けられるときは一覧から外す — 同じものが 2 か所に並ぶと、
+			// どちらで答えたのか分からなくなる（T-263 の判断）
+			const listed = cockpit.isLive()
+				? pending.filter((item) => item.sessionId !== activeSessionId)
+				: pending;
+			approvalsView.update(listed);
+			approvals.badge = listed.length > 0
+				? { value: listed.length, tooltip: `他のセッションの承認待ち ${listed.length} 件` }
 				: undefined;
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		},
