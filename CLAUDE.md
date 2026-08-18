@@ -32,6 +32,26 @@ Nimbus 固有のルールだけを置く。VS Code コードベース側の作�
 - 他のセッションの未コミット変更を `git stash` / `git checkout --` / `git reset --hard` で消さない
 - 公開リポジトリ（`miyazakiryuji/nimbus-ide`）なので、個人情報・実名・資格情報を含めない
 
+## 修正したらアプリとして固める（毎回）
+
+**コードに手を入れたら、その都度デスクトップアプリとして固め直し、固めた `.app` で動くことまで
+確かめる。** dev 起動（`./scripts/code.sh`）で動いたことは、パッケージ版で動く証拠にならない
+（同梱漏れ・`product.json`・NLS・拡張のバンドルは固めて初めて出る）。
+
+```bash
+npm run gulp vscode-darwin-arm64          # ../Nimbus-darwin-arm64/Nimbus.app を作り直す
+bash nimbus/branding/smoke-packaged.sh    # 身元・起動・webview のスモーク
+node nimbus/tests/gui/run.mjs --packaged  # 固めた .app を実際に操作する GUI テスト
+```
+
+- **対象**: `src/vs/**` / `extensions/**` / `build/**` / `product.json` / `nimbus/branding/**` を
+  触ったとき。ドキュメント・仕様書・`tasks.md` だけの修正は固め直さなくてよい
+- **タイミング**: コミット → push のあと。コミット単位で固め、溜め込まない
+- **完了の条件**: 「実装した」ではなく「**固めた `.app` で押したら動いた**」までで 1 つの修正が終わる。
+  GUI テストは存在確認で止めず、実際に押して実行されるところまで確かめる
+- 固め直しで壊れていたら、次の作業へ進まずそこで直す。ビルドが通らない状態で放置しない
+- 手順の詳細・dmg 化・署名の注意は [`nimbus/docs/specs/distribution.md`](nimbus/docs/specs/distribution.md)
+
 ## 実装したら記録も直す
 
 実装と**同じコミットで** `nimbus/docs/specs/` の仕様書と [`tasks.md`](tasks.md) を直す。
