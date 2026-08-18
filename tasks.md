@@ -719,3 +719,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       5 原則で数える）— 2026-08-18 / `.agents/skills/ergonomics/SKILL.md`。
       公式（Anthropic）に人間工学のスキルは無く、upstream の `accessibility` は「到達**できるか**」までなので、
       「到達に**何手かかるか**」を Nimbus 側の横断レイヤーとして足した。upstream の `.github/skills/` は触っていない
+- [x] T-243 スキル / CLAUDE.md / 設定 を常用サイドバーの外へ出す（アクティビティバーに 2 つめのコンテナ
+      「Nimbus 設定」を新設）— 2026-08-18 / 仕様 [views-layout](nimbus/docs/specs/views-layout.md)。
+      T-239 で `visibility: hidden` にしたが、**コマンドで一度開くと段として居座り、常用 5 段の枠を食い直していた**。
+      置き場所を変えただけで `extension.ts` は無変更（ビュー ID は同じ）。アイコンは雲＋歯車で家族を保つ

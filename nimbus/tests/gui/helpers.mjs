@@ -50,39 +50,62 @@ export function includesAny(text, candidates) {
 }
 
 /**
- * サイドバーに Nimbus のビューが出ているか。
+ * いま開いているサイドバーの見出し（＝ビューコンテナ名）。
  *
- * 目印は**翻訳されない**ものを使う。`viewsContainers` の title は `Nimbus` のままなので
- * （製品名なので `%key%` にしていない）、サイドバーの見出しに出る `NIMBUS` を見る。
- * ビュー名（コックピット / Cockpit）は言語で変わるので目印にしない。
+ * 中身の文字列ではなく**見出しだけ**を見る。アクティビティバーに Nimbus のコンテナが
+ * 2 つ並ぶようになったので（雲＝常用 / 歯車雲＝設定・T-243）、
+ * サイドバー全体を `/NIMBUS/i` で見ると「NIMBUS 設定」にも当たってしまい、
+ * 「常用のほうが開いている」と誤って判定する。
  */
-async function sidebarShowsNimbus(page) {
-	const text = await page.evaluate(() => document.querySelector('.part.sidebar')?.innerText ?? '');
-	return /NIMBUS/i.test(text);
+async function sidebarTitle(page) {
+	return page.evaluate(() => document.querySelector('.part.sidebar .title-label')?.innerText?.trim() ?? '');
 }
 
 /**
- * Nimbus のサイドバーを開く。**既に開いていれば何もしない。**
+ * 見出しが `wanted` のどれかになるまで、アクティビティバーのアイコンを押す。
+ * **既にその見出しなら何もしない。**
  *
- * アクティビティバーのアイコンは**トグル**なので、開いている状態で押すと閉じる。
+ * アイコンは**トグル**なので、開いている状態で押すと閉じる。
  * 起動時に NIMBUS_SMOKE が `nimbus.cockpit.focus` を呼んで開いているため、
  * 何も考えずに押すケースは「押した結果、閉じる」ことになる（実測でこれに嵌まった）。
  *
  * セレクタを `.activitybar` の中に限っているのも同じ理由で、
  * 製品名が Nimbus なのでタイトルバーやステータスバーにも "Nimbus" が入っている。
  */
-export async function openNimbusSidebar(page, { attempts = 6 } = {}) {
+async function openContainer(page, wanted, { attempts = 6, excluded = [] } = {}) {
+	const hit = (title) => wanted.some((name) => title.toUpperCase() === name.toUpperCase());
 	for (let i = 0; i < attempts; i++) {
-		if (await sidebarShowsNimbus(page)) {
+		if (hit(await sidebarTitle(page))) {
 			return true;
 		}
-		const icon = await page.$('.activitybar [aria-label*="Nimbus"], .activitybar [title*="Nimbus"]');
-		if (icon) {
+		for (const icon of await page.$$('.activitybar [aria-label], .activitybar [title]')) {
+			const name = await icon.evaluate(
+				(el) => `${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`
+			);
+			if (!wanted.some((want) => name.includes(want)) || excluded.some((skip) => name.includes(skip))) {
+				continue;
+			}
 			await icon.click();
+			break;
 		}
 		await page.waitForTimeout(1200);
 	}
-	return sidebarShowsNimbus(page);
+	return hit(await sidebarTitle(page));
+}
+
+/**
+ * 常用のほう（雲アイコン）のサイドバーを開く。
+ *
+ * 見出しの `Nimbus` は製品名なので翻訳されない（`%key%` にしていない）。
+ * 「Nimbus 設定」のほうは翻訳されるので、そちらを掴まないように名前で除ける。
+ */
+export async function openNimbusSidebar(page, { attempts = 6 } = {}) {
+	return openContainer(page, ['Nimbus'], { attempts, excluded: labels('viewsContainers.nimbusSettings') });
+}
+
+/** 設定のほう（歯車雲アイコン）のサイドバーを開く。スキル / CLAUDE.md / 設定 が入っている */
+export async function openNimbusSettingsSidebar(page, { attempts = 6 } = {}) {
+	return openContainer(page, labels('viewsContainers.nimbusSettings'), { attempts });
 }
 
 /** 畳まれているセクションを開く。既に開いていれば何もしない */

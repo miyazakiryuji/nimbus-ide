@@ -33,6 +33,11 @@
           "id": "nimbus",
           "title": "Nimbus",
           "icon": "resources/nimbus.svg"
+        },
+        {
+          "id": "nimbusSettings",
+          "title": "%viewsContainers.nimbusSettings%",
+          "icon": "resources/nimbus-settings.svg"
         }
       ],
       "panel": [
@@ -72,25 +77,24 @@
           "visibility": "collapsed"
         },
         {
-          "id": "nimbus.skills",
-          "name": "%view.nimbus.skills%",
-          "visibility": "hidden"
-        },
-        {
-          "id": "nimbus.claudeMd",
-          "name": "%view.nimbus.claudeMd%",
-          "visibility": "hidden"
-        },
-        {
-          "id": "nimbus.settings",
-          "name": "%view.nimbus.settings%",
-          "visibility": "hidden"
-        },
-        {
           "id": "nimbus.help",
           "name": "%view.nimbus.help%",
           "type": "webview",
           "visibility": "collapsed"
+        }
+      ],
+      "nimbusSettings": [
+        {
+          "id": "nimbus.skills",
+          "name": "%view.nimbus.skills%"
+        },
+        {
+          "id": "nimbus.claudeMd",
+          "name": "%view.nimbus.claudeMd%"
+        },
+        {
+          "id": "nimbus.settings",
+          "name": "%view.nimbus.settings%"
         }
       ],
       "nimbusDiagnostics": [

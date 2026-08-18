@@ -18,7 +18,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { labels, openHiddenView, openNimbusSidebar, runCommand, sidebarText } from '../helpers.mjs';
+import { labels, openHiddenView, openNimbusSettingsSidebar, runCommand, sidebarText } from '../helpers.mjs';
 
 /** モーダルが開いているか（ネイティブなので、ワークベンチ側の印で見る） */
 async function modalOpen(page) {
@@ -55,9 +55,9 @@ export default {
 		);
 
 		// --- 設定タブ ---
-		// 設定ビューは既定で出していない（T-239）。コマンドから開く
+		// 設定ビューはサイドバーの段から外し、歯車雲のコンテナへ移した（T-243）。コマンドでも開く
 		await openHiddenView(page, '設定ビューを開く');
-		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
+		ctx.expect(await openNimbusSettingsSidebar(page), 'Nimbus 設定のサイドバーを開けない');
 		const sidebar = await sidebarText(page);
 		ctx.expect(sidebar.includes('設定'), `サイドバーに「設定」が無い:\n${sidebar.slice(0, 400)}`);
 		await ctx.shot('settings-view');
