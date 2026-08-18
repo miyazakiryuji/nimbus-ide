@@ -22,6 +22,7 @@ import {
 	HEARTBEAT_INTERVAL_MS,
 	OWNER_TTL_MS,
 	forgettable,
+	isFinished,
 	type SessionRecord
 } from './core/sessionRegistry';
 
@@ -250,9 +251,12 @@ export class SessionStore {
 
 	/** 心拍。持っていることを示すだけなので、状態が動いていなくても書く */
 	private beat(): void {
-		if (this.mine.size > 0) {
-			const at = this.now();
-			for (const record of this.mine.values()) {
+		const at = this.now();
+		// **終わったセッションは打たない。** 持ち主がいる意味が無いうえ、
+		// 1 日使うと記録が溜まるので、全件を 5 秒ごとに書き直すのは無駄な負荷になる（T-248）
+		const living = [...this.mine.values()].filter((record) => !isFinished(record.status));
+		if (living.length > 0) {
+			for (const record of living) {
 				record.owner = { ...record.owner, heartbeatAt: at };
 				this.dirty.add(record.sessionId);
 			}

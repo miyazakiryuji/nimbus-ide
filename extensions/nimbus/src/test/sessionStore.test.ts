@@ -99,6 +99,26 @@ test('閉じるときに手放した記録は、開き直したときの「続�
 	);
 });
 
+test('終わったセッションには心拍を打たない（持ち主がいる意味が無く、書き込みだけが増える）', async () => {
+	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
+	let clock = 1_000_000;
+	// 心拍を手で 1 回だけ回すために、間隔を短くして待つ代わりに flush を直接見る
+	const store = new SessionStore(dir, { windowId: 'win-a', pid: 1, now: () => clock, heartbeatMs: 20 });
+	store.upsert('done', { cwd: '/w/app', status: 'completed' });
+	store.upsert('live', { cwd: '/w/app', status: 'running' });
+	await store.flush();
+	const before = (await store.list({ fresh: true })).map((r) => [r.sessionId, r.owner.heartbeatAt]);
+	clock += 60_000;
+	await new Promise((resolve) => setTimeout(resolve, 60));
+	await store.flush();
+	const after = new Map((await store.list({ fresh: true })).map((r) => [r.sessionId, r.owner.heartbeatAt]));
+	store.dispose();
+	assert.deepStrictEqual(
+		[before.length, after.get('done'), after.get('live')],
+		[2, 1_000_000, 1_060_000]
+	);
+});
+
 test('掃除は、自分がいま持っている記録には手を出さない', async () => {
 	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
 	let clock = 1_000_000;

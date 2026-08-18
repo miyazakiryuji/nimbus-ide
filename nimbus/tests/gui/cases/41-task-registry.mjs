@@ -9,7 +9,7 @@
  */
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { feedbackText, labels, openNimbusTasksSidebar, runCommand, webviewText } from '../helpers.mjs';
+import { feedbackText, labels, runCommand, webviewText } from '../helpers.mjs';
 
 const TASK_ID = '00000000-0000-4000-8000-000000000002';
 
@@ -41,8 +41,10 @@ export default {
 				`${JSON.stringify({ at: stale + 1000, kind: 'file', text: '/w/app/lib/main.dart' })}\n`
 		);
 
+		// 板はタブで開く（T-258）。アクティビティバーの開閉に依らないので、
+		// 前のケースがどの段を開いたままでも同じように確かめられる
+		await runCommand(page, labels('command.openBoardTab')[0]);
 		// 突き合わせは 5 秒ごと。書いてから拾われるまで待つ
-		ctx.expect(await openNimbusTasksSidebar(page), 'Nimbus タスクのサイドバーを開けない');
 		const board = await webviewText(page, ['別ウィンドウが置いたタスク'], { attempts: 12 });
 		ctx.expect(board !== undefined, '別のウィンドウが置いたタスクが板に出てこない（横断で共有できていない）');
 		ctx.expect(
