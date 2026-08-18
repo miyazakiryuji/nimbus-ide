@@ -24,12 +24,83 @@ const THEME_SERVICE = 'src/vs/workbench/services/themes/common/workbenchThemeSer
 const NLS = 'src/vs/nls.ts'
 const EXTENSION_MANAGEMENT = 'src/vs/platform/extensionManagement/node/extensionManagementService.ts'
 const MAIN = 'src/main.ts'
+const PANE_COMPOSITE_BAR = 'src/vs/workbench/browser/parts/paneCompositeBar.ts'
+const EDITOR_WATERMARK = 'src/vs/workbench/browser/parts/editor/editorGroupWatermark.ts'
 
 // 置き換える製品名は product.json から取る（改名しても追随する）
 const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
+  // 空のエディタの案内からも標準のデバッグを外す。アイコンだけ消しても、
+  // 一番よく見る画面に出ていては隠したことにならない（T-246）。
+  [
+    EDITOR_WATERMARK,
+    `const otherEntries: WatermarkEntry[] = [
+	gotoFile,
+	findInFiles,
+	startDebugging,
+	toggleTerminal,
+	openSettings,
+];`,
+    `const otherEntries: WatermarkEntry[] = [
+	gotoFile,
+	findInFiles,
+	startDebugging,
+	toggleTerminal,
+	openSettings,
+// --- Start Nimbus ---
+// 標準のデバッグは、Claude 用のものを用意するまで前に出さない（T-246）。
+// 空のエディタは一番よく見る画面なので、ここに出したままだと「隠した」ことにならない。
+// F5 は今までどおり効く — この一覧から外すだけ。戻すときはこの filter を消す
+].filter(entry => entry.id !== 'workbench.action.debug.start');
+// --- End Nimbus ---`
+  ],
+  // 標準のデバッグは Claude 用のものを用意するまでアイコンを出さない。登録は消していないので、
+  // F5・ブレークポイント・デバッグコンソールは今までどおり動く（T-246）。
+  [
+    PANE_COMPOSITE_BAR,
+    `	private getViewContainer(id: string): ViewContainer | undefined {
+		const viewContainer = this.viewDescriptorService.getViewContainerById(id);
+		return viewContainer && this.viewDescriptorService.getViewContainerLocation(viewContainer) === this.location ? viewContainer : undefined;
+	}
+
+	private getViewContainers(): readonly ViewContainer[] {
+		return this.viewDescriptorService.getViewContainersByLocation(this.location);
+	}`,
+    `	// --- Start Nimbus ---
+	/**
+	 * アクティビティバーに出さないビューコンテナ。
+	 *
+	 * 標準のデバッグは、Claude 用のものを用意するまで出さない（T-246）。
+	 * **登録は消していない** — F5・ブレークポイント・デバッグコンソール・\`workbench.view.debug\`
+	 * （⇧⌘D）は今までどおり動き、デバッグ中はサイドバーも開く。アイコンが出なくなるだけなので、
+	 * この集合から外せばそのまま戻る。
+	 *
+	 * ここで外すのは、バーがコンテナを引く口がこの 2 つしかないため。
+	 * 「このバーの担当ではない」を表す既存の道すじにそのまま乗るので、
+	 * 表示・非表示の判定を各所に足すより副作用が少ない。
+	 */
+	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set(['workbench.view.debug']);
+	// --- End Nimbus ---
+
+	private getViewContainer(id: string): ViewContainer | undefined {
+		// --- Start Nimbus ---
+		if (PaneCompositeBar.NIMBUS_HIDDEN_VIEW_CONTAINERS.has(id)) {
+			return undefined;
+		}
+		// --- End Nimbus ---
+		const viewContainer = this.viewDescriptorService.getViewContainerById(id);
+		return viewContainer && this.viewDescriptorService.getViewContainerLocation(viewContainer) === this.location ? viewContainer : undefined;
+	}
+
+	private getViewContainers(): readonly ViewContainer[] {
+		const containers = this.viewDescriptorService.getViewContainersByLocation(this.location);
+		// --- Start Nimbus ---
+		return containers.filter(container => !PaneCompositeBar.NIMBUS_HIDDEN_VIEW_CONTAINERS.has(container.id));
+		// --- End Nimbus ---
+	}`
+  ],
   // 既定の表示言語。upstream は指定が無いと undefined を返し、NLS の解決自体を行わないので
   // 画面が英語のままになる。日本語で使う道具なので、既定を ja にしておく。
   // 明示の `--locale` と argv.json の `locale` は今までどおり優先される。

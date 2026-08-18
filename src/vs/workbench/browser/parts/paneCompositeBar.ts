@@ -514,13 +514,37 @@ export class PaneCompositeBar extends Disposable {
 		this.compositeBar.layout(new Dimension(width, height));
 	}
 
+	// --- Start Nimbus ---
+	/**
+	 * アクティビティバーに出さないビューコンテナ。
+	 *
+	 * 標準のデバッグは、Claude 用のものを用意するまで出さない（T-246）。
+	 * **登録は消していない** — F5・ブレークポイント・デバッグコンソール・`workbench.view.debug`
+	 * （⇧⌘D）は今までどおり動き、デバッグ中はサイドバーも開く。アイコンが出なくなるだけなので、
+	 * この集合から外せばそのまま戻る。
+	 *
+	 * ここで外すのは、バーがコンテナを引く口がこの 2 つしかないため。
+	 * 「このバーの担当ではない」を表す既存の道すじにそのまま乗るので、
+	 * 表示・非表示の判定を各所に足すより副作用が少ない。
+	 */
+	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set(['workbench.view.debug']);
+	// --- End Nimbus ---
+
 	private getViewContainer(id: string): ViewContainer | undefined {
+		// --- Start Nimbus ---
+		if (PaneCompositeBar.NIMBUS_HIDDEN_VIEW_CONTAINERS.has(id)) {
+			return undefined;
+		}
+		// --- End Nimbus ---
 		const viewContainer = this.viewDescriptorService.getViewContainerById(id);
 		return viewContainer && this.viewDescriptorService.getViewContainerLocation(viewContainer) === this.location ? viewContainer : undefined;
 	}
 
 	private getViewContainers(): readonly ViewContainer[] {
-		return this.viewDescriptorService.getViewContainersByLocation(this.location);
+		const containers = this.viewDescriptorService.getViewContainersByLocation(this.location);
+		// --- Start Nimbus ---
+		return containers.filter(container => !PaneCompositeBar.NIMBUS_HIDDEN_VIEW_CONTAINERS.has(container.id));
+		// --- End Nimbus ---
 	}
 
 	private updateCompositeBarItemsFromStorage(retainExisting: boolean): void {

@@ -66,7 +66,12 @@ const otherEntries: WatermarkEntry[] = [
 	startDebugging,
 	toggleTerminal,
 	openSettings,
-];
+// --- Start Nimbus ---
+// 標準のデバッグは、Claude 用のものを用意するまで前に出さない（T-246）。
+// 空のエディタは一番よく見る画面なので、ここに出したままだと「隠した」ことにならない。
+// F5 は今までどおり効く — この一覧から外すだけ。戻すときはこの filter を消す
+].filter(entry => entry.id !== 'workbench.action.debug.start');
+// --- End Nimbus ---
 
 export class EditorGroupWatermark extends Disposable {
 

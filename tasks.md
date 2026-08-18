@@ -732,3 +732,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
       2026-08-18 / 仕様 [display-language](nimbus/docs/specs/display-language.md)。
       真っさらな設定では 1 回目だけ英語（言語パックの所在が書かれるのが拡張の走査後のため）。
       `--locale en` は今までどおり効く。GUI ケース 38 で実際に起ち上げて画面の文字を読む
+- [x] T-246 VS Code 標準のデバッグをアクティビティバーから外す（Claude 用を用意するまでの措置）—
+      2026-08-18 / 仕様 [views-layout](nimbus/docs/specs/views-layout.md) / コア台帳 #24。
+      **登録は消していない** — 消すとビューの登録先ごと無くなり F5 や `openPaneComposite` まで
+      巻き添えになる。バーがコンテナを引く 2 つの口で除くだけなので、戻すのは 1 行
