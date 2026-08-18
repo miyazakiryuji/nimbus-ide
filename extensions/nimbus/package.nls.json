@@ -87,6 +87,7 @@
   "command.startFromPreset": "テンプレートから始める",
   "command.managePresets": "テンプレートを管理する",
   "command.branchSession": "いまの作業を分岐する（A 案・B 案）",
+  "command.showSessions": "走っているセッションを見る",
   "command.restoreSession": "過去のセッションを再開する",
   "command.openCodeHealth": "命名と重複を見る",
   "command.taskFromFile": "tasks.md から着手する",

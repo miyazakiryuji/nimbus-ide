@@ -594,6 +594,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.showSessions",
+        "title": "%command.showSessions%",
+        "category": "Nimbus",
+        "icon": "$(server-process)"
+      },
+      {
         "command": "nimbus.openCodeHealth",
         "title": "%command.openCodeHealth%",
         "category": "Nimbus",

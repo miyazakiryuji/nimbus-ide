@@ -6,6 +6,7 @@
  */
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
+import { appendFile } from 'fs/promises';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
 import { pickWorkspaceRoot, resolveWorkspaceRoot } from './workspaceRoots';
@@ -93,6 +94,19 @@ import { captureAfterReload, readHotReloadConfig } from './hotReload';
 import { buildPinnedPrompt, describePinned, selectWithinBudget, type PinnedFile } from './core/pinned';
 import { thresholdLevel } from './core/usage';
 import { describeSessionConflict, SessionFilesTracker } from './core/sessionFiles';
+import { SessionStore } from './sessionStore';
+import {
+	admit,
+	describeOverlap,
+	describeRunning,
+	isMine,
+	isOwnerAlive,
+	occupiesSlot,
+	overlappingSessions,
+	resumeCandidates,
+	runningSessions,
+	type SessionRecord
+} from './core/sessionRegistry';
 import { managePresets, pickPreset, pickRestorable, planBranch } from './sessionLifecycle';
 import { moveToDone, parseTasksFile, startableEntries } from './core/tasksFile';
 import { buildCompactCommand, compactCandidates } from './core/compactSelection';
@@ -267,6 +281,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const authoringDiagnostics = vscode.languages.createDiagnosticCollection('nimbus');
 	// 誰がどのファイルを触っているか（T-011 / T-012）。全セッション横断で覚える
 	const sessionFiles = new SessionFilesTracker();
+	// セッションの台帳（T-247）。SessionManager の Map はウィンドウ（＝拡張ホスト）の中にしか無く、
+	// 落ちれば消えるし、別のウィンドウからは見えない。プロセスの外に置くことで
+	// 「続きから」（T-252）・横断の同時実行数（T-251）・作業場所の重なり（T-253）が成り立つ
+	const sessionStore = new SessionStore(vscode.Uri.joinPath(context.globalStorageUri, 'sessions').fsPath, { log });
 	// 送れなかった入力を預かる（T-151）。打った文が黙って消えるのが一番困る
 	const outbox = new Outbox();
 	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
@@ -344,7 +362,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		context.globalState,
 		worktrees,
 		sessions,
-		() => vscode.workspace.getConfiguration('nimbus').get<number>('tasks.maxConcurrent') ?? 2,
+		() => boardSlots(),
 		log
 	);
 
@@ -383,6 +401,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	sessions.on('event', (event: NimbusEvent) => {
 		// 触ったファイルは全セッションぶん覚える。絞り込みの前に置く（T-011 / T-012）
 		sessionFiles.record(event);
+		// 台帳も全セッションぶん更新する（T-247）。下の絞り込みより後ろに置くと、
+		// 板から起こしたセッション（＝いま前面で見ていないもの）が台帳に残らない
+		recordSession(event);
 		if (event.sessionId === helpSessionId) {
 			helpEvents.push(event);
 			help.post({ type: 'event', event });
@@ -1134,13 +1155,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		const uri = auditUri();
 		try {
 			await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
-			let existing = Buffer.alloc(0);
-			try {
-				existing = Buffer.from(await vscode.workspace.fs.readFile(uri));
-			} catch {
-				// 初回は空から
-			}
-			await vscode.workspace.fs.writeFile(uri, Buffer.concat([existing, Buffer.from(line, 'utf8')]));
+			// **追記だけ**する（T-250）。「全部読んで全部書き直す」だと、同時に書いた分が
+			// 黙って消え（並列セッションでは普通に起きる）、ファイルが育つほど 1 行の追記が遅くなる。
+			// O_APPEND なら書き込み位置は OS が面倒を見るので、行が混ざらず、長さにも依らない
+			await appendFile(uri.fsPath, line, 'utf8');
 		} catch (error) {
 			// 監査が書けないことを、セッションが動かない理由にしない
 			log(`[audit] 書き出せませんでした: ${error instanceof Error ? error.message : String(error)}`);
@@ -1664,6 +1682,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!cwd) {
 			return;
 		}
+		if (!(await admitNewSession())) {
+			return;
+		}
 		await newSession();
 		const sessionId = randomUUID();
 		activeSessionId = sessionId;
@@ -1677,6 +1698,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 		});
 		cockpit.reveal();
+		void warnIfOverlapping(cwd, sessionId);
 		log(`[preset] テンプレートから開始しました（${start.permissionMode ?? 'default'}）`);
 	}
 
@@ -1726,6 +1748,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		const chosen = await pickRestorable(cwd);
 		if (!chosen) {
+			return;
+		}
+		if (!(await admitNewSession())) {
 			return;
 		}
 		await newSession();
@@ -1846,6 +1871,216 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		debugTree.badge = failures > 0 ? { value: failures, tooltip: `失敗 ${failures} 件` } : undefined;
 	}
 
+	/** 同時に走らせる上限（T-251）。設定は 1 つのままで、板もコックピットも同じ数を見る */
+	function concurrentLimit(): number {
+		return vscode.workspace.getConfiguration('nimbus').get<number>('tasks.maxConcurrent') ?? 2;
+	}
+
+	/**
+	 * イベントを台帳へ写す（T-247）。**状態が動いたときだけ**書く。
+	 * イベントは 1 ターンで数百件流れるので、そのたびに書くとディスクが律速になる（T-248）。
+	 */
+	function recordSession(event: NimbusEvent): void {
+		// 使い方に答えるだけのセッション（ゆあ）は台帳に載せない。枠も食わず、続きからも要らない
+		if (event.sessionId === helpSessionId) {
+			return;
+		}
+		if (
+			event.kind !== 'session-init' &&
+			event.kind !== 'status' &&
+			event.kind !== 'turn-result' &&
+			event.kind !== 'user-text'
+		) {
+			return;
+		}
+		const summary = sessions.get(event.sessionId);
+		if (!summary) {
+			return;
+		}
+		sessionStore.upsert(event.sessionId, {
+			status: summary.status,
+			cwd: summary.cwd,
+			claudeSessionId: summary.claudeSessionId,
+			model: summary.model,
+			totalCostUsd: summary.totalCostUsd,
+			// 最初に頼んだことが、後で選ぶときの唯一の手がかりになる
+			...(event.kind === 'user-text' ? { title: oneLine(event.text).slice(0, 120) } : {})
+		});
+	}
+
+	/**
+	 * 板（カンバン）が使ってよい枠（T-251）。
+	 * 上限そのものは変えず、**板の外で走っているぶんを差し引く** —
+	 * コックピットから直に始めたセッションや別ウィンドウのセッションが
+	 * 数に入っていなかったので、上限を 2 にしていても 3 つ 4 つと走っていた。
+	 */
+	function boardSlots(): number {
+		const board = new Set(
+			tasks
+				.list()
+				.map((task) => task.sessionId)
+				.filter((id): id is string => Boolean(id))
+		);
+		const outside = runningSessions(sessionStore.snapshot(), Date.now()).filter(
+			(record) => !board.has(record.sessionId)
+		).length;
+		return Math.max(0, concurrentLimit() - outside);
+	}
+
+	/**
+	 * 新しいセッションを始めてよいか（T-251）。**数えるのはここ 1 か所**。
+	 * 断るときは理由と次の一手を出す — 黙って始まらないのが一番困る。
+	 */
+	async function admitNewSession(): Promise<boolean> {
+		const decision = admit(await sessionStore.refresh(), {
+			limit: concurrentLimit(),
+			windowId: sessionStore.windowId,
+			now: Date.now()
+		});
+		if (decision.allowed) {
+			return true;
+		}
+		log(`[sessions] ${decision.reason}`);
+		const SHOW = 'セッションを見る';
+		void vscode.window.showWarningMessage(`Nimbus: ${decision.reason}`, SHOW).then((choice) => {
+			if (choice === SHOW) {
+				void showSessions();
+			}
+		});
+		return false;
+	}
+
+	/**
+	 * 同じ場所で動いているセッションがあれば言う（T-253）。
+	 * **止めはしない** — 意図してやることもある。何が起きるかと、避けかたを添えて判断を返す。
+	 */
+	async function warnIfOverlapping(cwd: string, sessionId: string): Promise<void> {
+		const hits = overlappingSessions(await sessionStore.refresh(), {
+			cwd,
+			windowId: sessionStore.windowId,
+			now: Date.now(),
+			ignoreSessionId: sessionId
+		});
+		const overlap = describeOverlap(hits);
+		if (!overlap) {
+			return;
+		}
+		log(`[sessions] ${overlap}`);
+		const SPLIT = 'worktree を切って分ける';
+		if ((await vscode.window.showWarningMessage(`Nimbus: ${overlap}`, SPLIT)) === SPLIT) {
+			await newTask();
+		}
+	}
+
+	/**
+	 * セッションの横断一覧（T-251 / T-252）。
+	 * 並列で走らせると「今いくつ動いていて、どれが止まったままか」がどこにも出ていなかった。
+	 * 持ち主のいないものを選べば、そのまま続きから開ける。
+	 */
+	async function showSessions(): Promise<void> {
+		const records = await sessionStore.refresh();
+		if (records.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 台帳に載っているセッションはありません。');
+			return;
+		}
+		const now = Date.now();
+		const items = [...records]
+			.sort((a, b) => b.updatedAt - a.updatedAt)
+			.map((record) => {
+				const alive = isOwnerAlive(record, now);
+				const icon = !alive ? '$(debug-disconnect)' : occupiesSlot(record.status) ? '$(sync~spin)' : '$(cloud)';
+				const where = !alive ? '持ち主なし' : isMine(record, sessionStore.windowId) ? 'このウィンドウ' : '別のウィンドウ';
+				const cost = record.totalCostUsd !== undefined ? ` · $${record.totalCostUsd.toFixed(4)}` : '';
+				return {
+					label: `${icon} ${record.title ?? record.sessionId.slice(0, 8)}`,
+					description: `${record.status} · ${where}${cost}`,
+					detail: record.cwd,
+					record
+				};
+			});
+		const chosen = await vscode.window.showQuickPick(items, {
+			title: describeRunning(runningSessions(records, now).length, concurrentLimit()),
+			placeHolder: '持ち主のいないセッションを選ぶと、続きから開きます'
+		});
+		if (!chosen) {
+			return;
+		}
+		if (isOwnerAlive(chosen.record, Date.now())) {
+			void vscode.window.showInformationMessage(
+				isMine(chosen.record, sessionStore.windowId)
+					? 'Nimbus: このウィンドウで動いているセッションです。'
+					: 'Nimbus: 別のウィンドウが動かしています。二重に触ると片方の前提が壊れるので開きません。'
+			);
+			return;
+		}
+		await resumeRecord(chosen.record);
+	}
+
+	/**
+	 * 台帳の記録から続きを開く（T-252）。
+	 * Nimbus 側の ID は**引き継ぐ** — イベントのキーが変わると、記録が二重になる。
+	 */
+	async function resumeRecord(record: SessionRecord): Promise<void> {
+		if (!record.claudeSessionId) {
+			void vscode.window.showWarningMessage('Nimbus: このセッションには再開の鍵（session_id）がありません。');
+			return;
+		}
+		if (!(await admitNewSession())) {
+			return;
+		}
+		await newSession();
+		activeSessionId = record.sessionId;
+		await sessions.createSession({
+			cwd: record.cwd,
+			resumeClaudeSessionId: record.claudeSessionId,
+			reuseSessionId: record.sessionId
+		});
+		cockpit.reveal();
+		log(`[sessions] ${record.sessionId} を続きから開きました`);
+		void vscode.window.showInformationMessage(
+			`Nimbus: 「${record.title ?? record.sessionId.slice(0, 8)}」の続きから開きました。`
+		);
+	}
+
+	/**
+	 * 開いた直後に「続きから」を出す（T-252）。
+	 * 落ちても閉じても Claude 側の session_id は残っているのに、
+	 * 黙って新しいセッションを始めると、続きがあったことに誰も気づけない。
+	 */
+	async function offerResume(): Promise<void> {
+		const candidates = resumeCandidates(await sessionStore.refresh(), {
+			now: Date.now(),
+			cwd: workspaceCwd(currentScope(context.workspaceState))
+		});
+		if (candidates.length === 0) {
+			return;
+		}
+		const latest = candidates[0];
+		const RESUME = '続きから';
+		const LIST = '一覧を見る';
+		const name = latest.title ?? latest.sessionId.slice(0, 8);
+		const choice = await vscode.window.showInformationMessage(
+			`Nimbus: 前回のセッションが ${candidates.length} 件残っています（${name}）。`,
+			RESUME,
+			LIST
+		);
+		if (choice === RESUME) {
+			await resumeRecord(latest);
+		} else if (choice === LIST) {
+			await showSessions();
+		}
+	}
+
+	/**
+	 * 走っているセッションの本数（T-251）。**このウィンドウの中だけを数えない** —
+	 * 別のウィンドウで走っているぶんも同じ上限を食うので、そこが見えないと
+	 * 「上限 2 のはずなのに 4 つ走っている」が起きる。
+	 */
+	function describeAcrossWindows(): string {
+		const across = runningSessions(sessionStore.snapshot(), Date.now()).length;
+		return across > 0 ? describeRunning(across, concurrentLimit()) : '';
+	}
+
 	function updateStatus(summary: SessionSummary | undefined): void {
 		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
@@ -1870,7 +2105,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		if (!summary) {
 			status.text = `${waiting}$(cloud) Nimbus`;
-			status.tooltip = 'Nimbus — セッション未開始';
+			status.tooltip = ['Nimbus — セッション未開始', describeAcrossWindows()].filter(Boolean).join('\n');
 			void vscode.commands.executeCommand('setContext', 'nimbus.hasRunningSession', false);
 			return;
 		}
@@ -1887,6 +2122,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			billingModeLabel(lastApiKeySource),
 			summary.model ?? '',
 			`状態: ${stateLabel(agentState)}`,
+			describeAcrossWindows(),
 			contextPercent !== undefined ? `文脈 ${Math.round(contextPercent)}%（クリックでログ／使用量ビューに内訳）` : '',
 			summary.cwd
 		].filter(Boolean).join('\n');
@@ -2076,11 +2312,18 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// セッション ID を先に決めて active にしておく。createSession の実行中に出る
 			// 最初の user-text / status イベントは、ID が未確定だと購読側で捨てられてしまう
 			// （実測: 最初の発言がコックピットに表示されなかった）
+			// 走らせすぎない（T-251）。断ったときは、打った文を預かって消さない
+			if (!(await admitNewSession())) {
+				outbox.add(rawText, '同時実行の上限に達していました', Date.now());
+				return;
+			}
 			const sessionId = randomUUID();
 			activeSessionId = sessionId;
 			retained.length = 0;
 			await sessions.createSession({ cwd, firstMessage: text, firstImages: attachments, reuseSessionId: sessionId });
 			log(`[session] 新規セッション ${sessionId} cwd=${cwd}`);
+			// 同じ場所を別のセッションが触っていたら言う（T-253）
+			void warnIfOverlapping(cwd, sessionId);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			log(`[session] 送信に失敗: ${message}`);
@@ -2633,6 +2876,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.branchSession', () => branchSession()),
 		// 過去のセッションを再開（T-150）
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
+		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
+		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
 		// 証跡つき完了報告（T-081）。「できました」だけの報告を無くす
 		vscode.commands.registerCommand('nimbus.completionReport', () => openCompletionReport(retained)),
 		vscode.commands.registerCommand('nimbus.rewind', () => rewindToCheckpoint()),
@@ -3229,8 +3474,22 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				log
 			})
 		),
-		new vscode.Disposable(() => sessions.closeAll())
+		new vscode.Disposable(() => sessions.closeAll()),
+		// 閉じるときに持ち主を手放す（T-252）。次に開いたとき、心拍が切れるのを待たずに続きから戻せる
+		new vscode.Disposable(() => {
+			void sessionStore.release();
+			sessionStore.dispose();
+		})
 	);
+
+	// 置き去りの記録を掃除してから、前回の続きを出す（T-252）。
+	// 自動確認（GUI テスト）のときは黙っている — 画面に出す知らせが操作の邪魔になる
+	void sessionStore.sweep().then(() => {
+		if (!process.env['NIMBUS_SMOKE']) {
+			return offerResume();
+		}
+		return undefined;
+	});
 
 	void vscode.commands.executeCommand('setContext', 'nimbus.approvalQueueMode', isApprovalQueueMode());
 

@@ -87,6 +87,7 @@
   "command.startFromPreset": "Start from a Template",
   "command.managePresets": "Manage Templates",
   "command.branchSession": "Branch This Work (Plan A / Plan B)",
+  "command.showSessions": "Show Running Sessions",
   "command.restoreSession": "Resume a Past Session",
   "command.openCodeHealth": "See Naming and Duplication",
   "command.taskFromFile": "Start from tasks.md",
