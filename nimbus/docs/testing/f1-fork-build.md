@@ -86,3 +86,4 @@
 | 拡張が 1 つもインストールできない（`not iterable`） | `builtInExtensionsEnabledWithAutoUpdates` をキーごと削除した | 削除ではなく空配列に。「消す」ではなく「空にする」が正解の場合がある |
 | 拡張のインストールが `Signature verification was not executed.` で失敗 | Open VSX の拡張は Microsoft 署名を持たず、OSS ビルドに検証機構も無い | `extensions.verifySignature` の既定値を false に（停止リスト `controlUrl` を代替の防御として維持） |
 | パッケージビルドが `Copilot SDK directory not found` で失敗 | 出力先 `Nimbus-darwin-arm64/`（旧: VSCode-darwin-arm64） を手で書き換えた状態で再ビルドした（差分パッケージが不整合に） | 出力先を消してクリーンビルド。Copilot の ripgrep シムがビルド成功の前提になっている点も要注意 |
+| パッケージビルドが 6 秒ほどで `ERR_UNKNOWN_FILE_EXTENSION: Unknown file extension ".mts"` で失敗 | システム Node（22 系）で `npm run gulp vscode-darwin-arm64` を叩いた。gulp は `.mts` を直接実行するので 24 系が要る（`nimbus/scripts/test.sh` は自動で通すが、gulp を直に叩く経路は通らない） | `PATH` の先頭に `10_products/.toolchain/node-v24.18.0-darwin-arm64/bin` を足してから叩く。**失敗が早いので「ビルドできた」と見間違えやすい**（実際にソースだけ直ってアプリが古いまま残り、「フォルダを開くと Nimbus が消える」の再報告につながった） |

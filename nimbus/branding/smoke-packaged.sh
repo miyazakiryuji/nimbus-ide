@@ -46,7 +46,8 @@ echo "  インストール済み: $(env -u NODE_OPTIONS "$CLI" --user-data-dir "
 echo "== 3. 起動して Nimbus 拡張と実セッションを確認 =="
 # NODE_OPTIONS は必ず外す。Electron の main は無視するが、拡張ホストなどの子 Node プロセスは
 # 引き継いでしまい、`--require` が解決できないと**ウィンドウが出ないまま無言で止まる**（実測）。
-# --disable-workspace-trust: Nimbus 拡張は未信頼フォルダでは無効化される設計のため、確認時は信頼した状態で動かす。
+# --disable-workspace-trust: 未信頼フォルダでは Claude の実行を断る設計のため、確認時は信頼した状態で動かす。
+#   （画面自体は未信頼でも開く。消えないことの確認は GUI ケース 22 が受け持つ）
 ( nohup env -u NODE_OPTIONS NIMBUS_SMOKE=1 NIMBUS_SMOKE_PROMPT='Reply with exactly: NIMBUS_PACKAGED_OK' \
 	"$APP/Contents/MacOS/Nimbus" --disable-workspace-trust --user-data-dir "$UD" --extensions-dir "$EXT" "$WS" > /tmp/nimbus-smoke-run.log 2>&1 & )
 n=0
