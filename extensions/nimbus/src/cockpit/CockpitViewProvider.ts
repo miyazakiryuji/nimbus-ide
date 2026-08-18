@@ -27,8 +27,12 @@ export type OutboundMessage =
 	| { type: 'event'; event: NimbusEvent; assumptions?: string[] }
 	| { type: 'history'; events: NimbusEvent[]; session?: SessionSummary }
 	| { type: 'session'; session?: SessionSummary }
-	/** いま答えを待っている承認（T-266）。空配列で「もう無い」を表す */
-	| { type: 'approvals'; pending: readonly PendingApproval[] };
+	/**
+	 * いま答えを待っている承認（T-266）。空配列で「もう無い」を表す。
+	 * `activeSessionId` は「どのセッションの話か」をカードに出すため —
+	 * 並列で走らせていると、どれについて聞かれているのかが分からないと決められない。
+	 */
+	| { type: 'approvals'; pending: readonly PendingApproval[]; activeSessionId?: string };
 
 export interface CockpitHandlers {
 	/** @param images 貼り付け・ドロップで添えた画像（T-040）。省略時の振る舞いは従来どおり */

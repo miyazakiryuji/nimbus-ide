@@ -323,7 +323,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			pendingApprovals = pending.length;
 			// 会話の中にカードで出す（T-266）。ここが本命の入口で、
 			// コックピットが無いときだけ今までどおりモーダルへ落ちる
-			cockpit.post({ type: 'approvals', pending });
+			cockpit.post({ type: 'approvals', pending, activeSessionId });
 			if (pending.length > 0) {
 				cockpit.reveal();
 			}

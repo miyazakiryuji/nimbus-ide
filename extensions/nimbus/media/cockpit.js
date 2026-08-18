@@ -179,7 +179,7 @@
 	 * どのツールの話だったか思い出して、戻ってくる — その往復が要らなくなる。
 	 * 入力欄のすぐ上に置くのは、手がもう そこにあるから（人間工学 E2）。
 	 */
-	function renderApprovals(items) {
+	function renderApprovals(items, activeSessionId) {
 		let area = document.getElementById('approvals');
 		if (!area) {
 			area = document.createElement('div');
@@ -197,6 +197,14 @@
 			title.className = 'approval-title';
 			title.textContent = `${item.toolName} を実行してよいか待っています`;
 			card.appendChild(title);
+
+			// 並列で走らせていると、どのセッションの話かが分からないと決められない
+			if (activeSessionId && item.sessionId && item.sessionId !== activeSessionId) {
+				const who = document.createElement('div');
+				who.className = 'approval-who';
+				who.textContent = `別のセッション（${item.sessionId.slice(0, 8)}）`;
+				card.appendChild(who);
+			}
 
 			const summary = document.createElement('div');
 			summary.className = 'approval-summary';
@@ -301,7 +309,7 @@
 			}
 			log.scrollTop = log.scrollHeight;
 		} else if (message.type === 'approvals') {
-			renderApprovals(message.pending ?? []);
+			renderApprovals(message.pending ?? [], message.activeSessionId);
 		} else if (message.type === 'event') {
 			renderEvent(message.event);
 			if (message.assumptions && message.assumptions.length > 0) {

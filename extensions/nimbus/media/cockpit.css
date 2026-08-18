@@ -192,6 +192,12 @@ button:disabled {
 	margin-bottom: 2px;
 }
 
+.approval-who {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 2px;
+}
+
 .approval-summary {
 	font-family: var(--vscode-editor-font-family);
 	color: var(--vscode-descriptionForeground);
