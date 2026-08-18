@@ -58,7 +58,16 @@ export function includesAny(text, candidates) {
  * 「常用のほうが開いている」と誤って判定する。
  */
 async function sidebarTitle(page) {
-	return page.evaluate(() => document.querySelector('.part.sidebar .title-label')?.innerText?.trim() ?? '');
+	return page.evaluate(() => {
+		const side = document.querySelector('.part.sidebar');
+		if (!side) {
+			return '';
+		}
+		// ビューが 1 本しかないコンテナは `.title-label` を持たないことがある
+		// （`mergeViewWithContainerWhenSingleView`）。その場合は見出し行を読む
+		const label = side.querySelector('.title-label')?.innerText?.trim();
+		return label || (side.innerText ?? '').split('\n')[0].trim();
+	});
 }
 
 /**
@@ -73,7 +82,13 @@ async function sidebarTitle(page) {
  * 製品名が Nimbus なのでタイトルバーやステータスバーにも "Nimbus" が入っている。
  */
 async function openContainer(page, wanted, { attempts = 6, excluded = [] } = {}) {
-	const hit = (title) => wanted.some((name) => title.toUpperCase() === name.toUpperCase());
+	// ビューが 1 本だけのコンテナは見出しが「NIMBUS タスク: タスク」のように連結される。
+	// 前方一致にすると「NIMBUS」が「NIMBUS 設定」にも当たってしまうので、
+	// **完全一致か、コロンで続く形か**の 2 つだけを認める
+	const hit = (title) => wanted.some((name) => {
+		const [a, b] = [title.toUpperCase(), name.toUpperCase()];
+		return a === b || a.startsWith(`${b}:`);
+	});
 	for (let i = 0; i < attempts; i++) {
 		if (hit(await sidebarTitle(page))) {
 			return true;
@@ -107,7 +122,18 @@ export async function openNimbusSidebar(page, { attempts = 6 } = {}) {
 	});
 }
 
-/** 設定のほう（歯車雲アイコン）のサイドバーを開く。スキル / CLAUDE.md / 設定 が入っている */
+/**
+ * タスクのほう（一覧雲アイコン）のサイドバーを開く。タスク板が入っている。
+ *
+ * ビューが 1 本しかないコンテナは、見出しに**ビュー名のほう**が出ることがある
+ * （`mergeViewWithContainerWhenSingleView`）。どちらでも通るように両方を候補にする。
+ */
+export async function openNimbusTasksSidebar(page, { attempts = 6 } = {}) {
+	const names = [...labels('viewsContainers.nimbusTasks'), ...labels('view.nimbus.board')];
+	return openContainer(page, names, { attempts });
+}
+
+/** 設定のほう（歯車雲アイコン）のサイドバーを開く。スキル / CLAUDE.md / 設定 / ヘルプ が入っている */
 export async function openNimbusSettingsSidebar(page, { attempts = 6 } = {}) {
 	return openContainer(page, labels('viewsContainers.nimbusSettings'), { attempts });
 }
@@ -202,6 +228,27 @@ export async function expandPane(page, label) {
 		if ((await header.getAttribute('aria-expanded')) === 'false') {
 			await header.click();
 			await page.waitForTimeout(1200);
+		}
+		return true;
+	}
+	return false;
+}
+
+/**
+ * 開いているセクションを畳む。既に畳まれていれば何もしない。
+ *
+ * 段が増えると下のほうの行は**描画されず**、押すどころか見つからない
+ * （リストが仮想化されているため）。見たい段だけ残すのに使う。
+ */
+export async function collapsePane(page, label) {
+	for (const header of await page.$$('.pane-header')) {
+		const text = await header.evaluate((el) => el.innerText ?? '');
+		if (!text.includes(label)) {
+			continue;
+		}
+		if ((await header.getAttribute('aria-expanded')) === 'true') {
+			await header.click();
+			await page.waitForTimeout(800);
 		}
 		return true;
 	}

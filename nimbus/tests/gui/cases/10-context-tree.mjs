@@ -5,11 +5,13 @@
  * **空のツリーが黙って出ることが無い**ことを確かめる。案内が出ていれば、
  * ツリー自体は生きていて init を待っている状態だと分かる。
  */
-import { expandPane, includesAny, labels, openNimbusSidebar, sidebarText } from '../helpers.mjs';
+import { expandPane, includesAny, labels, openHiddenView, openNimbusSidebar, sidebarText } from '../helpers.mjs';
 
 export default {
 	name: '文脈ツリーが未開始の案内を出す',
 	async run(page, ctx) {
+		// 文脈はサイドバーの既定から外した（T-255）。コマンドから開く
+		await openHiddenView(page, '文脈を開く');
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
 		await expandPane(page, labels('view.nimbus.context')[0]);
 

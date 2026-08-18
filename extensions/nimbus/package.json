@@ -35,6 +35,11 @@
           "icon": "resources/nimbus.svg"
         },
         {
+          "id": "nimbusTasks",
+          "title": "%viewsContainers.nimbusTasks%",
+          "icon": "resources/nimbus-tasks.svg"
+        },
+        {
           "id": "nimbusSettings",
           "title": "%viewsContainers.nimbusSettings%",
           "icon": "resources/nimbus-settings.svg"
@@ -61,12 +66,6 @@
           "type": "webview"
         },
         {
-          "id": "nimbus.board",
-          "name": "%view.nimbus.board%",
-          "type": "webview",
-          "visibility": "collapsed"
-        },
-        {
           "id": "nimbus.approvals",
           "name": "%view.nimbus.approvals%",
           "visibility": "collapsed"
@@ -74,18 +73,19 @@
         {
           "id": "nimbus.review",
           "name": "%view.nimbus.review%",
-          "visibility": "collapsed"
+          "visibility": "hidden"
         },
         {
           "id": "nimbus.context",
           "name": "%view.nimbus.context%",
-          "visibility": "collapsed"
-        },
+          "visibility": "hidden"
+        }
+      ],
+      "nimbusTasks": [
         {
-          "id": "nimbus.help",
-          "name": "%view.nimbus.help%",
-          "type": "webview",
-          "visibility": "collapsed"
+          "id": "nimbus.board",
+          "name": "%view.nimbus.board%",
+          "type": "webview"
         }
       ],
       "nimbusSettings": [
@@ -100,6 +100,12 @@
         {
           "id": "nimbus.settings",
           "name": "%view.nimbus.settings%"
+        },
+        {
+          "id": "nimbus.help",
+          "name": "%view.nimbus.help%",
+          "type": "webview",
+          "visibility": "collapsed"
         }
       ],
       "nimbusDebug": [
@@ -1167,6 +1173,16 @@
       {
         "command": "nimbus.showSettings",
         "title": "設定ビューを開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showReview",
+        "title": "レビューを開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.showContext",
+        "title": "文脈を開く",
         "category": "Nimbus"
       },
       {

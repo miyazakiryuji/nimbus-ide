@@ -5,11 +5,13 @@
  * 「印を付けたら残る」ところは実際に変更のあるリポジトリが要るので、
  * ここでは入口の確認までにする（使い捨てワークスペースには git の変更が無い）。
  */
-import { includesAny, labels, openNimbusSidebar, searchCommands, sidebarText } from '../helpers.mjs';
+import { includesAny, labels, openHiddenView, openNimbusSidebar, searchCommands, sidebarText } from '../helpers.mjs';
 
 export default {
 	name: 'レビュービューと印のコマンドがある',
 	async run(page, ctx) {
+		// レビューはサイドバーの既定から外した（T-255）。コマンドから開く
+		await openHiddenView(page, 'レビューを開く');
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
 
 		const sidebar = await sidebarText(page);

@@ -5,7 +5,7 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { deriveState, nextStartable, occupiesSlot, restoreState, type KanbanTask } from '../core/tasks';
+import { deriveState, KANBAN_COLUMNS, nextStartable, occupiesSlot, restoreState, type KanbanTask } from '../core/tasks';
 
 function task(partial: Partial<KanbanTask> & { taskId: string }): KanbanTask {
 	return {
@@ -72,4 +72,15 @@ test('待機中が複数あれば古いものから開始する', () => {
 test('待機中が無ければ何も返さない', () => {
 	assert.strictEqual(nextStartable([task({ taskId: 'a', state: 'review' })], 5, 0), undefined);
 	assert.strictEqual(nextStartable([], 5, 0), undefined);
+});
+
+test('板の列は英語で揃っている（T-257）', () => {
+	// 一部だけ日本語に残すと 1 枚の板に 2 つの言語が混ざる。列ごと突き合わせる
+	assert.deepStrictEqual(KANBAN_COLUMNS, [
+		{ state: 'pending', label: 'To Do' },
+		{ state: 'running', label: 'In Progress' },
+		{ state: 'awaiting-approval', label: 'Needs Approval' },
+		{ state: 'review', label: 'In Review' },
+		{ state: 'done', label: 'Done' }
+	]);
 });

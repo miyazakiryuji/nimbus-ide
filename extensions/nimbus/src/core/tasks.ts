@@ -82,12 +82,18 @@ export function collectTags(tasks: readonly KanbanTask[]): { tag: string; count:
 		.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
 
+/**
+ * 板の列。**表記は英語で揃える**（T-257）。
+ *
+ * 未着手 / 作業中 / 完了 は、かんばんの言い回しとして英語のほうが通りがよい。
+ * 一部だけ日本語に残すと 1 枚の板に 2 つの言語が混ざって読みにくいので、5 列とも英語にする。
+ */
 export const KANBAN_COLUMNS: { state: KanbanState; label: string }[] = [
-	{ state: 'pending', label: '待機中' },
-	{ state: 'running', label: '実行中' },
-	{ state: 'awaiting-approval', label: '承認待ち' },
-	{ state: 'review', label: 'レビュー待ち' },
-	{ state: 'done', label: '完了' }
+	{ state: 'pending', label: 'To Do' },
+	{ state: 'running', label: 'In Progress' },
+	{ state: 'awaiting-approval', label: 'Needs Approval' },
+	{ state: 'review', label: 'In Review' },
+	{ state: 'done', label: 'Done' }
 ];
 
 /** 実行枠を占有している状態（同時実行上限の判定に使う） */

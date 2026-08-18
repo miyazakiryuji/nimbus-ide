@@ -251,5 +251,6 @@
   "config.voice.modelPath": "whisper.cpp を使うときのモデルの場所。ほかの書き起こしツールでは要りません。",
   "viewsContainers.nimbusDiagnostics": "Nimbus 診断",
   "viewsContainers.nimbusDebug": "Nimbus デバッグ",
+  "viewsContainers.nimbusTasks": "Nimbus タスク",
   "viewsContainers.nimbusSettings": "Nimbus 設定"
 }

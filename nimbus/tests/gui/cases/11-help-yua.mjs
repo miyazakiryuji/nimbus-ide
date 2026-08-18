@@ -6,12 +6,12 @@
  * コックピットのものではなく「使い方を聞く」側になっていること。
  * 実際に会話させると課金が発生するので、往復は `--with-claude` の 07 に任せる。
  */
-import { expandPane, includesAny, labels, openHiddenView, openNimbusSidebar, sidebarText } from '../helpers.mjs';
+import { expandPane, includesAny, labels, openHiddenView, openNimbusSettingsSidebar, sidebarText } from '../helpers.mjs';
 
 export default {
 	name: 'ヘルプ（ゆあ）が開き、ゆあ用の入力欄になっている',
 	async run(page, ctx) {
-		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
+		ctx.expect(await openNimbusSettingsSidebar(page), 'Nimbus 設定のサイドバーを開けない');
 
 		const sidebar = await sidebarText(page);
 		ctx.expect(

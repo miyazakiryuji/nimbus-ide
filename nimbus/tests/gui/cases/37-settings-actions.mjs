@@ -16,6 +16,7 @@
 import {
 	clickTreeRow,
 	closeAllEditors,
+	collapsePane,
 	expandPane,
 	feedbackText,
 	labels,
@@ -41,6 +42,11 @@ export default {
 	async run(page, ctx) {
 		await openHiddenView(page, '設定ビューを開く');
 		ctx.expect(await openNimbusSettingsSidebar(page), 'Nimbus 設定のサイドバーを開けない');
+		// 同じ部屋にスキル・CLAUDE.md・ヘルプも居るので、畳んで設定に場所を空ける。
+		// 段が詰まると下の行が描画されず、「行が無い」で落ちる
+		for (const key of ['view.nimbus.skills', 'view.nimbus.claudeMd', 'view.nimbus.help']) {
+			await collapsePane(page, labels(key)[0]);
+		}
 		await expandPane(page, labels('view.nimbus.settings')[0]);
 		await page.waitForTimeout(800);
 

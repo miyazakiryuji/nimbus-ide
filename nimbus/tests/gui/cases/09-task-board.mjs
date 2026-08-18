@@ -10,13 +10,13 @@
  * 列の並び自体は `core/tasks.ts` の `KANBAN_COLUMNS` を単体テストが押さえており、
  * 実タスクでの見え方は F4 の手動確認（f3-f6.md §3）で確認済み。
  */
-import { expandPane, labels, openNimbusSidebar, webviewText } from '../helpers.mjs';
+import { openNimbusTasksSidebar, webviewText } from '../helpers.mjs';
 
 export default {
 	name: 'タスク板が描画され、空のときに案内を出す',
 	async run(page, ctx) {
-		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
-		await expandPane(page, labels('view.nimbus.board')[0]);
+		// 板はアクティビティバーの専用アイコンへ独立させた（T-256）
+		ctx.expect(await openNimbusTasksSidebar(page), 'Nimbus タスクのサイドバーを開けない');
 		await page.waitForTimeout(1500);
 
 		const text = await webviewText(page, ['新しいタスク']);

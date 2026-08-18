@@ -3140,6 +3140,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.showSettings', () =>
 			vscode.commands.executeCommand('nimbus.settings.focus')
 		),
+		// レビューと文脈はサイドバーの既定から外した（T-255）。開く手だては残す
+		vscode.commands.registerCommand('nimbus.showReview', () =>
+			vscode.commands.executeCommand('nimbus.review.focus')
+		),
+		vscode.commands.registerCommand('nimbus.showContext', () =>
+			vscode.commands.executeCommand('nimbus.context.focus')
+		),
 		// 診断は下部パネルにまとめてある
 		vscode.commands.registerCommand('nimbus.showDiagnostics', () =>
 			vscode.commands.executeCommand('workbench.view.extension.nimbusDiagnostics')
@@ -3149,6 +3156,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			vscode.commands.executeCommand('workbench.view.extension.nimbusDebug')
 		),
 		vscode.commands.registerCommand('nimbus.refreshDebug', () => updateDebugView()),
+		// 行を押したら中身が出るところまでで 1 組。押せるだけで何も出ないのは見えているだけと同じ（T-244）
 		// 行から押す経路と、名前で引く経路の両方を持たせる。引数が無ければ一覧から選ばせる
 		vscode.commands.registerCommand('nimbus.showFailure', async (failure?: Failure) => {
 			const chosen = failure ?? (await pickFailure(debugView.failures()));

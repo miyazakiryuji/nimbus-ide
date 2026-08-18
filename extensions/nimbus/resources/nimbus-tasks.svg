@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!--
+    走っているものの部屋。雲は nimbus.svg と同じ形のまま縮めて家族として残し、
+    下半分を雨から「並んでいるもの」に替える。アクティビティバーは 24px の単色マスクなので、
+    雨（細い斜線）・歯車（丸い塊）・一覧（太い横棒）くらい質感が違わないと見分けがつかない。
+    塗りは currentColor に任せる。
+  -->
+  <g transform="translate(3.32 -1.35) scale(0.72)">
+    <path fill="currentColor" d="M17.5 18h-10A4.5 4.5 0 0 1 7 9.03 5.5 5.5 0 0 1 17.4 10.2 3.9 3.9 0 0 1 17.5 18Z"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="7.2" cy="14.6" r="1.15"/>
+    <rect x="9.8" y="13.6" width="8.9" height="2" rx="1"/>
+    <circle cx="7.2" cy="18.2" r="1.15"/>
+    <rect x="9.8" y="17.2" width="8.9" height="2" rx="1"/>
+    <circle cx="7.2" cy="21.8" r="1.15"/>
+    <rect x="9.8" y="20.8" width="8.9" height="2" rx="1"/>
+  </g>
+</svg>
