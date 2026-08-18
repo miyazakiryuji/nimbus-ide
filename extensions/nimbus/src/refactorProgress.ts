@@ -88,15 +88,8 @@ export async function startRefactorTrack(deps: RefactorProgressDeps): Promise<vo
 	if (!pattern) {
 		return;
 	}
-	const label = await vscode.window.showInputBox({
-		title: 'Nimbus: 置き換えを追いかける',
-		prompt: 'この置き換えの名前',
-		value: pattern
-	});
-	if (!label) {
-		return;
-	}
-
+	// **名前を聞く前に数える**（T-267）。当たらないパターンで名前だけ聞かれても、
+	// 打ったものが捨てられるだけで意味がない。断るなら早いほうがよい
 	let counts: Map<string, number>;
 	try {
 		counts = await gitGrepCounts(folder.uri.fsPath, pattern);
@@ -108,6 +101,15 @@ export async function startRefactorTrack(deps: RefactorProgressDeps): Promise<vo
 	const initial = totalOf(counts);
 	if (initial === 0) {
 		void vscode.window.showInformationMessage('Nimbus: そのパターンに当たる箇所がありません。');
+		return;
+	}
+
+	const label = await vscode.window.showInputBox({
+		title: 'Nimbus: 置き換えを追いかける',
+		prompt: `この置き換えの名前（いま ${initial} 箇所）`,
+		value: pattern
+	});
+	if (!label) {
 		return;
 	}
 
