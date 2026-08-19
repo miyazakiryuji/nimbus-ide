@@ -3,6 +3,8 @@
  *
  * 守りたいのは 2 つ — **入れる順は下から**であることと、
  * **下が入った後の付け替え**（いちばん忘れる作業）が出ること。
+ *
+ * 守っている修正（T-274）: T-135
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

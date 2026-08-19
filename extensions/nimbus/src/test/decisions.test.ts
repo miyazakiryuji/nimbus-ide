@@ -3,6 +3,8 @@
  *
  * **取りこぼしより誤検出の方が悪い。** 関係ない文が記録に混ざると、
  * 次に読む人がその記録全体を信用しなくなる。
+ *
+ * 守っている修正（T-274）: T-060
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

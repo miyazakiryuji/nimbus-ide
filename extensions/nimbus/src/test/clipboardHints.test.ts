@@ -2,6 +2,8 @@
  * コピーしたエラー文の判定。
  *
  * **迷ったら反応しない**が要件。関係ないコピーのたびに聞かれると、通知ごと切られる。
+ *
+ * 守っている修正（T-274）: T-170
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

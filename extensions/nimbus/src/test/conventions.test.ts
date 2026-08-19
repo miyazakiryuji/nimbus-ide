@@ -3,6 +3,8 @@
  *
  * **はっきり多いものだけを「流儀」と呼ぶ**のが要件。
  * 半々のものに従わせても、迷わせるだけで精度は上がらない。
+ *
+ * 守っている修正（T-274）: T-103
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

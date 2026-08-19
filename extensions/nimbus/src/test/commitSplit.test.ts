@@ -5,6 +5,8 @@
  * とくに `git add -- …` は人がそのまま貼るので、パスの引用を間違えないことが要。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-173
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

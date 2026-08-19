@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/** 守っている修正（T-274）: T-215 */
+
 import * as assert from 'assert';
 import { test } from 'node:test';
 import { addedLinesFromDiff, canShip, findLeftovers, renderPreflight, runPreflight, type PreflightInput } from '../core/preflight';

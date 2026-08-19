@@ -3,6 +3,8 @@
  *
  * 要件は「**一度に全部やらせない**」の一点。
  * まとまりの切り方と、間にテストを挟ませる指示をここで固定する。
+ *
+ * 守っている修正（T-274）: T-110
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

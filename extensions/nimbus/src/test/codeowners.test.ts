@@ -3,6 +3,8 @@
  *
  * **最後に一致した規則が勝つ**（GitHub の仕様）。ここを取り違えると、
  * 別の人にレビューを投げてしまう。
+ *
+ * 守っている修正（T-274）: T-221
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

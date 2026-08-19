@@ -5,6 +5,8 @@
  * 本当に曖昧なときにも効かなくなる。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-018 / T-027
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

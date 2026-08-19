@@ -5,6 +5,8 @@
  * 壊れたマーカー（閉じていない）を勝手に解釈しないことも、同じ理由で重要。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-173
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

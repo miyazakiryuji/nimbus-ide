@@ -5,6 +5,8 @@
  * 取れなかったとき（null）に 0% と誤って出さないことを重点的に押さえる。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-037 / T-059
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

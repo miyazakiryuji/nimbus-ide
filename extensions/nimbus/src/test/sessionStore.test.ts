@@ -5,6 +5,8 @@
  * 1 つの JSON に全部入れていたら、ここが壊れる（T-250 の監査ログと同じ壊れかた）。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-248
  */
 import * as assert from 'assert';
 import { mkdtempSync } from 'fs';

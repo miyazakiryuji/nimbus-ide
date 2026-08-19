@@ -3,6 +3,8 @@
  *
  * バージョン番号だけでは「何が増えたか」は分からない。
  * **init が渡す一覧の差分**なら、推測せずに言える。
+ *
+ * 守っている修正（T-274）: T-094
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

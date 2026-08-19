@@ -2,6 +2,8 @@
  * リポジトリの構造要約カード。
  *
  * 数えた事実しか書かない、が要件。推測を混ぜると、それを前提に読まれてしまう。
+ *
+ * 守っている修正（T-274）: T-176
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

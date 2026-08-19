@@ -3,6 +3,8 @@
  *
  * セルは VS Code から見ると別のファイルなので、そのまま扱うと
  * git も表示も破綻する。**言い方**をここで固定する。
+ *
+ * 守っている修正（T-274）: T-174
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

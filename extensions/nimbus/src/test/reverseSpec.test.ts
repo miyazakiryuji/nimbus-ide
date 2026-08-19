@@ -2,6 +2,8 @@
  * 仕様の逆生成。
  *
  * 丸投げすると**それらしい嘘**が出る。事実と推測を分けさせる一文が入っているかを固定する。
+ *
+ * 守っている修正（T-274）: T-080
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

@@ -2,6 +2,8 @@
  * エディタから頼むときの文面。
  *
  * 場所を先に、コードを後に。場所さえ渡っていれば、必要なぶんは自分で読みに行ける。
+ *
+ * 守っている修正（T-274）: T-171 / T-172 / T-174
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

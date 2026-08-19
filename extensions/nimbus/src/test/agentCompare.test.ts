@@ -3,6 +3,8 @@
  *
  * 守りたいのは **「どちらが良いかを言わない」**こと。
  * 機械が決められるのは「両方が同じ行を触った」という事実まで。
+ *
+ * 守っている修正（T-274）: T-069
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

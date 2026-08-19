@@ -11,6 +11,7 @@
  *   node nimbus/scripts/regression-guard.mjs           # 守りの無いものを新しい順に
  *   node nimbus/scripts/regression-guard.mjs --all     # 全部出す
  *   node nimbus/scripts/regression-guard.mjs --strict  # 1 件でもあれば終了コード 1
+ *   node nimbus/scripts/regression-guard.mjs --suggest # 既にテストがあるのに番号が書かれていないもの
  */
 import { readFileSync, readdirSync, existsSync } from 'fs'
 import { dirname, join } from 'path'
@@ -83,6 +84,64 @@ for (const group of shown) {
 }
 if (!showAll && unguarded.length > shown.length) {
   console.log(`\n（ほか ${unguarded.length - shown.length} 件。全部見るには --all）`)
+}
+
+/**
+ * 既にテストがあるのに、番号が書かれていないだけのもの（T-278 の棚卸し用）。
+ *
+ * 実装のファイルには T 番号が書いてある（見出しコメントの約束）。
+ * そのファイルを取り込んでいるテストがあれば、**守りはもうある**。足りないのは番号だけ。
+ */
+function suggest() {
+  const sources = []
+  const walk = (dir) => {
+    for (const name of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, name.name)
+      if (name.isDirectory()) {
+        if (name.name !== 'test') {
+          walk(path)
+        }
+      } else if (name.name.endsWith('.ts')) {
+        sources.push(path)
+      }
+    }
+  }
+  walk(join(ROOT, 'extensions', 'nimbus', 'src'))
+
+  const testDir = join(ROOT, 'extensions', 'nimbus', 'src', 'test')
+  const tests = readdirSync(testDir)
+    .filter((name) => name.endsWith('.ts'))
+    .map((name) => ({ name, text: readFileSync(join(testDir, name), 'utf8') }))
+
+  console.log('\n## 番号を書き足せば守りになるもの（既にテストがある）\n')
+  let count = 0
+  for (const group of unguarded) {
+    const hits = new Set()
+    for (const id of group.ids) {
+      for (const source of sources) {
+        if (!readFileSync(source, 'utf8').includes(id)) {
+          continue
+        }
+        // `.../src/core/foo.ts` を取り込んでいるテストを探す
+        const module = source.slice(source.lastIndexOf('/src/') + 5).replace(/\.ts$/, '')
+        const needle = `/${module.split('/').pop()}'`
+        for (const test of tests) {
+          if (test.text.includes(needle)) {
+            hits.add(test.name)
+          }
+        }
+      }
+    }
+    if (hits.size > 0) {
+      count++
+      console.log(`- ${group.ids.join(' / ')} → ${[...hits].slice(0, 3).join(', ')}`)
+    }
+  }
+  console.log(`\n${count} 件は番号を書き足すだけで守りになる`)
+}
+
+if (args.includes('--suggest')) {
+  suggest()
 }
 
 if (strict && unguarded.length > 0) {

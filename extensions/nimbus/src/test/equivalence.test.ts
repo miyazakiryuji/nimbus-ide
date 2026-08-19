@@ -2,6 +2,8 @@
  * 移行前後の等価性確認。
  *
  * 頼み方がすべての機能なので、**外してはいけない一文**が入っているかを固定する。
+ *
+ * 守っている修正（T-274）: T-179
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

@@ -2,6 +2,8 @@
  * PR の説明文（T-220）の単体テスト。
  *
  * 機械が埋められないところ（何のための変更か）を**捏造しないこと**を押さえる。
+ *
+ * 守っている修正（T-274）: T-123
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

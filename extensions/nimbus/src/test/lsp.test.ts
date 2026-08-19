@@ -5,6 +5,8 @@
  *   - ワークスペースの外を参照させないこと
  *   - 行・桁の数え方（モデルは 1 起点、VS Code は 0 起点）を取り違えないこと
  *   - 名前だけ言われても目的のシンボルに辿り着けること
+ *
+ * 守っている修正（T-274）: T-098 / T-099 / T-100
  */
 import * as assert from 'assert';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';

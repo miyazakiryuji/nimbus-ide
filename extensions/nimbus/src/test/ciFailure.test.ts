@@ -3,6 +3,8 @@
  *
  * **走っている最中の実行を「失敗」と見ない**ことと、
  * **まだ直させない**ことを固定する。
+ *
+ * 守っている修正（T-274）: T-131
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

@@ -3,6 +3,8 @@
  *
  * **「名前が出てくる」だけで直させない**のが要件。部分一致で拾うと
  * `run` のような短い名前があらゆる文書に当たり、指摘が信用されなくなる。
+ *
+ * 守っている修正（T-274）: T-209
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

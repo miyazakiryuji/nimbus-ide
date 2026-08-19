@@ -3,6 +3,8 @@
  *
  * 要件は 2 つ。**何が変わったかを名指しすること**と、
  * 画像のように中身を読めないものを「読めたつもり」にさせないこと。
+ *
+ * 守っている修正（T-274）: T-181
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

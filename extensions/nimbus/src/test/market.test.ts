@@ -2,6 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+/** 守っている修正（T-274）: T-070 */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { describeEntry, installWarning, parseMarket, search, type MarketEntry } from '../core/market';

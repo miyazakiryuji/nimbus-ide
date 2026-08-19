@@ -3,6 +3,8 @@
  *
  * 要件は「**フォルダが 1 つなら何も聞かない**」と
  * 「入れ子のルートでは近い方が当たる」の 2 つ。
+ *
+ * 守っている修正（T-274）: T-173
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

@@ -3,6 +3,8 @@
  *
  * 運んで困るのは会話ではなく**前提のほう**。
  * 守るのは「ずれていることを黙って続けない」こと。
+ *
+ * 守っている修正（T-274）: T-085
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

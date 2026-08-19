@@ -5,6 +5,8 @@
  * 予算と効率は「数字を出す」だけの機能に見えて、0 件のときの扱いを誤ると嘘になる。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-037 / T-059
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

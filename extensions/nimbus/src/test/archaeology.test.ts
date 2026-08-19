@@ -3,6 +3,8 @@
  *
  * `git blame --line-porcelain` は、**同じコミットが続くとヘッダを省略する**。
  * そこを取りこぼすと、行ごとに作者が消えたり日付が空になったりする。
+ *
+ * 守っている修正（T-274）: T-079 / T-174
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

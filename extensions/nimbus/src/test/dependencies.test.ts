@@ -3,6 +3,8 @@
  *
  * 誤爆すると毎回関係ない行が付いて、指示が読みにくくなる。
  * **語として現れているものだけ**を拾うことを固定する。
+ *
+ * 守っている修正（T-274）: T-083
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

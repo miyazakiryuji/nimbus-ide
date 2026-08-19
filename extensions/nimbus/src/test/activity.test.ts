@@ -6,6 +6,8 @@
  * 途中で空になる形で壊れるため必ず押さえる。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-018 / T-023 / T-027
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

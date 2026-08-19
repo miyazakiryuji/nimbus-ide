@@ -3,6 +3,8 @@
  *
  * 同じディレクトリに複数のマニフェストが並ぶ構成（Flutter の `pubspec.yaml` と
  * `build.gradle`）で、同じパッケージが 2 回出ないことを固定する。
+ *
+ * 守っている修正（T-274）: T-078
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

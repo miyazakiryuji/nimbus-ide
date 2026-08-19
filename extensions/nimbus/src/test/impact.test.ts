@@ -5,6 +5,8 @@
  * だから語の切れ目の判定と、変更したファイル自身を除くところを重点的に押さえる。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-098
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

@@ -3,6 +3,8 @@
  *
  * ここで固めたいのは「拾いすぎないこと」。関係ない語まで引くと、
  * 指示より添付の方が長くなり、かえって精度が落ちる。
+ *
+ * 守っている修正（T-274）: T-175
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

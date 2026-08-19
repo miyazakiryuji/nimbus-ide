@@ -3,6 +3,8 @@
  *
  * 見たいのは「残り何箇所か」だけ。分母は始めたときの件数で固定し、
  * 途中で増えても壊れないようにする。
+ *
+ * 守っている修正（T-274）: T-110
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

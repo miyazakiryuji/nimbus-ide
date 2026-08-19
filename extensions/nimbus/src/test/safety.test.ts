@@ -5,6 +5,8 @@
  * 「危険と言わなかった」ケースを載せておかないと、規則を足すたびに何でも危険になっていく。
  *
  *   node --test extensions/nimbus/out/test
+ *
+ * 守っている修正（T-274）: T-155
  */
 import * as assert from 'assert';
 import { test } from 'node:test';

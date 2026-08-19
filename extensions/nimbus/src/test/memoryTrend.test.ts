@@ -3,6 +3,8 @@
  *
  * どちらも「**ぶれで騒がない**」ことが本体。
  * 毎回警告が出るようになった時点で、誰も読まなくなる。
+ *
+ * 守っている修正（T-274）: T-222
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
