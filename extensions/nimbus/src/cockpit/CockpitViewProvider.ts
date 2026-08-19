@@ -12,6 +12,7 @@ import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
 import { parseMarkdown, type Block } from '../core/chatMarkdown';
 import { runCodeAction } from './codeActions';
+import { isAllowedAction, type ReadyCheck } from '../core/readiness';
 import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
@@ -30,7 +31,12 @@ export type InboundMessage =
 	/** 画像を添える（T-271）。webview からはダイアログを開けないので拡張側に頼む */
 	| { type: 'attach' }
 	/** タブを押してセッションを切り替える（T-269） */
-	| { type: 'switchSession'; sessionId: string };
+	| { type: 'switchSession'; sessionId: string }
+	/**
+	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
+	 * 画面のボタンが任意のコマンドを呼べる状態にはしない。
+	 */
+	| { type: 'run'; command: string };
 
 /** 拡張 → Webview */
 export type OutboundMessage =
@@ -65,7 +71,12 @@ export type OutboundMessage =
 	 */
 	| { type: 'commands'; items: readonly SlashCommand[] }
 	/** 選ばれた画像。webview 側の添付欄へ足す（T-271） */
-	| { type: 'attachments'; items: readonly { name: string; dataUrl: string }[] };
+	| { type: 'attachments'; items: readonly { name: string; dataUrl: string }[] }
+	/**
+	 * 使い始めの「準備」（T-285）。足りないものを、詰まる場所に出すための材料。
+	 * 揃っていても送るので、`checks` は常に渡す（画面側が出し分ける）。
+	 */
+	| { type: 'readiness'; checks: readonly ReadyCheck[] };
 
 /** `/` で引ける定型 1 つ */
 export interface SlashCommand {
@@ -100,6 +111,8 @@ export interface CockpitHandlers {
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
+	/** 使い始めの「準備」（T-285）。足りないものを画面に出すために引く */
+	readiness?(): readonly ReadyCheck[];
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
 	log(message: string): void;
 }
@@ -186,6 +199,11 @@ export class CockpitViewProvider extends WebviewViewHost {
 					if (items.length > 0) {
 						this.post({ type: 'commands', items });
 					}
+					// 使い始めで迷わせないよう、開いた時点で足りないものを出す（T-285）
+					const checks = this.handlers.readiness?.();
+					if (checks) {
+						this.post({ type: 'readiness', checks });
+					}
 					break;
 				}
 				case 'send':
@@ -210,6 +228,14 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'copyText':
 					await vscode.env.clipboard.writeText(message.text);
+					break;
+				case 'run':
+					// 許していないコマンドは黙って捨てる（画面から任意のコマンドを呼ばせない）
+					if (isAllowedAction(message.command)) {
+						await vscode.commands.executeCommand(message.command);
+					} else {
+						this.handlers.log(`[cockpit] 許可していないコマンドを弾きました: ${message.command}`);
+					}
 					break;
 				case 'attach': {
 					const items = await pickImages();
@@ -238,8 +264,23 @@ export class CockpitViewProvider extends WebviewViewHost {
 		this.postMessage(message);
 	}
 
-	reveal(): void {
-		void this.view?.show?.(true);
+	/**
+	 * コックピットを前に出す。**面がまだ無ければ、作らせるところからやる**（T-286）。
+	 *
+	 * `view.show()` は**既に生成された面**しか動かせない。別のアクティビティバー
+	 * （タスク／設定／デバッグ）を見ているとコックピットの面は生成されていないので、
+	 * ここが黙って何もしないまま `isLive()` も false になり、
+	 * 承認が会話のカードではなくモーダルへ落ちていた（＝「いちいち POP が出る」の正体）。
+	 *
+	 * `focus` コマンドはコンテナごと開いて面を作るので、そこまで面倒を見る。
+	 * 呼び終わったときに面が立っていることを、呼び手が待てるように Promise を返す。
+	 */
+	async reveal(): Promise<void> {
+		if (this.isLive()) {
+			this.view?.show?.(true);
+			return;
+		}
+		await vscode.commands.executeCommand('nimbus.cockpit.focus');
 	}
 
 	protected render(webview: vscode.Webview): string {

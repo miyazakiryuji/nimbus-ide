@@ -164,6 +164,9 @@ import { buildWeeklyReview, describeWeeklyReview } from './core/weeklyReview';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
+import { buildReadiness, isReady, summaryLabel, type ReadyCheck } from './core/readiness';
+import { remoteLabel } from './core/remoteGuidance';
+import { locateClaude, openClaudeInstall } from './setupActions';
 import {
 	DebugViewProvider,
 	pickFailure,
@@ -365,7 +368,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// 許可待ちはタブの色にも出す（T-269）
 			updateSessionTabs();
 			if (pending.length > 0) {
-				cockpit.reveal();
+				void cockpit.reveal();
 			}
 			// 承認待ちのセッションはカンバン上でも「承認待ち」に見せる
 			tasks?.applyPendingApprovals(new Set(pending.map((p) => p.sessionId)));
@@ -387,7 +390,16 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// コックピットが開いていれば、モーダルで窓ごと止めずに会話の中で受ける（T-266）。
 		// 面が無い（一度も開いていない）ときだけ、今までどおりモーダルを出す —
 		// 誰も見られないところに出しても、待ち続けるだけになる
-		queueMode: () => isApprovalQueueMode() || cockpit.isLive(),
+		// 会話のカードで受けられるなら、モーダルは出さない（T-266）。
+		// 面がまだ無いときは**開かせてから**判断する — 同期で `isLive()` を見るだけだと、
+		// コックピット以外を見ている利用者に承認のたびモーダルが出る（T-286）
+		queueMode: async () => {
+			if (isApprovalQueueMode()) {
+				return true;
+			}
+			await cockpit.reveal();
+			return cockpit.isLive();
+		},
 		alwaysAllowRules: () => {
 			// 組織が認めていないルールは、設定に書いてあっても効かせない（T-212）
 			const decided = applyToAlwaysAllow(
@@ -471,6 +483,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	// 緊急停止はコマンドパレットを開く余裕が無いときに押すものなので、
 	// 動いている間だけステータスバーに出しておく（T-057）
+	// 使い始めで足りないものがあるときだけ出す（T-285）。押すと準備の面が開く
+	const setupStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 102);
+	setupStatus.command = 'nimbus.showSetup';
+	setupStatus.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+
 	const stopButton = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
 	stopButton.command = 'nimbus.stopAll';
 	stopButton.text = '$(debug-stop) 停止';
@@ -503,7 +520,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				titles: sessionTitles
 			})
 		}),
-		// `/` で引ける定型（T-268）。既にある指示のテンプレートをそのまま候補に出す
+		// 使い始めで足りないもの（T-285）。詰まる場所に出すために引かれる
+		readiness: () => currentReadiness(),
+		// `/` で引ける定型（T-271）。既にある指示のテンプレートをそのまま候補に出す
 		slashCommands: () =>
 			loadTemplates().map((template) => ({
 				name: template.name,
@@ -540,7 +559,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// Claude Code が上がって使えるものが増えたら知らせる（T-094）
 			void noticeUpgrade(context.globalState, event, {
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -550,6 +569,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			contextView.update(event);
 			skillsView.setSessionSkills(event.skills);
 			lastApiKeySource = event.apiKeySource;
+			// 課金モードが分かったので、準備の表示を更新する（T-285）
+			pushReadiness();
 		}
 		if (event.kind === 'tool-use') {
 			// 書き換える前の診断を控えておく。「そのターンで増えたぶん」を出すため（T-101）
@@ -968,7 +989,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			void vscode.window.showInformationMessage('Nimbus: スタックトレースを読み取れませんでした。');
 			return;
 		}
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(buildCrashPrompt(report));
 		log(`[crash] フレーム ${report.frames.length} 件（自分のコード ${report.ownFrames.length} 件）を渡しました`);
 	}
@@ -1077,7 +1098,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!chosen) {
 			return;
 		}
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(turnModeInstruction(chosen.mode));
 		log(`[turn] ${TURN_MODE_LABEL[chosen.mode]}`);
 	}
@@ -1198,7 +1219,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			return;
 		}
 		log(`[workflow] ${describeProgress(workflow.definition, workflow.state)}`);
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(fillStep(step, workflow.state.input));
 		workflow = { ...workflow, state: advance(workflow.state) };
 		const progress = describeProgress(workflow.definition, workflow.state);
@@ -1244,7 +1265,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (theirs === undefined) {
 			return;
 		}
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(disagreementPrompt(mine, theirs));
 	}
 
@@ -1408,7 +1429,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				return;
 			}
 		}
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(filled);
 	}
 
@@ -1522,7 +1543,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (action === OPEN && chosen.path) {
 			await vscode.window.showTextDocument(vscode.Uri.file(chosen.path));
 		} else if (action === USE) {
-			cockpit.reveal();
+			void cockpit.reveal();
 			await send(toPrompt(chosen));
 		}
 	}
@@ -1817,7 +1838,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				...(start.model ? { model: start.model } : {})
 			}
 		});
-		cockpit.reveal();
+		void cockpit.reveal();
 		void warnIfOverlapping(cwd, sessionId);
 		log(`[preset] テンプレートから開始しました（${start.permissionMode ?? 'default'}）`);
 	}
@@ -1877,7 +1898,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		const sessionId = randomUUID();
 		activeSessionId = sessionId;
 		await sessions.createSession({ cwd, resumeClaudeSessionId: chosen.sessionId, reuseSessionId: sessionId });
-		cockpit.reveal();
+		void cockpit.reveal();
 		log(`[restore] ${chosen.title ?? chosen.sessionId} を再開しました`);
 		void vscode.window.showInformationMessage(
 			`Nimbus: 「${chosen.title ?? chosen.sessionId.slice(0, 8)}」を再開しました。続きから指示できます。`
@@ -2181,7 +2202,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			resumeClaudeSessionId: record.claudeSessionId,
 			reuseSessionId: record.sessionId
 		});
-		cockpit.reveal();
+		void cockpit.reveal();
 		log(`[sessions] ${record.sessionId} を続きから開きました`);
 		void vscode.window.showInformationMessage(
 			`Nimbus: 「${record.title ?? record.sessionId.slice(0, 8)}」の続きから開きました。`
@@ -2242,7 +2263,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			);
 			return;
 		}
-		cockpit.reveal();
+		void cockpit.reveal();
 		await send(`${snapshot.text}\n\nここで何が起きているのか、原因の見当と次に見るべき場所を教えてください。`);
 		log(`[debug] 止まった場所（${snapshot.where}）をセッションへ渡しました`);
 	}
@@ -2439,6 +2460,39 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		void sidePane.follow(sessionId);
 		void refreshUsage(sessionId);
 		log(`[session] タブで ${sessionId.slice(0, 8)} に切り替えました`);
+	}
+
+	/**
+	 * いま足りていないもの（T-285）。
+	 *
+	 * 使い始めで迷わせないために、**詰まる場所（コックピット）に出す**材料を作る。
+	 * 課金モードは一度動かすまで分からないので、分かっていれば添える。
+	 */
+	function currentReadiness(): ReadyCheck[] {
+		return buildReadiness({
+			executable: resolveClaudeExecutable(),
+			remoteLabel: remoteLabel(vscode.env.remoteName),
+			hasFolder: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
+			trusted: vscode.workspace.isTrusted,
+			apiKeySource: lastApiKeySource
+		});
+	}
+
+	/** 準備をコックピットへ配り、足りなければステータスバーにも出す */
+	function pushReadiness(): void {
+		const checks = currentReadiness();
+		cockpit.post({ type: 'readiness', checks });
+		if (isReady(checks)) {
+			setupStatus.hide();
+			return;
+		}
+		// 面を開いていなくても気づけるように。押すと準備の面が開く
+		setupStatus.text = `$(warning) ${summaryLabel(checks)}`;
+		setupStatus.tooltip = checks
+			.filter((check) => check.state === 'blocked')
+			.map((check) => `${check.title}: ${check.detail}`)
+			.join('\n');
+		setupStatus.show();
 	}
 
 	function updateStatus(summary: SessionSummary | undefined): void {
@@ -2830,7 +2884,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
-		cockpit.reveal();
+		void cockpit.reveal();
 	}
 
 	// ヘルプ（ゆあ）。コックピットとは別セッションで、ツールを一切渡さない
@@ -3046,7 +3100,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (action === OPEN) {
 			await vscode.window.showTextDocument(vscode.Uri.file(chosen.path));
 		} else if (action === USE) {
-			cockpit.reveal();
+			void cockpit.reveal();
 			await send(`/${chosen.name}`);
 		}
 	}
@@ -3063,7 +3117,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// コピーしたエラー文に気づいて聞く（T-170・既定は無効）
 	const clipboardHints = new ClipboardHints({
 		send: (text) => {
-			cockpit.reveal();
+			void cockpit.reveal();
 			void send(text);
 		},
 		log
@@ -3073,7 +3127,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 「出力を選んでコピーして貼る」を通知のボタン 1 つに畳む
 	const terminals = new TerminalWatcher({
 		send: (text) => {
-			cockpit.reveal();
+			void cockpit.reveal();
 			void send(text);
 		},
 		log
@@ -3083,7 +3137,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// ターミナルの出力を読み解かせるより、名前・場所・メッセージが構造のまま渡る
 	const testRuns = new TestWatcher({
 		send: (text) => {
-			cockpit.reveal();
+			void cockpit.reveal();
 			void send(text);
 		},
 		log
@@ -3142,7 +3196,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.pluginActions', async () => {
 			const text = await pluginApi.pickAction();
 			if (text) {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			}
 		}),
@@ -3385,7 +3439,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			if (!name) {
 				return;
 			}
-			cockpit.reveal();
+			void cockpit.reveal();
 			await send(`/${name}`);
 		}),
 		// フォルダを開き直したら一覧も作り直す
@@ -3411,6 +3465,34 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			vscode.commands.executeCommand('nimbus.settings.focus')
 		),
 		// 診断は下部パネルにまとめてある
+		// 使い始めの「準備」（T-285）。場所（ステータスバー・コックピット）と
+		// 名前（コマンドパレット）の両方から辿り着けるようにする
+		// 場所を指定したり、フォルダを信頼したりしたら、その場で消えるように配り直す（T-285）
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration('nimbus.claudeCodeExecutable')) {
+				pushReadiness();
+			}
+		}),
+		vscode.workspace.onDidGrantWorkspaceTrust(() => pushReadiness()),
+		vscode.workspace.onDidChangeWorkspaceFolders(() => pushReadiness()),
+		vscode.commands.registerCommand('nimbus.showSetup', () => {
+			cockpit.reveal();
+			pushReadiness();
+		}),
+		vscode.commands.registerCommand('nimbus.locateClaude', async () => {
+			await locateClaude();
+			pushReadiness();
+		}),
+		vscode.commands.registerCommand('nimbus.openClaudeInstall', () => openClaudeInstall()),
+		vscode.commands.registerCommand('nimbus.recheckSetup', () => {
+			pushReadiness();
+			const checks = currentReadiness();
+			// 押した手応えを必ず返す。何も出ないと、探したのかどうか分からない
+			void vscode.window.showInformationMessage(
+				isReady(checks) ? 'Nimbus: 準備は揃っています。' : `Nimbus: ${summaryLabel(checks)}`
+			);
+		}),
+		setupStatus,
 		vscode.commands.registerCommand('nimbus.showDiagnostics', () =>
 			vscode.commands.executeCommand('workbench.view.extension.nimbusDiagnostics')
 		),
@@ -3438,7 +3520,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			if (!node?.failure) {
 				return;
 			}
-			cockpit.reveal();
+			void cockpit.reveal();
 			void send(failurePrompt(node.failure));
 		}),
 		debugTree,
@@ -3459,14 +3541,14 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 監視ツールの障害をセッションへ（T-142）
 		vscode.commands.registerCommand('nimbus.importMonitoredIssue', () =>
 			importMonitoredIssue((text) => {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			})
 		),
 		// ログから、まず落ちるテストを起こす（T-143）
 		vscode.commands.registerCommand('nimbus.reproduceFromLog', () =>
 			reproduceFromLog((text) => {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			})
 		),
@@ -3480,7 +3562,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// PR のレビュー指摘をセッションへ（T-116）
 		vscode.commands.registerCommand('nimbus.importPrReview', () =>
 			importPrReview((text) => {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			})
 		),
@@ -3491,7 +3573,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 差分を読む前の見取り図（T-157）
 		vscode.commands.registerCommand('nimbus.showDiffSummary', () =>
 			showDiffSummary((text) => {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			})
 		),
@@ -3552,7 +3634,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}),
 		vscode.commands.registerCommand('nimbus.assistConflicts', () =>
 			assistConflicts((text) => {
-				cockpit.reveal();
+				void cockpit.reveal();
 				void send(text);
 			})
 		),
@@ -3563,7 +3645,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				askAboutSelection(
 					{
 						send: (text) => {
-							cockpit.reveal();
+							void cockpit.reveal();
 							void send(text);
 						}
 					},
@@ -3601,7 +3683,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.reverseSpec', () =>
 			reverseSpec({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3611,7 +3693,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.exploreHistory', () =>
 			exploreHistory({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3621,7 +3703,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.investigateCi', () =>
 			investigateCi({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3631,7 +3713,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.dictateInstruction', () =>
 			dictateInstruction({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3649,7 +3731,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.importCpuProfile', () =>
 			importCpuProfile({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3659,7 +3741,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.exportSession', () =>
 			exportSession({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log,
@@ -3669,7 +3751,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.importSession', () =>
 			importSession({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log,
@@ -3685,7 +3767,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.captureSimulator', () =>
 			captureSimulator({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3694,7 +3776,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.writeFlowTest', () =>
 			writeFlowTest({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3704,7 +3786,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.compareAgentWork', () =>
 			compareAgentWork({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3714,7 +3796,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.trackMemory', () =>
 			trackMemory({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log,
@@ -3724,7 +3806,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.measureStartup', () =>
 			measureStartup({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log,
@@ -3747,7 +3829,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.trackSchemaImpact', () =>
 			trackSchemaImpact({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3757,7 +3839,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.checkApiDocs', () =>
 			checkApiDocs({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3773,7 +3855,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				instructions: () =>
 					retained.filter((event) => event.kind === 'user-text').map((event) => (event as { text: string }).text),
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3785,7 +3867,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.checkMutations', () =>
 			checkMutations({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3795,7 +3877,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.planBulkChange', () =>
 			planBulkChange({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log,
@@ -3813,7 +3895,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.projectConventions', () =>
 			showConventions({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3823,7 +3905,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.captureBehavior', () =>
 			captureBehavior({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3832,7 +3914,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.verifyEquivalence', () =>
 			verifyEquivalence({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3842,7 +3924,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.reviewSnapshots', () =>
 			reviewSnapshots({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3852,7 +3934,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.repoSummary', () =>
 			showRepoSummary({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3866,7 +3948,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			showRefactorProgress({
 				storage: context.workspaceState,
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3884,14 +3966,14 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			if (!goal) {
 				return;
 			}
-			cockpit.reveal();
+			void cockpit.reveal();
 			await send(buildFailingTestPrompt(goal));
 		}),
 		// この変更で足した行がテストされているか（T-109）
 		vscode.commands.registerCommand('nimbus.coverageDiff', () =>
 			showCoverageDiff({
 				send: (text) => {
-					cockpit.reveal();
+					void cockpit.reveal();
 					void send(text);
 				},
 				log
@@ -3931,6 +4013,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 	}
 
+	// 使い始めで足りないものは、**開いた時点で**見えていてほしい（T-285）。
+	// 送ろうとして初めて分かるのでは、そこまでの時間が丸ごと無駄になる
+	pushReadiness();
 	log('[nimbus] 拡張を有効化しました');
 
 	// 自動確認用。UI を人手で操作せずにコックピットまで到達できるようにしておく。

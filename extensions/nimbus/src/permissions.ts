@@ -106,8 +106,12 @@ export interface PermissionDeps {
 	/**
 	 * キューモード（T-010）。true のあいだはモーダルを出さず、承認キューに積んで待つ。
 	 * 並列セッションではモーダルが 1 つずつしか出ず、「誰が何で止まっているか」が見えないため。
+	 *
+	 * **非同期なのは、面をこれから作る場合があるから**（T-286）。
+	 * 「いま面が生きているか」を同期で見るだけだと、コックピットを開いていない利用者に
+	 * 承認のたびモーダルが出る。開かせてから判断する。
 	 */
-	queueMode?: () => boolean;
+	queueMode?: () => boolean | Promise<boolean>;
 	/** 保存済みの「常に許可」ルール（T-038） */
 	alwaysAllowRules?: () => readonly string[];
 	/** 「今後この種類は常に許可」を押されたときにルールを保存する（T-038） */
@@ -313,11 +317,15 @@ export function createPermissionBroker(deps: PermissionDeps): {
 			notify();
 
 			try {
-				// キューモードでなければ、今までどおりその場でモーダルを出す。
-				// await しないのは、キューからの回答（decide / denyAll）でも先に進めるようにするため
-				if (!deps.queueMode?.()) {
-					void askInModal(entry, risk, partial).then((decision) => entry.settle(decision));
-				}
+				// キューモード（＝会話のカードで受けられる）でなければ、その場でモーダルを出す。
+				// await しないのは、キューからの回答（decide / denyAll）でも先に進めるようにするため。
+				// 判断が非同期なのは、面をこれから作ることがあるため（T-286）
+				void (async () => {
+					if (await deps.queueMode?.()) {
+						return;
+					}
+					entry.settle(await askInModal(entry, risk, partial));
+				})();
 				const decision = await decided;
 
 				if (decision === 'allow-session') {
