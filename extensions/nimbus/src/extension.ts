@@ -300,6 +300,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const sessionAllowAll = new Set<string>();
 	const previewer = new ProposedEditPreviewer();
 	const contextView = new ContextViewProvider();
+	// 文脈は画面から外した（T-267）。素の `registerTreeDataProvider` のままだと、起動のたびに
+	// 「No view is registered with id: nimbus.context」が出る（実測）。他と同じくガードに通す
+	const contextTree = treeViewFor('nimbus.context', contextView);
 	const skillsView = new SkillsViewProvider();
 	const claudeMdView = new ClaudeMdViewProvider();
 	const usageView = new UsageViewProvider();
@@ -3094,7 +3097,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				log(`[permission] まとめて拒否: ${broker.denyAll()} 件`);
 			}
 		}),
-		vscode.window.registerTreeDataProvider('nimbus.context', contextView),
+		...(contextTree ? [contextTree] : []),
 		vscode.window.registerTreeDataProvider('nimbus.skills', skillsView),
 		vscode.window.registerTreeDataProvider('nimbus.claudeMd', claudeMdView),
 		vscode.window.registerTreeDataProvider('nimbus.usage', usageView),

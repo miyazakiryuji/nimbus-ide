@@ -80,6 +80,14 @@
 
 body {
 	margin: 0;
+	/*
+	 * webview のホストが `body { padding: 0 20px }` を入れてくる（`webview/browser/pre/index.html`）。
+	 * 読み物のための余白だが、**サイドバー幅 300px でこれを払うと各部品の余白と重なる**。
+	 * 実測で 20（body）＋ 8（入力の枠）＋ 6（箱）＋ 1（線）＝ 片側 35px、
+	 * 入力欄が 229px まで痩せていた（全体の 76%）。
+	 * **余白は 1 回だけ払う。** ここでは外し、面ごとに自分の分だけ持たせる。
+	 */
+	padding: 0;
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
@@ -499,8 +507,17 @@ body {
 }
 
 #input {
+	/*
+	 * 既定は 3 行ぶん（T-275）。1 行だと、ここが**主戦場**ではなく検索欄に見える。
+	 * それ以上に、2 行目を打った瞬間に下のツールバーごと動くのが高くつく —
+	 * 読んでいた場所を目で追い直すことになる（人間工学 E5「差し込みは場所を先に取る」）。
+	 * 行送りは 1 か所だけに書き、高さはそこから出す（数字が 2 か所に散らない）。
+	 */
+	--nimbus-input-lines: 3;
+	--nimbus-input-line-height: 1.45;
+
 	width: 100%;
-	min-height: 22px;
+	min-height: calc(var(--nimbus-input-line-height) * var(--nimbus-input-lines) * 1em);
 	max-height: 220px;
 	resize: none;
 	overflow-y: auto;
@@ -510,7 +527,7 @@ body {
 	color: var(--vscode-input-foreground);
 	font-family: inherit;
 	font-size: inherit;
-	line-height: 1.45;
+	line-height: var(--nimbus-input-line-height);
 	padding: 2px 2px 0;
 }
 
