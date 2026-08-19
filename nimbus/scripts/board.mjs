@@ -56,10 +56,19 @@ for (const task of inProgress) {
   console.log(`- ${task.id} ${task.title} — ${who}`)
 }
 
+// 札は Inbox にも立つ（進行中へ移す前に確保することがある）。どの段でも @ を見る
 const unclaimed = [...inbox, ...next].filter((task) => !task.done && task.claims.length === 0)
 console.log(`\n## まだ誰も取っていない（${unclaimed.length}）`)
 for (const task of unclaimed) {
   console.log(`- ${task.id} ${task.title}`)
+}
+
+const claimedElsewhere = [...inbox, ...next].filter((task) => !task.done && task.claims.length > 0)
+if (claimedElsewhere.length > 0) {
+  console.log(`\n## 板の上流で確保済み（${claimedElsewhere.length}）`)
+  for (const task of claimedElsewhere) {
+    console.log(`- ${task.id} ${task.title} — ${task.claims.map((name) => `@${name}`).join(' ')}`)
+  }
 }
 
 // 同じ ID が 2 つあると、コミットメッセージの参照先が定まらない。
