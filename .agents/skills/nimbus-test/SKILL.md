@@ -29,6 +29,11 @@ bash nimbus/scripts/test.sh gui --with-claude   # 実セッションの往復も
 ケースの足しかた: `src/test/<対象>.test.ts` に `test('日本語で意図を書く', () => { ... })`。
 VS Code に依存しないよう、対象のロジックは `src/core/` に置いてから読む。
 
+**リポジトリの道具**（板を見る `board.mjs`・ドクター）の守りは `nimbus/tests/scripts/*.test.mjs`
+（T-283 / T-284）。道具は拡張ではないので `src/test/` には置けないが、
+**壊れると「板に書いたのに見えない」のように、いちばん気づけない形で効く**ので守りは要る。
+同じ `test.sh unit` で走り、守りの一覧（`regression-guard.mjs`）からも見える。
+
 ## 2. GUI テスト
 
 `nimbus/tests/gui/` にある。Playwright で Electron ごと起動し、使い捨てのプロファイルと
