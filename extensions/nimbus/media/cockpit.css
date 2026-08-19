@@ -9,8 +9,73 @@
  * `--vscode-chat-*` はチャット用に登録されている色で、無いテーマのために既定を添えてある。
  */
 
+:root {
+	/*
+	 * 日本語を**名指しで**積む（typography T1 / T2）。
+	 *
+	 * `--vscode-font-family` も `--vscode-editor-font-family` も日本語を名指ししていないので、
+	 * 任せると字ごとに OS 依存で落ちる。落ち先が版で変わるし、英数と日本語で設計の違う
+	 * フォントが 1 行に並ぶ。
+	 *
+	 * Hiragino Sans は W0〜W9 を持つので、名指しすれば `600` が**実体**で出る
+	 * （名指ししないと合成太字になり、画数の多い漢字が小さい字でつぶれる）。
+	 */
+	--nimbus-ui-font: var(--vscode-font-family), 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+		'Noto Sans JP', 'Yu Gothic UI', Meiryo, sans-serif;
+	/*
+	 * 等幅の側。**macOS に日本語の等幅はプリインストールされていない**ので、
+	 * 日本語はプロポーショナルに落ちる。それは避けられないが、
+	 * 落ち先を名指ししておけば「どの環境でも同じように落ちる」ところまでは決められる。
+	 * 英数の桁揃えを優先し、日本語は読めればよい面（ツール出力・コード）に使う。
+	 */
+	--nimbus-mono-font: var(--vscode-editor-font-family), 'Hiragino Sans', 'Noto Sans JP', monospace;
+}
+
 * {
 	box-sizing: border-box;
+}
+
+/* セッションのタブ（T-269）。ファイルタブと同じ感覚で行き来する */
+.session-tabs {
+	display: flex;
+	overflow-x: auto;
+	gap: 1px;
+	flex: 0 0 auto;
+	background: var(--vscode-editorGroupHeader-tabsBackground);
+	border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, transparent);
+}
+
+.session-tab {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 180px;
+	padding: 4px 10px;
+	border: none;
+	border-radius: 0;
+	background: var(--vscode-tab-inactiveBackground);
+	color: var(--vscode-tab-inactiveForeground);
+	cursor: pointer;
+	font-size: 12px;
+}
+
+.session-tab.active {
+	background: var(--vscode-tab-activeBackground);
+	color: var(--vscode-tab-activeForeground);
+	/* 前面のタブは、色ではなく線で示す（色覚に依らない） */
+	box-shadow: inset 0 -1px 0 0 var(--vscode-tab-activeBorder, currentColor);
+}
+
+.session-tab-mark {
+	flex: 0 0 auto;
+	font-size: 11px;
+	line-height: 1;
+}
+
+.session-tab-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 body {
@@ -18,7 +83,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
-	font-family: var(--vscode-font-family);
+	font-family: var(--nimbus-ui-font);
 	font-size: var(--vscode-font-size);
 	color: var(--vscode-foreground);
 	background: var(--vscode-sideBar-background);
@@ -139,7 +204,7 @@ body {
 }
 
 .turn-body code.inline {
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: 0.92em;
 	background: var(--vscode-textCodeBlock-background);
 	border-radius: 3px;
@@ -197,7 +262,7 @@ body {
 	margin: 0;
 	padding: 8px 10px;
 	overflow-x: auto;
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: var(--vscode-editor-font-size, 0.92em);
 	line-height: 1.45;
 	tab-size: 4;
@@ -240,7 +305,7 @@ body {
 }
 
 .collapsible-title {
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: 0.9em;
 	white-space: nowrap;
 	overflow: hidden;
@@ -257,8 +322,10 @@ body {
 .collapsible-detail {
 	margin: 0;
 	padding: 6px 10px;
+	/* 日本語のツール出力を読ませる面。英数で決めた行間のままだと詰まって見える（typography T3） */
+	line-height: 1.55;
 	border-top: 1px solid var(--vscode-panel-border);
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: 0.9em;
 	white-space: pre-wrap;
 	word-break: break-word;
@@ -596,7 +663,7 @@ body {
 }
 
 .approval-summary {
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: 0.9em;
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;

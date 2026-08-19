@@ -92,6 +92,23 @@ VS Code のチャットと同じ作りに寄せる。作法が既に決まって
   外から何も読み込まないので、確実に出る
 - コックピットとヘルプ（ゆあ）は**同じ実装**を使い回している。片方だけ直せない
 
+### 文字の積み
+
+`--vscode-font-family` も `--vscode-editor-font-family` も**日本語を名指ししていない**ので、
+任せると字ごとに OS 依存で落ちる（typography T1）。表示言語を日本語にしてある以上、
+落ち先を決めておかないと版が変わるたびに見え方が変わる。
+
+| 用途 | 積み | なぜこの順か |
+| --- | --- | --- |
+| UI | `--vscode-font-family` → Hiragino Sans → Hiragino Kaku Gothic ProN → Noto Sans JP → Yu Gothic UI → Meiryo | 利用者のテーマ設定を先に立てる。日本語は macOS → Linux/同梱 → Windows の順で拾う |
+| 等幅 | `--vscode-editor-font-family` → Hiragino Sans → Noto Sans JP → monospace | **macOS に日本語の等幅は無い**ので、日本語はプロポーショナルに落ちる。避けられないが、名指ししておけば**どの環境でも同じように落ちる** |
+
+Hiragino Sans は W0〜W9 を持つので、名指しすれば `600`（`semiBold`）が**実体**で出る。
+名指ししないと合成太字になり、画数の多い漢字が小さい字でつぶれる（typography T2）。
+
+ツール出力を読ませる面（折りたたみの中身）は行間 `1.55`。
+英数で決めた行間をそのまま当てると、日本語は詰まって見える（typography T3）。
+
 ### 実測でわかったこと
 
 - **`display: flex` は UA の `[hidden] { display: none }` に勝つ。** 送信⇄停止を `hidden` で
