@@ -9,6 +9,8 @@ import type { NimbusEvent, SessionSummary } from '../events';
 import type { ApprovalDecision, PendingApproval } from '../permissions';
 import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
+import { parseMarkdown, type Block } from '../core/chatMarkdown';
+import { runCodeAction } from './codeActions';
 import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
@@ -19,12 +21,22 @@ export type InboundMessage =
 	| { type: 'interrupt' }
 	| { type: 'newSession' }
 	/** 会話の中で承認に答える（T-266） */
-	| { type: 'approve'; id: string; decision: ApprovalDecision };
+	| { type: 'approve'; id: string; decision: ApprovalDecision }
+	/** コードブロックの操作（T-271）。VS Code のチャットと同じ 4 つ */
+	| { type: 'code'; action: 'copy' | 'insert' | 'newFile' | 'terminal'; text: string; language: string }
+	/** 応答をそのまま写す（T-271） */
+	| { type: 'copyText'; text: string }
+	/** 画像を添える（T-271）。webview からはダイアログを開けないので拡張側に頼む */
+	| { type: 'attach' };
 
 /** 拡張 → Webview */
 export type OutboundMessage =
-	/** `assumptions` は本文から抜き出した「置かれた仮定」。本文とは別に目立たせて出す */
-	| { type: 'event'; event: NimbusEvent; assumptions?: string[] }
+	/**
+	 * `assumptions` は本文から抜き出した「置かれた仮定」。本文とは別に目立たせて出す。
+	 * `blocks` は応答を描くための塊（T-271）。**webview では解析しない** —
+	 * 文字列を組み立てて `innerHTML` に入れる余地を最初から作らないため。
+	 */
+	| { type: 'event'; event: NimbusEvent; assumptions?: string[]; blocks?: Block[] }
 	| { type: 'history'; events: NimbusEvent[]; session?: SessionSummary }
 	| { type: 'session'; session?: SessionSummary }
 	/**
@@ -32,7 +44,22 @@ export type OutboundMessage =
 	 * `activeSessionId` は「どのセッションの話か」をカードに出すため —
 	 * 並列で走らせていると、どれについて聞かれているのかが分からないと決められない。
 	 */
-	| { type: 'approvals'; pending: readonly PendingApproval[]; activeSessionId?: string };
+	| { type: 'approvals'; pending: readonly PendingApproval[]; activeSessionId?: string }
+	/**
+	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
+	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
+	 */
+	| { type: 'commands'; items: readonly SlashCommand[] }
+	/** 選ばれた画像。webview 側の添付欄へ足す（T-271） */
+	| { type: 'attachments'; items: readonly { name: string; dataUrl: string }[] };
+
+/** `/` で引ける定型 1 つ */
+export interface SlashCommand {
+	name: string;
+	detail: string;
+	/** 選んだときに入力欄へ入る本文 */
+	text: string;
+}
 
 export interface CockpitHandlers {
 	/** @param images 貼り付け・ドロップで添えた画像（T-040）。省略時の振る舞いは従来どおり */
@@ -47,6 +74,8 @@ export interface CockpitHandlers {
 	 * セッションは待ったままなのに答える場所が無くなる
 	 */
 	snapshot(): { events: NimbusEvent[]; session?: SessionSummary; approvals?: readonly PendingApproval[] };
+	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
+	slashCommands?(): readonly SlashCommand[];
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
 	log(message: string): void;
 }
@@ -62,6 +91,43 @@ const DEFAULT_OPTIONS: CockpitOptions = {
 	assistantLabel: 'Claude',
 	placeholder: 'Claude に指示を書く（Enter で送信 / Shift+Enter で改行）'
 };
+
+/** 拡張子から MIME を引く。データ URL に載せる形にするために要る */
+const IMAGE_MIME: Readonly<Record<string, string>> = {
+	png: 'image/png',
+	jpg: 'image/jpeg',
+	jpeg: 'image/jpeg',
+	gif: 'image/gif',
+	webp: 'image/webp'
+};
+
+/**
+ * 画像を選んでもらい、データ URL にして返す（T-271）。
+ *
+ * webview からはファイルダイアログを開けないので、ここで開く。
+ * 貼り付け・ドロップだけだと、**手元にファイルがある場合に経路が無い**。
+ */
+async function pickImages(): Promise<{ name: string; dataUrl: string }[]> {
+	const picked = await vscode.window.showOpenDialog({
+		canSelectMany: true,
+		openLabel: '添える',
+		filters: { 画像: Object.keys(IMAGE_MIME) }
+	});
+	if (!picked) {
+		return [];
+	}
+	const items: { name: string; dataUrl: string }[] = [];
+	for (const uri of picked) {
+		const name = uri.path.split('/').pop() ?? 'image';
+		const mime = IMAGE_MIME[name.split('.').pop()?.toLowerCase() ?? ''];
+		if (!mime) {
+			continue;
+		}
+		const bytes = await vscode.workspace.fs.readFile(uri);
+		items.push({ name, dataUrl: `data:${mime};base64,${Buffer.from(bytes).toString('base64')}` });
+	}
+	return items;
+}
 
 export class CockpitViewProvider extends WebviewViewHost {
 	public static readonly viewType = 'nimbus.cockpit';
@@ -86,6 +152,10 @@ export class CockpitViewProvider extends WebviewViewHost {
 					if (approvals && approvals.length > 0) {
 						this.post({ type: 'approvals', pending: approvals });
 					}
+					const items = this.handlers.slashCommands?.() ?? [];
+					if (items.length > 0) {
+						this.post({ type: 'commands', items });
+					}
 					break;
 				}
 				case 'send':
@@ -100,18 +170,37 @@ export class CockpitViewProvider extends WebviewViewHost {
 				case 'approve':
 					this.handlers.onApprove?.(message.id, message.decision);
 					break;
+				case 'code':
+					await runCodeAction(message.action, message.text, message.language, (text) =>
+						this.handlers.log(`[cockpit] ${text}`)
+					);
+					break;
+				case 'copyText':
+					await vscode.env.clipboard.writeText(message.text);
+					break;
+				case 'attach': {
+					const items = await pickImages();
+					if (items.length > 0) {
+						this.post({ type: 'attachments', items });
+					}
+					break;
+				}
 			}
 		});
 	}
 
 	post(message: OutboundMessage): void {
-		// エージェントが置いた仮定は、本文に紛れると読み飛ばされる。抜き出して別に渡す（T-186）
 		if (message.type === 'event' && message.event.kind === 'assistant-text') {
+			// 応答は Markdown で返ってくる。描くための塊にしてから渡す（T-271）
+			const blocks = parseMarkdown(message.event.text);
+			// エージェントが置いた仮定は、本文に紛れると読み飛ばされる。抜き出して別に渡す（T-186）
 			const assumptions = extractAssumptions(message.event.text);
-			if (assumptions.length > 0) {
-				this.postMessage({ ...message, assumptions });
-				return;
-			}
+			this.postMessage({
+				...message,
+				blocks,
+				...(assumptions.length > 0 ? { assumptions } : {})
+			});
+			return;
 		}
 		this.postMessage(message);
 	}
@@ -127,18 +216,28 @@ export class CockpitViewProvider extends WebviewViewHost {
 			stylesheet: this.mediaUri(webview, 'cockpit.css'),
 			script: this.mediaUri(webview, 'cockpit.js'),
 			bodyAttributes: `data-assistant="${this.options.assistantLabel}"`,
-			body: `	<header id="status" class="status">
-		<span id="statusText">セッション未開始</span>
-		<span id="statusMeta" class="meta"></span>
-	</header>
-	<main id="log" class="log" aria-live="polite"></main>
-	<footer class="composer">
-		<textarea id="input" rows="3" placeholder="${this.options.placeholder}"></textarea>
-		<div class="actions">
-			<button id="interrupt" class="secondary" disabled>中断</button>
-			<button id="send">送信</button>
+			// VS Code のチャットと同じ作り（T-271）— 会話の列と、丸めた 1 枚の入力欄。
+			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
+			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
+			body: `	<main id="log" class="chat-list" aria-live="polite"></main>
+	<div class="chat-input-area">
+		<div id="approvals" class="approvals" hidden></div>
+		<div id="composer" class="chat-input-container">
+			<div id="attachments" class="chat-attachments" hidden></div>
+			<textarea id="input" rows="1" placeholder="${this.options.placeholder}"></textarea>
+			<div class="chat-input-toolbars">
+				<div class="chat-input-status">
+					<span id="statusText">セッション未開始</span>
+					<span id="statusMeta" class="meta"></span>
+				</div>
+				<div class="chat-input-actions">
+					<button id="attach" class="icon-button" type="button" title="画像を添える"></button>
+					<button id="interrupt" class="icon-button stop" type="button" title="中断" hidden></button>
+					<button id="send" class="icon-button send" type="button" title="送信（Enter）"></button>
+				</div>
+			</div>
 		</div>
-	</footer>`
+	</div>`
 		});
 	}
 }

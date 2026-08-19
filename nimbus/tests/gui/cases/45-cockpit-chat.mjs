@@ -1,0 +1,90 @@
+/**
+ * コックピットを VS Code のチャットの作りに寄せた（T-271）ことの確認。
+ *
+ * **存在確認で止めない。** 候補や定型は「出ている」だけでは意味がなく、
+ * 押した結果が入力欄に入って初めて機能になる（T-244）。ここでは実際に押す。
+ *
+ * 応答の Markdown・コードブロックの描画は**実セッションが要る**ので、
+ * ここでは扱わない ── 塊に分けるところは `chatMarkdown` のモジュールテスト（9 件）が見ている。
+ */
+import { openNimbusSidebar, webviewText } from '../helpers.mjs';
+
+/** コックピットの webview フレームを掴む */
+async function cockpitFrame(page, { attempts = 20 } = {}) {
+	for (let i = 0; i < attempts; i++) {
+		for (const frame of page.frames()) {
+			try {
+				if (await frame.$('#composer')) {
+					return frame;
+				}
+			} catch {
+				// フレームが入れ替わっている最中。次で拾う
+			}
+		}
+		await page.waitForTimeout(500);
+	}
+	return undefined;
+}
+
+export default {
+	name: 'コックピットが VS Code のチャットの作りになり、候補と定型が実際に入力欄へ入る',
+	async run(page, ctx) {
+		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
+
+		// 1. 空のときの案内が出ている
+		const welcome = await webviewText(page, ['に頼む', 'Enter で送ります'], { attempts: 20 });
+		ctx.expect(Boolean(welcome), '空のときの案内が出ていない（コックピットが描けていないかもしれない）');
+
+		const frame = await cockpitFrame(page);
+		ctx.expect(frame !== undefined, 'コックピットの入力欄まわり（#composer）が見つからない');
+
+		// 2. VS Code のチャットと同じで、入力欄とツールバーが 1 枚の箱に同居している
+		const shape = await frame.evaluate(() => {
+			const box = document.querySelector('.chat-input-container');
+			return {
+				hasBox: Boolean(box),
+				hasInput: Boolean(box && box.querySelector('#input')),
+				hasToolbar: Boolean(box && box.querySelector('.chat-input-toolbars')),
+				hasSend: Boolean(box && box.querySelector('#send'))
+			};
+		});
+		ctx.expect(
+			shape.hasBox && shape.hasInput && shape.hasToolbar && shape.hasSend,
+			`入力欄が 1 枚の箱になっていない: ${JSON.stringify(shape)}`
+		);
+
+		// 3. 案内の候補を**実際に押す**と、入力欄に入る
+		const suggestion = await frame.$('.suggestion');
+		ctx.expect(suggestion !== null, '空のときの候補が出ていない');
+		const suggestionText = await suggestion.evaluate((el) => el.textContent ?? '');
+		await suggestion.click();
+		await page.waitForTimeout(400);
+		const afterSuggestion = await frame.$eval('#input', (el) => el.value);
+		ctx.expect(
+			afterSuggestion === suggestionText && afterSuggestion.length > 0,
+			`候補を押しても入力欄に入らない: 入力欄="${afterSuggestion}" 候補="${suggestionText}"`
+		);
+
+		// 4. `/` を打つと定型の候補が出て、**選ぶと**入力欄に入る
+		await frame.$eval('#input', (el) => {
+			el.value = '';
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		const input = await frame.$('#input');
+		await input.click();
+		await input.type('/', { delay: 20 });
+		await page.waitForTimeout(600);
+
+		const slash = await frame.$('.slash-item');
+		ctx.expect(slash !== null, '`/` を打っても定型の候補が出ない');
+		await slash.click();
+		await page.waitForTimeout(400);
+		const afterSlash = await frame.$eval('#input', (el) => el.value);
+		ctx.expect(
+			afterSlash.length > 0 && !afterSlash.startsWith('/'),
+			`定型を選んでも入力欄に入らない: "${afterSlash.slice(0, 80)}"`
+		);
+
+		await ctx.shot('cockpit-chat');
+	}
+};

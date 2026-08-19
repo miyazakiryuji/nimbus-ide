@@ -452,6 +452,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// 面を畳んで開き直しても、答え待ちのカードが消えないように（T-266）
 			approvals: broker.pending()
 		}),
+		// `/` で引ける定型（T-271）。既にある指示のテンプレートをそのまま候補に出す
+		slashCommands: () =>
+			loadTemplates().map((template) => ({
+				name: template.name,
+				detail: template.description ?? '',
+				text: template.body
+			})),
 		log
 	});
 
