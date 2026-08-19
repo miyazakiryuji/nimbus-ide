@@ -603,6 +603,18 @@
         "icon": "$(comment-discussion)"
       },
       {
+        "command": "nimbus.showSessionSide",
+        "title": "%command.showSessionSide%",
+        "category": "Nimbus",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "nimbus.fullscreenCockpit",
+        "title": "%command.fullscreenCockpit%",
+        "category": "Nimbus",
+        "icon": "$(screen-full)"
+      },
+      {
         "command": "nimbus.openCockpitTab",
         "title": "%command.openCockpitTab%",
         "category": "Nimbus",

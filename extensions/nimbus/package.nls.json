@@ -90,6 +90,8 @@
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
   "command.sendDebugStop": "止まった場所をセッションへ渡す",
+  "command.showSessionSide": "右半分に出すものを選ぶ（コマンドの出力 / 変更差分）",
+  "command.fullscreenCockpit": "コックピットを全画面にする（もう一度で戻す）",
   "command.openCockpitTab": "コックピットをタブで開く",
   "command.openBoardTab": "タスク板をタブで開く",
   "command.showTaskProgress": "タスクの進捗を見る",

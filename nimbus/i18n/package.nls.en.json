@@ -90,6 +90,8 @@
   "command.showSessions": "Show Running Sessions",
   "command.checkTasks": "Check Tasks for Stalls",
   "command.sendDebugStop": "Send the Paused Location to the Session",
+  "command.showSessionSide": "Choose What to Show on the Right (Command Output / Diff)",
+  "command.fullscreenCockpit": "Toggle Full-Screen Cockpit",
   "command.openCockpitTab": "Open Cockpit in a Tab",
   "command.openBoardTab": "Open Task Board in a Tab",
   "command.showTaskProgress": "Show Task Progress",

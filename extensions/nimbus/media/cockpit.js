@@ -17,6 +17,7 @@
 	const attachButton = /** @type {HTMLButtonElement} */ (document.getElementById('attach'));
 	const attachmentsBar = /** @type {HTMLElement} */ (document.getElementById('attachments'));
 	const approvalsArea = /** @type {HTMLElement} */ (document.getElementById('approvals'));
+	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
 	const statusText = /** @type {HTMLElement} */ (document.getElementById('statusText'));
 	const statusMeta = /** @type {HTMLElement} */ (document.getElementById('statusMeta'));
 
@@ -766,8 +767,53 @@
 
 	// ───────────────────────── 拡張との往復 ─────────────────────────
 
+	/**
+	 * セッションのタブ（T-269）。ファイルタブと同じ感覚で行き来できるようにする。
+	 *
+	 * 状態は**色と記号の両方**で出す。色だけだと、色覚の違いとモノクロのスクリーンショットで潰れる。
+	 * 並びは拡張側で始めた順に固定してあるので、ここでは並べ替えない
+	 * （押そうとした瞬間に動くと押し間違える）。
+	 */
+	function renderSessionTabs(tabs) {
+		sessionTabs.textContent = '';
+		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
+		sessionTabs.hidden = !tabs || tabs.length < 2;
+		if (sessionTabs.hidden) {
+			return;
+		}
+		for (const tab of tabs) {
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.className = `session-tab${tab.active ? ' active' : ''}`;
+			button.title = `${tab.title} — ${tab.label}`;
+			button.setAttribute('aria-current', tab.active ? 'true' : 'false');
+
+			const mark = document.createElement('span');
+			mark.className = 'session-tab-mark';
+			mark.textContent = tab.symbol;
+			mark.style.color = `var(--vscode-${tab.color})`;
+			button.appendChild(mark);
+
+			const name = document.createElement('span');
+			name.className = 'session-tab-name';
+			name.textContent = tab.title;
+			button.appendChild(name);
+
+			button.addEventListener('click', () => {
+				if (!tab.active) {
+					vscode.postMessage({ type: 'switchSession', sessionId: tab.sessionId });
+				}
+			});
+			sessionTabs.appendChild(button);
+		}
+	}
+
 	window.addEventListener('message', (e) => {
 		const message = e.data;
+		if (message.type === 'sessions') {
+			renderSessionTabs(message.tabs ?? []);
+			return;
+		}
 		if (message.type === 'history') {
 			log.textContent = '';
 			toolRows.clear();

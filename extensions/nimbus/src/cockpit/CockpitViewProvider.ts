@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
 import type { ApprovalDecision, PendingApproval } from '../permissions';
+import type { SessionTab } from '../core/sessionTabs';
 import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
 import { parseMarkdown, type Block } from '../core/chatMarkdown';
@@ -27,7 +28,9 @@ export type InboundMessage =
 	/** 応答をそのまま写す（T-271） */
 	| { type: 'copyText'; text: string }
 	/** 画像を添える（T-271）。webview からはダイアログを開けないので拡張側に頼む */
-	| { type: 'attach' };
+	| { type: 'attach' }
+	/** タブを押してセッションを切り替える（T-269） */
+	| { type: 'switchSession'; sessionId: string };
 
 /** 拡張 → Webview */
 export type OutboundMessage =
@@ -45,6 +48,11 @@ export type OutboundMessage =
 	 * 並列で走らせていると、どれについて聞かれているのかが分からないと決められない。
 	 */
 	| { type: 'approvals'; pending: readonly PendingApproval[]; activeSessionId?: string }
+	/**
+	 * セッションのタブ（T-269）。**並びは始めた順で固定**し、状態は色と記号の両方で出す。
+	 * 色だけだと、色覚の違いとモノクロのスクリーンショットで潰れる。
+	 */
+	| { type: 'sessions'; tabs: readonly SessionTab[] }
 	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
@@ -68,12 +76,20 @@ export interface CockpitHandlers {
 	onNewSession(): void | Promise<void>;
 	/** 会話の中で承認に答えたとき（T-266） */
 	onApprove?(id: string, decision: ApprovalDecision): void;
+	/** タブでセッションを切り替えたとき（T-269） */
+	onSwitchSession?(sessionId: string): void;
 	/**
 	 * Webview が（再）生成されたときに現在の状態を復元するための材料。
 	 * **答え待ちの承認も含める**（T-266）— 面を畳んで開き直したときにカードが消えると、
 	 * セッションは待ったままなのに答える場所が無くなる
 	 */
-	snapshot(): { events: NimbusEvent[]; session?: SessionSummary; approvals?: readonly PendingApproval[] };
+	snapshot(): {
+		events: NimbusEvent[];
+		session?: SessionSummary;
+		approvals?: readonly PendingApproval[];
+		/** セッションのタブ（T-269）。面を作り直したときに列ごと戻す */
+		tabs?: readonly SessionTab[];
+	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
@@ -146,11 +162,14 @@ export class CockpitViewProvider extends WebviewViewHost {
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
-					const { events, session, approvals } = this.handlers.snapshot();
+					const { events, session, approvals, tabs } = this.handlers.snapshot();
 					this.handlers.log(`[cockpit] Webview から ready（復元イベント ${events.length} 件）`);
 					this.post({ type: 'history', events, session });
 					if (approvals && approvals.length > 0) {
 						this.post({ type: 'approvals', pending: approvals });
+					}
+					if (tabs && tabs.length > 0) {
+						this.post({ type: 'sessions', tabs });
 					}
 					const items = this.handlers.slashCommands?.() ?? [];
 					if (items.length > 0) {
@@ -169,6 +188,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'approve':
 					this.handlers.onApprove?.(message.id, message.decision);
+					break;
+				case 'switchSession':
+					this.handlers.onSwitchSession?.(message.sessionId);
 					break;
 				case 'code':
 					await runCodeAction(message.action, message.text, message.language, (text) =>
@@ -219,7 +241,8 @@ export class CockpitViewProvider extends WebviewViewHost {
 			// VS Code のチャットと同じ作り（T-271）— 会話の列と、丸めた 1 枚の入力欄。
 			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
 			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
-			body: `	<main id="log" class="chat-list" aria-live="polite"></main>
+			body: `	<nav id="sessionTabs" class="session-tabs" hidden></nav>
+	<main id="log" class="chat-list" aria-live="polite"></main>
 	<div class="chat-input-area">
 		<div id="approvals" class="approvals" hidden></div>
 		<div id="composer" class="chat-input-container">

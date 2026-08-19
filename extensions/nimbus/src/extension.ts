@@ -98,6 +98,8 @@ import { describeSessionConflict, SessionFilesTracker } from './core/sessionFile
 import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
+import { buildTabs } from './core/sessionTabs';
+import { SessionSidePane, type SideMode } from './sessionSide';
 import { stoppedSnapshot } from './debugTools';
 import {
 	admit,
@@ -258,6 +260,12 @@ const WRITE_TOOL_NAMES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 /** 表示復元用に保持するイベント数の上限（長い会話でメモリを食い潰さないため） */
 const MAX_RETAINED_EVENTS = 2000;
 
+/** タブで戻ったときに出す、セッション 1 本あたりの控え（T-269） */
+const MAX_ARCHIVED_EVENTS = 500;
+
+/** 控えておくセッションの数（T-269）。古いものから落とす */
+const MAX_ARCHIVED_SESSIONS = 12;
+
 export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const output = vscode.window.createOutputChannel('Nimbus', { log: true });
 	const sanitizer = createSanitizer();
@@ -347,6 +355,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// 会話の中にカードで出す（T-266）。ここが本命の入口で、
 			// コックピットが無いときだけ今までどおりモーダルへ落ちる
 			cockpit.post({ type: 'approvals', pending, activeSessionId });
+			// 許可待ちはタブの色にも出す（T-269）
+			updateSessionTabs();
 			if (pending.length > 0) {
 				cockpit.reveal();
 			}
@@ -421,6 +431,28 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	/** 直近の init。探す対象（コマンド・サブエージェント・MCP ツール）の出どころ（T-117） */
 	let lastInit: SessionInitEvent | undefined;
 	const retained: NimbusEvent[] = [];
+	/**
+	 * セッションごとの控え（T-269）。`retained` は**前面のセッション**のぶんという約束で、
+	 * 20 か所以上がそれを前提に読んでいる。タブで戻ったときに会話が空にならないよう、
+	 * 全セッションぶんをここへ控え、切り替えのときに `retained` へ移し替える。
+	 */
+	const archived = new Map<string, NimbusEvent[]>();
+	/** タブに出す名前（最初に頼んだこと）。T-269 */
+	const sessionTitles = new Map<string, string>();
+	/** 直前に送ったタブの列。変わったときだけ送る */
+	let lastTabsSignature = '';
+	/** 全画面（T-269）。戻すときにサイドバーを開き直すために覚えておく */
+	let cockpitFullscreen = false;
+	/**
+	 * 全画面の右半分（T-270）。端末も差分もワークベンチの実物を置く。
+	 * 控え（`archived`）をそのまま材料にするので、タブで切り替えても同じ見かたができる
+	 */
+	const sidePane = new SessionSidePane({
+		events: (sessionId) => archived.get(sessionId) ?? [],
+		cwdOf: (sessionId) => sessions.get(sessionId)?.cwd,
+		titleOf: (sessionId) => sessionTitles.get(sessionId) ?? sessionId.slice(0, 8),
+		log
+	});
 
 	const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
 	status.command = 'nimbus.showLog';
@@ -440,6 +472,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		onSend: (text, images) => void send(text, images),
 		onInterrupt: () => void interrupt(),
 		onNewSession: () => void newSession(),
+		// タブでセッションを切り替える（T-269）
+		onSwitchSession: (sessionId) => switchSession(sessionId),
 		// 会話の中で承認に答える（T-266）。読んでいる場所と決める場所を同じにする
 		onApprove: (id, decision) => {
 			if (!broker.decide(id, decision)) {
@@ -450,9 +484,15 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			events: retained,
 			session: activeSessionId ? sessions.get(activeSessionId) : undefined,
 			// 面を畳んで開き直しても、答え待ちのカードが消えないように（T-266）
-			approvals: broker.pending()
+			approvals: broker.pending(),
+			// タブの列も戻す（T-269）
+			tabs: buildTabs(tabbableSessions(), {
+				activeSessionId,
+				pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
+				titles: sessionTitles
+			})
 		}),
-		// `/` で引ける定型（T-271）。既にある指示のテンプレートをそのまま候補に出す
+		// `/` で引ける定型（T-268）。既にある指示のテンプレートをそのまま候補に出す
 		slashCommands: () =>
 			loadTemplates().map((template) => ({
 				name: template.name,
@@ -468,6 +508,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 台帳も全セッションぶん更新する（T-247）。下の絞り込みより後ろに置くと、
 		// 板から起こしたセッション（＝いま前面で見ていないもの）が台帳に残らない
 		recordSession(event);
+		// タブで戻れるように、前面でないセッションのぶんも控える（T-269）
+		archiveEvent(event);
+		updateSessionTabs();
+		// 右半分に出している端末へ、動いたコマンドをそのまま流す（T-270）
+		sidePane.append(event);
 		if (event.sessionId === helpSessionId) {
 			helpEvents.push(event);
 			help.post({ type: 'event', event });
@@ -2231,6 +2276,134 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		await vscode.window.showTextDocument(document, { preview: false });
 	}
 
+	/**
+	 * セッションごとに控える（T-269）。
+	 * 1 セッションあたりの本数と、覚えておくセッション数の両方を絞る — 並列で長く回すと、
+	 * 控えだけでメモリを食い潰しかねない。
+	 */
+	function archiveEvent(event: NimbusEvent): void {
+		if (event.sessionId === helpSessionId) {
+			return;
+		}
+		if (event.kind === 'user-text' && !sessionTitles.has(event.sessionId)) {
+			sessionTitles.set(event.sessionId, oneLine(event.text).slice(0, 120));
+		}
+		const kept = archived.get(event.sessionId) ?? [];
+		kept.push(event);
+		if (kept.length > MAX_ARCHIVED_EVENTS) {
+			kept.splice(0, kept.length - MAX_ARCHIVED_EVENTS);
+		}
+		archived.set(event.sessionId, kept);
+		while (archived.size > MAX_ARCHIVED_SESSIONS) {
+			// 入れた順に古いものから落とす。ただし**いま出ているものは落とさない**
+			const oldest = [...archived.keys()].find((id) => id !== activeSessionId);
+			if (!oldest) {
+				break;
+			}
+			archived.delete(oldest);
+			sessionTitles.delete(oldest);
+		}
+	}
+
+	/**
+	 * コックピットを全画面にする（T-269）。
+	 *
+	 * タブで開いたうえで、サイドバー・パネル・補助バーを畳んで**会話だけ**にする。
+	 * 要は「元に戻せること」— 戻せない全画面は、使う前に躊躇する。もう一度呼べば戻す。
+	 * アクティビティバーは残す（帰り道が消えると、戻りかたを探すことになる）。
+	 */
+	async function toggleFullscreenCockpit(): Promise<void> {
+		if (cockpitFullscreen) {
+			cockpitFullscreen = false;
+			void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', false);
+			await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+			log('[cockpit] 全画面をやめました');
+			return;
+		}
+		cockpit.openInEditor('nimbus.cockpitTab', 'Nimbus コックピット');
+		for (const command of [
+			'workbench.action.closeSidebar',
+			'workbench.action.closePanel',
+			'workbench.action.closeAuxiliaryBar'
+		]) {
+			// 既に閉じているものは何も起きない。閉じられなくても全画面自体は成立させる
+			await vscode.commands.executeCommand(command).then(undefined, () => undefined);
+		}
+		cockpitFullscreen = true;
+		void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', true);
+		log('[cockpit] 全画面にしました');
+	}
+
+	/**
+	 * 右半分に何を出すかを選ぶ（T-270）。
+	 * **どちらか 1 つ**にするのは、2 つ並べると会話が細って読めなくなるため。
+	 */
+	async function chooseSessionSide(): Promise<void> {
+		if (!activeSessionId) {
+			void vscode.window.showInformationMessage('Nimbus: セッションが始まっていません。');
+			return;
+		}
+		const items: { label: string; description: string; mode: SideMode }[] = [
+			{ label: '$(terminal) コマンドの出力', description: 'このセッションが動かしたコマンドの写し', mode: 'terminal' },
+			{ label: '$(diff) 変更差分', description: 'このセッションが書いたファイルを HEAD と比べる', mode: 'diff' },
+			{ label: '$(close) 閉じる', description: '右半分を畳む', mode: 'off' }
+		];
+		const chosen = await vscode.window.showQuickPick(items, {
+			title: '右半分に出すもの',
+			placeHolder: '会話は左のまま。右にワークベンチの実物を置きます'
+		});
+		if (chosen) {
+			await sidePane.show(chosen.mode, activeSessionId);
+		}
+	}
+
+	/**
+	 * タブに出すセッション（T-269）。
+	 * **ゆあ（使い方に答えるだけのセッション）は出さない** — 切り替える先ではないし、
+	 * 会話の本数に数えられると「並列で何本走っているか」が狂う。
+	 */
+	function tabbableSessions(): SessionSummary[] {
+		return sessions.list().filter((session) => session.sessionId !== helpSessionId);
+	}
+
+	/** タブの列を作って送る（T-269）。中身が変わったときだけ送る */
+	function updateSessionTabs(): void {
+		const tabs = buildTabs(tabbableSessions(), {
+			activeSessionId,
+			pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
+			titles: sessionTitles
+		});
+		const signature = JSON.stringify(tabs);
+		if (signature === lastTabsSignature) {
+			return;
+		}
+		lastTabsSignature = signature;
+		cockpit.post({ type: 'sessions', tabs });
+	}
+
+	/**
+	 * タブでセッションを切り替える（T-269）。
+	 *
+	 * `retained` は「前面のセッションのぶん」という約束なので、控えから入れ替える。
+	 * 控えは全セッションぶん貯めてあるので、戻っても会話が空にならない。
+	 */
+	function switchSession(sessionId: string): void {
+		const summary = sessions.get(sessionId);
+		if (!summary || sessionId === activeSessionId) {
+			return;
+		}
+		activeSessionId = sessionId;
+		retained.length = 0;
+		retained.push(...(archived.get(sessionId) ?? []));
+		cockpit.post({ type: 'history', events: retained, session: summary });
+		timelineView.update(retained);
+		updateStatus(summary);
+		updateSessionTabs();
+		void sidePane.follow(sessionId);
+		void refreshUsage(sessionId);
+		log(`[session] タブで ${sessionId.slice(0, 8)} に切り替えました`);
+	}
+
 	function updateStatus(summary: SessionSummary | undefined): void {
 		// 承認待ちは最優先で見せる。ここで止まっていることに気づけないのが一番困る
 		const waiting = pendingApprovals > 0 ? `$(shield) 承認待ち ${pendingApprovals} · ` : '';
@@ -3032,6 +3205,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// 右半分に「いま何が起きているか」を出す（T-270）
+		vscode.commands.registerCommand('nimbus.showSessionSide', () => chooseSessionSide()),
+		sidePane,
+		// 会話だけにする（T-269）。もう一度押せば戻る
+		vscode.commands.registerCommand('nimbus.fullscreenCockpit', () => toggleFullscreenCockpit()),
 		// サイドバーの幅では狭い面を、エディタタブで広く使う（T-258）。
 		// 中身の持ち主は拡張ホスト側のままなので、サイドバーと同時に開いても食い違わない
 		vscode.commands.registerCommand('nimbus.openCockpitTab', () =>
