@@ -85,6 +85,16 @@ export default {
 			`定型を選んでも入力欄に入らない: "${afterSlash.slice(0, 80)}"`
 		);
 
+		// 枠の残りの行（T-282）。**セッションが無いときは空欄を置かず、行ごと消えている**こと
+		const quota = await frame.$eval('#quota', (el) => ({
+			hidden: el.hidden,
+			text: (el.textContent ?? '').trim()
+		}));
+		ctx.expect(
+			quota.hidden && quota.text === '',
+			`枠の残りの行が、出すものが無いのに残っている: ${JSON.stringify(quota)}`
+		);
+
 		await ctx.shot('cockpit-chat');
 	}
 };

@@ -54,6 +54,11 @@ export type OutboundMessage =
 	 */
 	| { type: 'sessions'; tabs: readonly SessionTab[] }
 	/**
+	 * 枠の残り（T-282）。入力欄の下に 1 行だけ出す。
+	 * `text` が無いときは「出すものが無い」— 行ごと消す（空欄を置かない）。
+	 */
+	| { type: 'quota'; text?: string }
+	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
 	 */
@@ -89,6 +94,8 @@ export interface CockpitHandlers {
 		approvals?: readonly PendingApproval[];
 		/** セッションのタブ（T-269）。面を作り直したときに列ごと戻す */
 		tabs?: readonly SessionTab[];
+		/** 枠の残りの 1 行（T-282） */
+		quota?: string;
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
@@ -162,7 +169,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
-					const { events, session, approvals, tabs } = this.handlers.snapshot();
+					const { events, session, approvals, tabs, quota } = this.handlers.snapshot();
 					this.handlers.log(`[cockpit] Webview から ready（復元イベント ${events.length} 件）`);
 					this.post({ type: 'history', events, session });
 					if (approvals && approvals.length > 0) {
@@ -170,6 +177,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 					}
 					if (tabs && tabs.length > 0) {
 						this.post({ type: 'sessions', tabs });
+					}
+					if (quota) {
+						this.post({ type: 'quota', text: quota });
 					}
 					const items = this.handlers.slashCommands?.() ?? [];
 					if (items.length > 0) {
@@ -245,6 +255,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 	<main id="log" class="chat-list" aria-live="polite"></main>
 	<div class="chat-input-area">
 		<div id="approvals" class="approvals" hidden></div>
+		<div id="quota" class="chat-quota" hidden></div>
 		<div id="composer" class="chat-input-container">
 			<div id="attachments" class="chat-attachments" hidden></div>
 			<textarea id="input" rows="1" placeholder="${this.options.placeholder}"></textarea>

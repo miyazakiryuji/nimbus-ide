@@ -662,6 +662,20 @@ body {
 
 /* ───────────────────────── 承認カード（T-266） ───────────────────────── */
 
+/* 枠の残り（T-282）。視線がいちばん通る場所なので、静かな格の 1 行に収める */
+.chat-quota {
+	padding: 2px 2px 4px;
+	font-size: var(--nimbus-label2);
+	color: var(--vscode-descriptionForeground);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.chat-quota[hidden] {
+	display: none;
+}
+
 .approvals {
 	display: flex;
 	flex-direction: column;

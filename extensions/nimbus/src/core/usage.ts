@@ -126,6 +126,33 @@ export function toGauges(limits: RateLimitWindows | null | undefined, now: numbe
 	].filter((gauge): gauge is Gauge => gauge !== undefined);
 }
 
+/**
+ * 入力欄の下に出す 1 行（T-282）。
+ *
+ * **1 行に収める。** ここは視線がいちばん通る場所なので、何行も置くと会話が押し出される。
+ * 出すのは「あとどれだけ使えるか」と「いつ戻るか」だけ。内訳（Opus / Sonnet / アプリ経由）と
+ * 費用は使用量ビューに残す。
+ *
+ * 枠の無い環境（API キー / Bedrock / Vertex）では `rate_limits` が null で返る。
+ * そのときは **undefined を返して行ごと消す** — 空欄を置くと「取れていない」のか
+ * 「枠が無い」のか分からない。
+ */
+export function quotaLine(limits: RateLimitWindows | null | undefined, now: number = Date.now()): string | undefined {
+	const parts: string[] = [];
+	for (const [label, window] of [
+		['5 時間', limits?.five_hour],
+		['週', limits?.seven_day]
+	] as const) {
+		if (!window || window.utilization === null || window.utilization === undefined) {
+			continue;
+		}
+		const left = Math.max(0, Math.round(100 - window.utilization));
+		const reset = formatReset(window.resets_at, now);
+		parts.push(`${label} 残り ${left}%${reset ? `（${reset}）` : ''}`);
+	}
+	return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
 /** 文脈の使用量（T-020）。maxTokens が 0 のときは割合を出さない */
 export function contextGauge(totalTokens: number, maxTokens: number): Gauge {
 	const percent = maxTokens > 0 ? (totalTokens / maxTokens) * 100 : undefined;

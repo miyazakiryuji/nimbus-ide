@@ -18,6 +18,7 @@
 	const attachmentsBar = /** @type {HTMLElement} */ (document.getElementById('attachments'));
 	const approvalsArea = /** @type {HTMLElement} */ (document.getElementById('approvals'));
 	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
+	const quotaLine = /** @type {HTMLElement} */ (document.getElementById('quota'));
 	const statusText = /** @type {HTMLElement} */ (document.getElementById('statusText'));
 	const statusMeta = /** @type {HTMLElement} */ (document.getElementById('statusMeta'));
 
@@ -810,6 +811,12 @@
 
 	window.addEventListener('message', (e) => {
 		const message = e.data;
+		if (message.type === 'quota') {
+			// 枠が無い環境・取れなかったときは行ごと消す（空欄を置かない・T-282）
+			quotaLine.textContent = message.text ?? '';
+			quotaLine.hidden = !message.text;
+			return;
+		}
 		if (message.type === 'sessions') {
 			renderSessionTabs(message.tabs ?? []);
 			return;

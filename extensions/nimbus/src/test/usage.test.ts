@@ -10,7 +10,16 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { bar, contextGauge, costAlertLevel, formatCost, formatReset, formatTokens, toGauges } from '../core/usage';
+import {
+	bar,
+	contextGauge,
+	costAlertLevel,
+	formatCost,
+	formatReset,
+	formatTokens,
+	quotaLine,
+	toGauges
+} from '../core/usage';
 
 const NOW = Date.parse('2026-08-13T12:00:00Z');
 
@@ -92,4 +101,22 @@ test('コスト上限は 80% で警告、超えたら over', () => {
 	);
 	// 警告を出す割合は変えられる
 	assert.strictEqual(costAlertLevel(0.5, 1, 50), 'warn');
+});
+
+test('枠の残りは 1 行に収め、枠が無ければ行ごと消す（T-282）', () => {
+	const now = Date.parse('2026-08-19T10:00:00Z');
+	assert.deepStrictEqual(
+		[
+			quotaLine(
+				{
+					five_hour: { utilization: 38, resets_at: '2026-08-19T12:00:00Z' },
+					seven_day: { utilization: 59, resets_at: null }
+				},
+				now
+			),
+			quotaLine({ five_hour: { utilization: null, resets_at: null } }, now),
+			quotaLine(null, now)
+		],
+		['5 時間 残り 62%（2 時間後にリセット） · 週 残り 41%', undefined, undefined]
+	);
 });
