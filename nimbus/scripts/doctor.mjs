@@ -154,6 +154,9 @@ function checkContributesDrift() {
 	const declaredViews = Object.values(contributes.views ?? {}).flat().map((v) => v.id);
 	const providerIds = new Set([
 		...[...sources.matchAll(/register(?:WebviewViewProvider|TreeDataProvider)\(\s*'([^']+)'/g)].map((m) => m[1]),
+		// `createTreeView('id', { treeDataProvider })` も登録の一種。
+		// 見落とすと、動いているビューを「登録していない」と言ってしまう（T-284）
+		...[...sources.matchAll(/createTreeView\(\s*'([^']+)'/g)].map((m) => m[1]),
 		// `X.viewType` 経由の登録は定数の中身を見る
 		...[...sources.matchAll(/viewType\s*=\s*'([^']+)'/g)].map((m) => m[1])
 	]);
