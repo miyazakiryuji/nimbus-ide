@@ -64,10 +64,15 @@ upstream 追従でコアの Nimbus ブロックが落ちる、の 3 つが原因
 （同梱漏れ・`product.json`・NLS・拡張のバンドルは固めて初めて出る）。
 
 ```bash
-npm run gulp vscode-darwin-arm64          # ../Nimbus-darwin-arm64/Nimbus.app を作り直す
-bash nimbus/branding/smoke-packaged.sh    # 身元・起動・webview のスモーク
-node nimbus/tests/gui/run.mjs --packaged  # 固めた .app を実際に操作する GUI テスト
+bash nimbus/scripts/package-app.sh --copy /tmp/nimbus-gui-app   # 順番待ちして固め、写しを作る
+bash nimbus/branding/smoke-packaged.sh                          # 身元・起動・webview のスモーク
+NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged
 ```
+
+**`npm run gulp vscode-darwin-arm64` を直に叩かない**（T-276）。出力先は 1 つしかないので、
+別のセッションと重なると**相手が消した途中のファイルを踏んで落ちる**。
+`package-app.sh` は順番待ちをして、固めたあとに自分用の写しを作る —
+写しを見て GUI テストを走らせれば、後から始まった別のビルドに壊されない。
 
 - **対象**: `src/vs/**` / `extensions/**` / `build/**` / `product.json` / `nimbus/branding/**` を
   触ったとき。ドキュメント・仕様書・`tasks.md` だけの修正は固め直さなくてよい

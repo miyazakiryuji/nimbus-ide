@@ -3,6 +3,23 @@
 macOS 向けに固めて配り、upstream（`microsoft/vscode`）の新しいリリースへ載せ替える手順
 （フォーク F5）。機能ではなく**運用**の仕様。
 
+
+## 固めるときは順番待ちをする（T-276）
+
+出力先（`.build/extensions` / `out-vscode` / `../Nimbus-darwin-arm64`）は 1 つしかないので、
+2 つのセッションが同時に固めると**相手が消した途中のファイルを踏んで落ちる**
+（実測: `ENOENT: .build/extensions/pug`）。
+
+```bash
+bash nimbus/scripts/package-app.sh                     # 順番を待ってから固める
+bash nimbus/scripts/package-app.sh --copy /tmp/my-app  # 固めたあと、自分用の写しを作る
+```
+
+- ロックは `mkdir`（不可分）で取る。持ち主の pid を残し、**居なくなっていたら引き取る**
+- ロックの外で走っている `gulp` も待つ（素の `npm run gulp` を叩く人がいるため）
+- 写しを作っておくと、GUI テスト（`NIMBUS_APP=<写し>`）が後から始まったビルドに壊されない。
+  表示言語のケース（`38-display-language.mjs`）も同じ写しを見る
+
 ## 何を解決するのか
 
 「修正のたびにアプリとして固める」運用をフォークでも回す（ルール本文は
