@@ -99,7 +99,7 @@ import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
 import { buildTabs } from './core/sessionTabs';
-import { quotaLine } from './core/usage';
+import { quotaLine, quotaTooltip } from './core/usage';
 import { SessionSidePane, type SideMode } from './sessionSide';
 import { listAgents as listHerdrAgents } from './herdr';
 import { describePane, toTabState as herdrTabState } from './core/herdr';
@@ -451,7 +451,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	/** 全画面（T-269）。戻すときにサイドバーを開き直すために覚えておく */
 	let cockpitFullscreen = false;
 	/** 枠の残りの 1 行（T-282）。面を作り直したときに出し直すために覚えておく */
-	let lastQuota: string | undefined;
+	let lastQuota: { text: string; tooltip?: string } | undefined;
 	/**
 	 * 全画面の右半分（T-270）。端末も差分もワークベンチの実物を置く。
 	 * 控え（`archived`）をそのまま材料にするので、タブで切り替えても同じ見かたができる
@@ -1895,8 +1895,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		usageView.update(usage, context, retained, budget);
 		// 枠の残りは入力欄の下にも出す（T-282）。下のパネルにしか無いと、走らせている最中に見えない。
 		// 取れない・枠が無い環境では text を渡さない＝行ごと消える
-		lastQuota = quotaLine(usage?.rate_limits);
-		cockpit.post({ type: 'quota', text: lastQuota });
+		const quotaText = quotaLine(usage?.rate_limits);
+		lastQuota = quotaText ? { text: quotaText, tooltip: quotaTooltip(usage?.rate_limits) } : undefined;
+		cockpit.post({ type: 'quota', text: lastQuota?.text, tooltip: lastQuota?.tooltip });
 		if (context) {
 			checkContextBudget(context.totalTokens, budget);
 		}

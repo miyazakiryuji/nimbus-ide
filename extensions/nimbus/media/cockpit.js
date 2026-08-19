@@ -814,6 +814,8 @@
 		if (message.type === 'quota') {
 			// 枠が無い環境・取れなかったときは行ごと消す（空欄を置かない・T-282）
 			quotaLine.textContent = message.text ?? '';
+			// いつ戻るかは 1 行に入らないので、指を置いたときに出す
+			quotaLine.title = message.tooltip ?? '';
 			quotaLine.hidden = !message.text;
 			return;
 		}

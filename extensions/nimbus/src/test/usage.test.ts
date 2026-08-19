@@ -18,6 +18,7 @@ import {
 	formatReset,
 	formatTokens,
 	quotaLine,
+	quotaTooltip,
 	toGauges
 } from '../core/usage';
 
@@ -105,18 +106,34 @@ test('コスト上限は 80% で警告、超えたら over', () => {
 
 test('枠の残りは 1 行に収め、枠が無ければ行ごと消す（T-282）', () => {
 	const now = Date.parse('2026-08-19T10:00:00Z');
+	const limits = {
+		five_hour: { utilization: 38, resets_at: '2026-08-19T12:00:00Z' },
+		seven_day: { utilization: 59, resets_at: null }
+	};
 	assert.deepStrictEqual(
 		[
-			quotaLine(
+			// **いつ戻るかは行に入れない。** 入れるとサイドバーの既定幅で週の残りが末尾から切れる
+			quotaLine(limits, now),
+			quotaLine({ five_hour: { utilization: null, resets_at: null } }, now),
+			quotaLine(null, now)
+		],
+		['5 時間 残り 62% · 週 残り 41%', undefined, undefined]
+	);
+});
+
+test('いつ戻るかは、指を置いたときの中身に回す（T-282）', () => {
+	const now = Date.parse('2026-08-19T10:00:00Z');
+	assert.deepStrictEqual(
+		[
+			quotaTooltip(
 				{
 					five_hour: { utilization: 38, resets_at: '2026-08-19T12:00:00Z' },
 					seven_day: { utilization: 59, resets_at: null }
 				},
 				now
 			),
-			quotaLine({ five_hour: { utilization: null, resets_at: null } }, now),
-			quotaLine(null, now)
+			quotaTooltip(null, now)
 		],
-		['5 時間 残り 62%（2 時間後にリセット） · 週 残り 41%', undefined, undefined]
+		['5 時間の枠 残り 62%（2 時間後にリセット）\n週の枠 残り 41%', undefined]
 	);
 });

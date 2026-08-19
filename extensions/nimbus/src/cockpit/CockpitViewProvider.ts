@@ -56,8 +56,9 @@ export type OutboundMessage =
 	/**
 	 * 枠の残り（T-282）。入力欄の下に 1 行だけ出す。
 	 * `text` が無いときは「出すものが無い」— 行ごと消す（空欄を置かない）。
+	 * `tooltip` は 1 行に入りきらない中身（いつ戻るか）。
 	 */
-	| { type: 'quota'; text?: string }
+	| { type: 'quota'; text?: string; tooltip?: string }
 	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
@@ -94,8 +95,8 @@ export interface CockpitHandlers {
 		approvals?: readonly PendingApproval[];
 		/** セッションのタブ（T-269）。面を作り直したときに列ごと戻す */
 		tabs?: readonly SessionTab[];
-		/** 枠の残りの 1 行（T-282） */
-		quota?: string;
+		/** 枠の残りの 1 行（T-282）。`tooltip` は指を置いたときに出す中身 */
+		quota?: { text: string; tooltip?: string };
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
@@ -179,7 +180,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 						this.post({ type: 'sessions', tabs });
 					}
 					if (quota) {
-						this.post({ type: 'quota', text: quota });
+						this.post({ type: 'quota', text: quota.text, tooltip: quota.tooltip });
 					}
 					const items = this.handlers.slashCommands?.() ?? [];
 					if (items.length > 0) {

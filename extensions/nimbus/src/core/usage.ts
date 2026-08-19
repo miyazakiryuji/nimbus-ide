@@ -126,19 +126,12 @@ export function toGauges(limits: RateLimitWindows | null | undefined, now: numbe
 	].filter((gauge): gauge is Gauge => gauge !== undefined);
 }
 
-/**
- * 入力欄の下に出す 1 行（T-282）。
- *
- * **1 行に収める。** ここは視線がいちばん通る場所なので、何行も置くと会話が押し出される。
- * 出すのは「あとどれだけ使えるか」と「いつ戻るか」だけ。内訳（Opus / Sonnet / アプリ経由）と
- * 費用は使用量ビューに残す。
- *
- * 枠の無い環境（API キー / Bedrock / Vertex）では `rate_limits` が null で返る。
- * そのときは **undefined を返して行ごと消す** — 空欄を置くと「取れていない」のか
- * 「枠が無い」のか分からない。
- */
-export function quotaLine(limits: RateLimitWindows | null | undefined, now: number = Date.now()): string | undefined {
-	const parts: string[] = [];
+/** 入力欄の下に出す枠（5 時間と週）だけを、残りとリセットに直す（T-282） */
+function quotaWindows(
+	limits: RateLimitWindows | null | undefined,
+	now: number
+): { label: string; left: number; reset: string }[] {
+	const rows: { label: string; left: number; reset: string }[] = [];
 	for (const [label, window] of [
 		['5 時間', limits?.five_hour],
 		['週', limits?.seven_day]
@@ -146,11 +139,42 @@ export function quotaLine(limits: RateLimitWindows | null | undefined, now: numb
 		if (!window || window.utilization === null || window.utilization === undefined) {
 			continue;
 		}
-		const left = Math.max(0, Math.round(100 - window.utilization));
-		const reset = formatReset(window.resets_at, now);
-		parts.push(`${label} 残り ${left}%${reset ? `（${reset}）` : ''}`);
+		rows.push({
+			label,
+			left: Math.max(0, Math.round(100 - window.utilization)),
+			reset: formatReset(window.resets_at, now)
+		});
 	}
+	return rows;
+}
+
+/**
+ * 入力欄の下に出す 1 行（T-282）。
+ *
+ * **1 行に収める。** ここは視線がいちばん通る場所なので、何行も置くと会話が押し出される。
+ * 出すのは「あとどれだけ使えるか」だけ。**いつ戻るかは入れない** —
+ * サイドバーの既定幅では、リセットまで入れると**週の残りが末尾から切れる**（実測）。
+ * 週の枠が尽きて週末が潰れるのを避けるのがこの行の眼目なので、切れてよいのはそちらではない。
+ * リセットは `quotaTooltip`（指を置いたとき）へ、内訳と費用は使用量ビューへ。
+ *
+ * 枠の無い環境（API キー / Bedrock / Vertex）では `rate_limits` が null で返る。
+ * そのときは **undefined を返して行ごと消す** — 空欄を置くと「取れていない」のか
+ * 「枠が無い」のか分からない。
+ */
+export function quotaLine(limits: RateLimitWindows | null | undefined, now: number = Date.now()): string | undefined {
+	const parts = quotaWindows(limits, now).map((row) => `${row.label} 残り ${row.left}%`);
 	return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
+/**
+ * 枠の行に指を置いたときに出す中身（T-282）。
+ * 1 行に入りきらない「いつ戻るか」はここで出す。
+ */
+export function quotaTooltip(limits: RateLimitWindows | null | undefined, now: number = Date.now()): string | undefined {
+	const parts = quotaWindows(limits, now).map(
+		(row) => `${row.label}の枠 残り ${row.left}%${row.reset ? `（${row.reset}）` : ''}`
+	);
+	return parts.length > 0 ? parts.join('\n') : undefined;
 }
 
 /** 文脈の使用量（T-020）。maxTokens が 0 のときは割合を出さない */
