@@ -51,6 +51,7 @@ case "$MODE" in
 	unit)
 		compile_if_needed
 		run_step "モジュールテスト" node --test "extensions/nimbus/out/test/"*.test.js
+		run_step "スクリプトのテスト" node --test "nimbus/tests/scripts/"*.test.mjs
 		;;
 	doctor)
 		run_step "ドクター（不要ファイル・仕様ズレ）" node nimbus/scripts/doctor.mjs
@@ -62,12 +63,14 @@ case "$MODE" in
 	all)
 		compile_if_needed
 		run_step "モジュールテスト" node --test "extensions/nimbus/out/test/"*.test.js
+		run_step "スクリプトのテスト" node --test "nimbus/tests/scripts/"*.test.mjs
 		run_step "ドクター（不要ファイル・仕様ズレ）" node nimbus/scripts/doctor.mjs
 		run_step "GUI テスト" node nimbus/tests/gui/run.mjs "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
 		;;
 	default)
 		compile_if_needed
 		run_step "モジュールテスト" node --test "extensions/nimbus/out/test/"*.test.js
+		run_step "スクリプトのテスト" node --test "nimbus/tests/scripts/"*.test.mjs
 		run_step "ドクター（不要ファイル・仕様ズレ）" node nimbus/scripts/doctor.mjs
 		echo ""
 		echo "（GUI テストは含めていません。走らせるなら: bash nimbus/scripts/test.sh gui）"
