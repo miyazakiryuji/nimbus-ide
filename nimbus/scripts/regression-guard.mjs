@@ -50,7 +50,9 @@ function guarded() {
   const found = new Map()
   const roots = [
     join(ROOT, 'extensions', 'nimbus', 'src', 'test'),
-    join(ROOT, 'nimbus', 'tests', 'gui', 'cases')
+    join(ROOT, 'nimbus', 'tests', 'gui', 'cases'),
+    // リポジトリの道具（板・ドクター）の守りもここに置く（T-283）
+    join(ROOT, 'nimbus', 'tests', 'scripts')
   ]
   for (const dir of roots) {
     if (!existsSync(dir)) {

@@ -14,7 +14,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXT = join(ROOT, 'extensions', 'nimbus');
@@ -130,6 +130,22 @@ function checkUnusedDependencies() {
 }
 
 /** 3. package.json の宣言と実装のズレ（コマンド・ビュー・設定） */
+/**
+ * ソースの中で「このビューにプロバイダを付けた」と言えている ID を集める（T-284）。
+ *
+ * **登録のしかたは 1 つではない。** 見落とすと、動いているビューを
+ * 「登録していない」と言ってしまい、直っているものを直させることになる。
+ */
+export function viewProviderIds(sources) {
+	return new Set([
+		...[...sources.matchAll(/register(?:WebviewViewProvider|TreeDataProvider)\(\s*'([^']+)'/g)].map((m) => m[1]),
+		// `createTreeView('id', { treeDataProvider })` も登録の一種
+		...[...sources.matchAll(/createTreeView\(\s*'([^']+)'/g)].map((m) => m[1]),
+		// `X.viewType` 経由の登録は定数の中身を見る
+		...[...sources.matchAll(/viewType\s*=\s*'([^']+)'/g)].map((m) => m[1])
+	]);
+}
+
 function checkContributesDrift() {
 	const manifest = JSON.parse(readFileSync(join(EXT, 'package.json'), 'utf8'));
 	const contributes = manifest.contributes ?? {};
@@ -152,14 +168,7 @@ function checkContributesDrift() {
 	// ビュー: 宣言 ⇄ プロバイダ登録
 	// ビューは複数のコンテナに分かれている（サイドバーと下部パネル）
 	const declaredViews = Object.values(contributes.views ?? {}).flat().map((v) => v.id);
-	const providerIds = new Set([
-		...[...sources.matchAll(/register(?:WebviewViewProvider|TreeDataProvider)\(\s*'([^']+)'/g)].map((m) => m[1]),
-		// `createTreeView('id', { treeDataProvider })` も登録の一種。
-		// 見落とすと、動いているビューを「登録していない」と言ってしまう（T-284）
-		...[...sources.matchAll(/createTreeView\(\s*'([^']+)'/g)].map((m) => m[1]),
-		// `X.viewType` 経由の登録は定数の中身を見る
-		...[...sources.matchAll(/viewType\s*=\s*'([^']+)'/g)].map((m) => m[1])
-	]);
+	const providerIds = viewProviderIds(sources);
 	for (const id of declaredViews) {
 		if (!providerIds.has(id)) {
 			add('contributes', 'error', '宣言されているがプロバイダを登録していないビュー', id);
@@ -582,44 +591,51 @@ const CHECKS = {
 	docs: ['ドキュメントと実装のズレ', checkDocDrift]
 };
 
-const args = process.argv.slice(2);
-const asJson = args.includes('--json');
-const selected = args.filter((a) => !a.startsWith('--'));
-const toRun = selected.length > 0 ? selected : Object.keys(CHECKS);
+/** CLI として走らせたときだけ検査する（テストから読み込むときは動かさない） */
+function main() {
+	const args = process.argv.slice(2);
+	const asJson = args.includes('--json');
+	const selected = args.filter((a) => !a.startsWith('--'));
+	const toRun = selected.length > 0 ? selected : Object.keys(CHECKS);
 
-for (const name of toRun) {
-	const entry = CHECKS[name];
-	if (!entry) {
-		console.error(`不明な検査: ${name}（使えるのは ${Object.keys(CHECKS).join(', ')}）`);
-		process.exit(2);
-	}
-	try {
-		entry[1]();
-	} catch (error) {
-		add(name, 'error', '検査そのものが失敗した', error instanceof Error ? error.message : String(error));
-	}
-}
-
-const errors = findings.filter((f) => f.level === 'error');
-const warns = findings.filter((f) => f.level === 'warn');
-
-if (asJson) {
-	console.log(JSON.stringify({ findings, summary: { error: errors.length, warn: warns.length } }, null, 2));
-} else {
 	for (const name of toRun) {
-		const mine = findings.filter((f) => f.check === name);
-		const [label] = CHECKS[name];
-		if (mine.length === 0) {
-			console.log(`✔ ${name} — ${label}`);
-			continue;
+		const entry = CHECKS[name];
+		if (!entry) {
+			console.error(`不明な検査: ${name}（使えるのは ${Object.keys(CHECKS).join(', ')}）`);
+			process.exit(2);
 		}
-		console.log(`${mine.some((f) => f.level === 'error') ? '✖' : '△'} ${name} — ${label}`);
-		for (const f of mine) {
-			console.log(`    ${f.level === 'error' ? '要対応' : '参考  '} ${f.message}`);
-			console.log(`           ${f.detail}`);
+		try {
+			entry[1]();
+		} catch (error) {
+			add(name, 'error', '検査そのものが失敗した', error instanceof Error ? error.message : String(error));
 		}
 	}
-	console.log(`\n要対応 ${errors.length} 件 / 参考 ${warns.length} 件`);
+
+	const errors = findings.filter((f) => f.level === 'error');
+	const warns = findings.filter((f) => f.level === 'warn');
+
+	if (asJson) {
+		console.log(JSON.stringify({ findings, summary: { error: errors.length, warn: warns.length } }, null, 2));
+	} else {
+		for (const name of toRun) {
+			const mine = findings.filter((f) => f.check === name);
+			const [label] = CHECKS[name];
+			if (mine.length === 0) {
+				console.log(`✔ ${name} — ${label}`);
+				continue;
+			}
+			console.log(`${mine.some((f) => f.level === 'error') ? '✖' : '△'} ${name} — ${label}`);
+			for (const f of mine) {
+				console.log(`    ${f.level === 'error' ? '要対応' : '参考  '} ${f.message}`);
+				console.log(`           ${f.detail}`);
+			}
+		}
+		console.log(`\n要対応 ${errors.length} 件 / 参考 ${warns.length} 件`);
+	}
+
+	process.exit(errors.length > 0 ? 1 : 0);
 }
 
-process.exit(errors.length > 0 ? 1 : 0);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main();
+}
