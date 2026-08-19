@@ -70,13 +70,14 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       今のビューに残す）。枠が無い環境（API キー / Bedrock / Vertex）と取得に失敗したときは、
       黙って空欄にせず 1 行を消すか理由を出す。パネルのビューを残すか畳むかは実物を見て決める。
       T-268 / T-269 と同じ webview を触るので順番を合わせる [P1]
-- [ ] T-281 **ドキュメント類をまとめて棚卸しして更新する** — 実装が先行して記録が追いついていない
+
+## 進行中
+
+- [ ] T-281 **ドキュメント類をまとめて棚卸しして更新する** — 実装が先行して記録が追いついていない @session-d 2026-08-19
       ところを一度そろえる。対象は `nimbus/docs/specs/` の仕様書・`README.md`・`CLAUDE.md`・
       コア台帳（`nimbus/docs/core-changes.md`）・確認記録（`nimbus/docs/testing/`）。`spec-drift` と
       `nimbus-doctor` のスキルで機械的に拾えるところを先に潰し、残りは読み比べて直す。
       Herdr を入れるなら（T-279）配布物と依存が変わるので `distribution.md` も同じコミットで直す [P2]
-
-## 進行中
 
 - [ ] T-279 **Herdr をセッションの土台に取り込めるか検討し、可能なら実装する** — Herdr @session-d 2026-08-19
       （[herdr.dev](https://herdr.dev/) / [herdrdev/herdr](https://github.com/herdrdev/herdr)・Rust の
