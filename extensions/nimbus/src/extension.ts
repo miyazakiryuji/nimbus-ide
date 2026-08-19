@@ -3163,13 +3163,6 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.showSettings', () =>
 			vscode.commands.executeCommand('nimbus.settings.focus')
 		),
-		// レビューと文脈はサイドバーの既定から外した（T-255）。開く手だては残す
-		vscode.commands.registerCommand('nimbus.showReview', () =>
-			vscode.commands.executeCommand('nimbus.review.focus')
-		),
-		vscode.commands.registerCommand('nimbus.showContext', () =>
-			vscode.commands.executeCommand('nimbus.context.focus')
-		),
 		// 診断は下部パネルにまとめてある
 		vscode.commands.registerCommand('nimbus.showDiagnostics', () =>
 			vscode.commands.executeCommand('workbench.view.extension.nimbusDiagnostics')

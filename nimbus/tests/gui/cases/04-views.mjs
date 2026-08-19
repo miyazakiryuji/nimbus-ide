@@ -9,9 +9,9 @@ export default {
 
 		const sidebar = await sidebarText(page);
 		// ビュー名は翻訳される（T-091）。キーで書き、候補は package.nls*.json から引く
-		// 既定で出すのは会話と承認待ちだけ。板は専用アイコン（T-256）、
-		// レビュー・文脈・ヘルプは外に出した（T-255 / T-265）
-		for (const key of ['view.nimbus.cockpit', 'view.nimbus.approvals']) {
+		// 常用サイドバーに残すのは会話だけ。板は専用アイコン（T-256）、
+		// 承認待ち・レビュー・文脈は UI から外し（T-267）、ヘルプは設定側へ（T-265）
+		for (const key of ['view.nimbus.cockpit']) {
 			ctx.expect(
 				includesAny(sidebar, labels(key)),
 				`サイドバーに ${key}（${labels(key).join(' / ')}）が無い:\n${sidebar.slice(0, 300)}`
@@ -28,7 +28,8 @@ export default {
 		ctx.expect(headers.length > 0, 'サイドバーの見出しが 1 つも取れない（セレクタが変わった可能性）');
 		for (const key of [
 			'view.nimbus.skills', 'view.nimbus.claudeMd', 'view.nimbus.settings',
-			'view.nimbus.board', 'view.nimbus.review', 'view.nimbus.context', 'view.nimbus.help'
+			'view.nimbus.board', 'view.nimbus.review', 'view.nimbus.context', 'view.nimbus.help',
+			'view.nimbus.approvals'
 		]) {
 			ctx.expect(
 				!headers.some((header) => includesAny(header, labels(key))),

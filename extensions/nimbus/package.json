@@ -64,21 +64,6 @@
           "id": "nimbus.cockpit",
           "name": "%view.nimbus.cockpit%",
           "type": "webview"
-        },
-        {
-          "id": "nimbus.approvals",
-          "name": "%view.nimbus.approvals%",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "nimbus.review",
-          "name": "%view.nimbus.review%",
-          "visibility": "hidden"
-        },
-        {
-          "id": "nimbus.context",
-          "name": "%view.nimbus.context%",
-          "visibility": "hidden"
         }
       ],
       "nimbusTasks": [
@@ -1173,16 +1158,6 @@
       {
         "command": "nimbus.showSettings",
         "title": "設定ビューを開く",
-        "category": "Nimbus"
-      },
-      {
-        "command": "nimbus.showReview",
-        "title": "レビューを開く",
-        "category": "Nimbus"
-      },
-      {
-        "command": "nimbus.showContext",
-        "title": "文脈を開く",
         "category": "Nimbus"
       },
       {
