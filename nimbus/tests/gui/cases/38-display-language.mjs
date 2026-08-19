@@ -16,11 +16,14 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-const APP = join(dirname(ROOT), 'Nimbus-darwin-arm64', 'Nimbus.app', 'Contents', 'MacOS', 'Nimbus');
-const PACK = join(
-	dirname(ROOT), 'Nimbus-darwin-arm64', 'Nimbus.app', 'Contents', 'Resources', 'app',
-	'extensions', 'MS-CEINTL.vscode-language-pack-ja'
-);
+/**
+ * このケースは自分でアプリを起ち上げるので、`run.mjs` と**同じアプリ**を見る必要がある。
+ * 既定の `../Nimbus-darwin-arm64` を直に見ていると、別のセッションが作り直している最中に
+ * 半端なアプリを掴んで落ちる（実測。T-276）。写しを指しているときはそちらを使う。
+ */
+const APP_ROOT = process.env['NIMBUS_APP'] ?? join(dirname(ROOT), 'Nimbus-darwin-arm64', 'Nimbus.app');
+const APP = join(APP_ROOT, 'Contents', 'MacOS', 'Nimbus');
+const PACK = join(APP_ROOT, 'Contents', 'Resources', 'app', 'extensions', 'MS-CEINTL.vscode-language-pack-ja');
 
 /** アクティビティバーの読み上げ名。コアが訳す文字なので、言語の判定に使える */
 async function activityBarLabels(page) {

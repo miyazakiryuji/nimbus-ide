@@ -476,16 +476,40 @@ function checkCoreLedger() {
 		}
 	}
 
-	// 台帳の表に載っているのに、もう差分が無いもの（当て忘れ・不要になった記録）
-	const changedPaths = new Set(modified.map((e) => e.path));
+	/**
+	 * 台帳に載っているのに、もう差分が無いもの。
+	 *
+	 * **これは赤で落とす**（T-274 ③）。台帳に載っている＝ upstream のファイルへ Nimbus の変更を
+	 * 入れたということなので、差分が消えているなら**その変更が落ちている**。
+	 * upstream 追従のたびに起こりうるうえ、落ちても画面は動いてしまうので、
+	 * 誰も気づかないまま機能だけが消える。警告では見落とす。
+	 *
+	 * 判定は「基点から**まったく触られていない**」で行う。Nimbus が新しく足したファイル（A）は
+	 * upstream への変更ではないので、ここで数えると全部が赤になる。
+	 * ディレクトリの記載（末尾が `/`）は、その下の何かが触られていれば足りているとみなす。
+	 */
+	const allChanged = new Set(entries.map((e) => e.path));
+	const touched = (path) => {
+		if (allChanged.has(path)) {
+			return true;
+		}
+		if (path.endsWith('/')) {
+			for (const changed of allChanged) {
+				if (changed.startsWith(path)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	};
 	for (const line of ledger.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| ---'))) {
 		for (const match of line.matchAll(/`((?:src|build|resources|product)[^`]*?)`/g)) {
 			const path = match[1];
 			if (path.includes('...') || path.includes('*') || path.includes('$')) {
 				continue;
 			}
-			if (existsSync(join(ROOT, path)) && !changedPaths.has(path)) {
-				add('ledger', 'warn', '台帳にあるが upstream との差分が無いファイル', path);
+			if (existsSync(join(ROOT, path)) && !touched(path)) {
+				add('ledger', 'error', '台帳に載っているのに upstream との差分が無い（Nimbus の変更が落ちている）', path);
 			}
 		}
 	}
