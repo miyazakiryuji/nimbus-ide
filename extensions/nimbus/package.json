@@ -1198,6 +1198,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.claudeLogin",
+        "title": "Claude Code にログインする",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.recheckSetup",
         "title": "準備をもう一度さがす",
         "category": "Nimbus"

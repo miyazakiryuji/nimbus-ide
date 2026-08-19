@@ -164,9 +164,9 @@ import { buildWeeklyReview, describeWeeklyReview } from './core/weeklyReview';
 import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
-import { buildReadiness, isReady, summaryLabel, type ReadyCheck } from './core/readiness';
+import { buildReadiness, isReady, looksLikeAuthProblem, summaryLabel, type ReadyCheck } from './core/readiness';
 import { remoteLabel } from './core/remoteGuidance';
-import { locateClaude, openClaudeInstall } from './setupActions';
+import { claudeLogin, locateClaude, openClaudeInstall } from './setupActions';
 import {
 	DebugViewProvider,
 	pickFailure,
@@ -447,6 +447,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	/** 現在前面で操作しているセッション。並列セッションは F4 で本格対応する */
 	let activeSessionId: string | undefined;
 	let lastApiKeySource: string | undefined;
+	/** 認証で落ちたときの一言（T-285）。入っているのに動かないのは、無いのと同じくらい迷う */
+	let lastAuthError: string | undefined;
 	/** 直近の init。探す対象（コマンド・サブエージェント・MCP ツール）の出どころ（T-117） */
 	let lastInit: SessionInitEvent | undefined;
 	const retained: NimbusEvent[] = [];
@@ -569,7 +571,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			contextView.update(event);
 			skillsView.setSessionSkills(event.skills);
 			lastApiKeySource = event.apiKeySource;
-			// 課金モードが分かったので、準備の表示を更新する（T-285）
+			// 起動できたなら認証は通っている。前に出した案内を消す（T-285）
+			lastAuthError = undefined;
 			pushReadiness();
 		}
 		if (event.kind === 'tool-use') {
@@ -1999,6 +2002,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				break;
 			case 'session-error':
 				log(`[session] エラー: ${event.message}`);
+				// 入っているのに動かないときは、ログインの入口まで連れていく（T-285）
+				if (looksLikeAuthProblem(event.message)) {
+					lastAuthError = oneLine(event.message, 120);
+					pushReadiness();
+				}
 				break;
 			case 'turn-result':
 				log(`[session] ターン終了 subtype=${event.subtype} turns=${event.numTurns} cost=${event.totalCostUsd ?? '-'}`);
@@ -2474,7 +2482,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			remoteLabel: remoteLabel(vscode.env.remoteName),
 			hasFolder: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
 			trusted: vscode.workspace.isTrusted,
-			apiKeySource: lastApiKeySource
+			apiKeySource: lastApiKeySource,
+			authError: lastAuthError
 		});
 	}
 
@@ -3484,6 +3493,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			pushReadiness();
 		}),
 		vscode.commands.registerCommand('nimbus.openClaudeInstall', () => openClaudeInstall()),
+		vscode.commands.registerCommand('nimbus.claudeLogin', () => claudeLogin()),
 		vscode.commands.registerCommand('nimbus.recheckSetup', () => {
 			pushReadiness();
 			const checks = currentReadiness();

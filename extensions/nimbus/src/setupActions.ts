@@ -13,6 +13,8 @@ import { resolveClaudeExecutable } from './claudeExecutable';
 const INSTALL_DOCS = 'https://docs.claude.com/en/docs/claude-code/setup';
 /** 入れるためのコマンド。**送るだけで実行はしない**（走る前に読めるように・人間工学 E3） */
 const INSTALL_COMMAND = 'npm install -g @anthropic-ai/claude-code';
+/** ログインのコマンド。こちらも送るだけ */
+const LOGIN_COMMAND = 'claude login';
 
 /**
  * Claude Code の場所を選んでもらい、設定に書く。
@@ -70,4 +72,16 @@ export async function openClaudeInstall(): Promise<void> {
 		terminal.show(true);
 		terminal.sendText(INSTALL_COMMAND, false);
 	}
+}
+
+/**
+ * ログインの入口をターミナルに出す。
+ *
+ * 認証は Claude Code 側の領分なので**代行しない**。どこで認証したのかが
+ * 分からなくなるほうが、後で困る。打つ場所まで連れていくところまでを引き受ける。
+ */
+export function claudeLogin(): void {
+	const terminal = vscode.window.activeTerminal ?? vscode.window.createTerminal('Nimbus');
+	terminal.show(true);
+	terminal.sendText(LOGIN_COMMAND, false);
 }

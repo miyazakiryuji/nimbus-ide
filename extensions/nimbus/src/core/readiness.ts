@@ -50,6 +50,32 @@ export interface ReadinessInput {
 	trusted: boolean;
 	/** 一度でもセッションが起動して分かった課金モード。未確認なら undefined */
 	apiKeySource?: string;
+	/**
+	 * 認証で落ちたときのメッセージ。
+	 * 「入っているのに動かない」は**見つからない**のと同じくらい迷う（T-285）。
+	 */
+	authError?: string;
+}
+
+/**
+ * そのエラーが「ログインしていない」に見えるか。
+ *
+ * Claude Code 側の文言はこちらで決められないので、**言い切らない** ──
+ * 当たっていれば近道になり、外していても普通のエラーとして読めるようにしておく。
+ */
+export function looksLikeAuthProblem(message: string): boolean {
+	const text = message.toLowerCase();
+	return [
+		'not logged in',
+		'login',
+		'unauthorized',
+		'authentication',
+		'authenticate',
+		'invalid api key',
+		'api key',
+		'401',
+		'credit balance'
+	].some((needle) => text.includes(needle));
 }
 
 /**
@@ -61,6 +87,7 @@ export interface ReadinessInput {
 export const ALLOWED_ACTIONS: readonly string[] = [
 	'nimbus.locateClaude',
 	'nimbus.openClaudeInstall',
+	'nimbus.claudeLogin',
 	'nimbus.recheckSetup',
 	'nimbus.runSetupWizard',
 	'nimbus.openEnvCheck',
@@ -139,6 +166,21 @@ export function buildReadiness(input: ReadinessInput): ReadyCheck[] {
 					actions: [{ label: 'このフォルダを信頼する', command: 'workbench.trust.manage' }]
 				}
 		);
+	}
+
+	if (input.authError) {
+		// 見つかっているのに動かないときは、**止める**。動かしてみないと分からない、ではもう無い
+		checks.push({
+			id: 'auth',
+			title: '認証',
+			state: 'blocked',
+			detail: `Claude Code にログインしていないようです。（${input.authError}）`,
+			actions: [
+				{ label: 'ターミナルに claude login を出す', command: 'nimbus.claudeLogin' },
+				{ label: 'もう一度さがす', command: 'nimbus.recheckSetup' }
+			]
+		});
+		return checks;
 	}
 
 	checks.push(

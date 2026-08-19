@@ -9,7 +9,14 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { blockedCount, buildReadiness, isAllowedAction, isReady, summaryLabel } from '../core/readiness';
+import {
+	blockedCount,
+	buildReadiness,
+	isAllowedAction,
+	isReady,
+	looksLikeAuthProblem,
+	summaryLabel
+} from '../core/readiness';
 
 const ready = { executable: '/usr/local/bin/claude', hasFolder: true, trusted: true, apiKeySource: 'none' };
 
@@ -85,5 +92,30 @@ test('画面のボタンから走らせてよいコマンドを絞る', () => {
 	assert.deepStrictEqual(
 		['nimbus.locateClaude', 'workbench.trust.manage', 'workbench.action.terminal.kill'].map(isAllowedAction),
 		[true, true, false]
+	);
+});
+
+test('入っているのに動かないときは、ログインの入口まで連れていく', () => {
+	const checks = buildReadiness({ ...ready, authError: 'Invalid API key · Please run /login' });
+	const auth = checks.find((check) => check.id === 'auth');
+
+	assert.strictEqual(auth?.state, 'blocked');
+	assert.deepStrictEqual(
+		auth?.actions.map((action) => action.command),
+		['nimbus.claudeLogin', 'nimbus.recheckSetup']
+	);
+	assert.strictEqual(isReady(checks), false);
+});
+
+test('認証らしいエラーだけを拾い、ふつうのログ行では騒がない', () => {
+	assert.deepStrictEqual(
+		[
+			'Invalid API key',
+			'Error: not logged in',
+			'HTTP 401',
+			'ENOENT: no such file or directory',
+			'wrote log info to disk'
+		].map(looksLikeAuthProblem),
+		[true, true, true, false, false]
 	);
 });
