@@ -1,9 +1,20 @@
+/*
+ * 日本語を**名指しで**積む（T-273・typography T1 / T2）。理由は
+ * `nimbus/docs/specs/typography.md`。コックピットと同じ積みにしてある —
+ * 同じ製品の中で、面ごとに字の顔が変わって見えないようにするため。
+ */
+:root {
+	--nimbus-ui-font: var(--vscode-font-family), 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+		'Noto Sans JP', 'Yu Gothic UI', Meiryo, sans-serif;
+	--nimbus-mono-font: var(--vscode-editor-font-family), 'Hiragino Sans', 'Noto Sans JP', monospace;
+}
+
 /* 色はすべて VS Code のテーマ変数から取る */
 * { box-sizing: border-box; }
 
 body {
 	margin: 0;
-	font-family: var(--vscode-font-family);
+	font-family: var(--nimbus-ui-font);
 	font-size: var(--vscode-font-size);
 	color: var(--vscode-foreground);
 	background: var(--vscode-sideBar-background);
@@ -60,7 +71,7 @@ body {
 .card .title { font-weight: 600; }
 
 .card .branch {
-	font-family: var(--vscode-editor-font-family);
+	font-family: var(--nimbus-mono-font);
 	font-size: 0.85em;
 	color: var(--vscode-descriptionForeground);
 	word-break: break-all;
