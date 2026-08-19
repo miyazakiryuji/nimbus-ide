@@ -1,7 +1,7 @@
 # 文字（日本語で読む前提の積み）
 
 **タスク**: T-273 / **実装**: `extensions/nimbus/media/cockpit.css`, `media/board.css` /
-**考えかた**: [typography スキル](../../.claude/skills/typography/SKILL.md)
+**考えかた**: [typography スキル](../../../.agents/skills/typography/SKILL.md)
 
 ## なぜ
 
