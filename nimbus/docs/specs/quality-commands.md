@@ -40,6 +40,7 @@ bash nimbus/scripts/test.sh gui --with-claude
 ```
 
 - **モジュールテスト**: `extensions/nimbus/src/test/*.test.ts` を `node --test` で実行。VS Code は起動しない
+- **スクリプトのテスト**: `nimbus/tests/scripts/*.test.mjs`。板・ドクターなど**リポジトリの道具**の守り（T-283 / T-284）
 - **GUI テスト**: `nimbus/tests/gui/` の Playwright ハーネスが Electron ごと起動し、
   使い捨てのプロファイルとワークスペースで操作する。ケースは `cases/*.mjs` に 1 ファイル 1 件
 - **GUI は既定に含めない**。ウィンドウが前面に出て利用者の作業を邪魔するため、明示したときだけ走る

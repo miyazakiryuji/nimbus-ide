@@ -27,7 +27,8 @@ node nimbus/scripts/regression-guard.mjs --strict  # 1 件でもあれば終了�
 ```
 
 見るのは**板の完了行**と、`extensions/nimbus/src/test/*.test.ts` /
-`nimbus/tests/gui/cases/*.mjs` の中の T 番号。1 行にまとめて片付けた番号の組は、
+`nimbus/tests/gui/cases/*.mjs` / `nimbus/tests/scripts/*.test.mjs`（リポジトリの道具の守り・T-283）
+の中の T 番号。1 行にまとめて片付けた番号の組は、
 **どれか 1 つが守られていれば足りる**とする（1 件の修正に 1 本で足りるため）。
 
 **番号を書くのは、テストを消してよいか後から判断するため。** 何を守っているか分からないテストは、
