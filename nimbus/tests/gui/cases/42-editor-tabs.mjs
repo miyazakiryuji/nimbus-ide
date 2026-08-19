@@ -37,10 +37,23 @@ export default {
 		ctx.expect(board !== undefined, 'タブに板の中身が描かれていない');
 		await ctx.shot('editor-tabs');
 
-		// 開いたタブは次のケースの邪魔になるので閉じておく
-		await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
-		await page.waitForTimeout(300);
-		await page.keyboard.press('w');
-		await page.waitForTimeout(1200);
+		// 開いたタブは次のケースの邪魔になるので閉じておく。
+		//
+		// **キーボードでは閉じない。** 和音（Cmd+K W）は待ち状態が残るし、
+		// `closeAllEditors` はテキストエディタしか数えないので webview のタブには効かない。
+		// さらに、webview に焦点が残ったままだと次のケースのコマンドパレットが開かず、
+		// 打った文字が webview の入力欄へ流れ込む（実測でこれに嵌まった）。
+		// **タブの ✕ を実際に押す**のがいちばん確実
+		for (let i = 0; i < 6; i++) {
+			const closers = await page.$$('.tabs-container .tab .codicon-close, .tabs-container .tab .tab-close');
+			if (closers.length === 0) {
+				break;
+			}
+			await closers[0].click();
+			await page.waitForTimeout(500);
+		}
+		// 焦点を webview の外へ戻す（次のケースがキーボードで操作できるように）
+		await page.click('.part.activitybar');
+		await page.waitForTimeout(500);
 	}
 };

@@ -278,11 +278,48 @@ export async function searchCommands(page, query) {
 }
 
 /** コマンドパレットからコマンドを 1 つ実行する */
+/** コマンドパレットが開いているか */
+async function paletteOpen(page) {
+	return page.evaluate(() => {
+		const widget = document.querySelector('.quick-input-widget');
+		return Boolean(widget) && widget.style.display !== 'none';
+	});
+}
+
+/**
+ * 焦点をワークベンチへ戻す。
+ *
+ * **webview（コックピットや板をタブで開いたもの）に焦点があると、キーはそちらへ流れる。**
+ * パレットが開かないまま打った文字が入力欄に入り、以降のケースが**全部**空振りする
+ * （実測: 41 でタブを開いたあと、42 と 43 が続けて落ちた）。
+ */
+async function returnFocusToWorkbench(page) {
+	await page.evaluate(() => {
+		const active = document.activeElement;
+		if (active && active.tagName === 'IFRAME') {
+			active.blur();
+		}
+		window.focus();
+	});
+	await page.waitForTimeout(200);
+	// blur で戻らないときのために、押しても何も起きないところを 1 回押す
+	if (!(await paletteOpen(page))) {
+		await page.click('.part.statusbar', { position: { x: 400, y: 10 } }).catch(() => undefined);
+		await page.waitForTimeout(200);
+	}
+}
+
 export async function runCommand(page, title) {
-	await page.keyboard.press('Escape');
-	await page.waitForTimeout(300);
-	await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
-	await page.waitForTimeout(1000);
+	for (let attempt = 0; attempt < 3; attempt++) {
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(300);
+		await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+Shift+P');
+		await page.waitForTimeout(1000);
+		if (await paletteOpen(page)) {
+			break;
+		}
+		await returnFocusToWorkbench(page);
+	}
 	await page.keyboard.type(title, { delay: 20 });
 	await page.waitForTimeout(1200);
 	await page.keyboard.press('Enter');
