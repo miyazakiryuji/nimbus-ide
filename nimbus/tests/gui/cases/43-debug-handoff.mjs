@@ -11,8 +11,16 @@ export default {
 	name: '止まった場所を渡すコマンドが、止まっていないときに理由を返す',
 	async run(page, ctx) {
 		await runCommand(page, labels('command.sendDebugStop')[0]);
-		await page.waitForTimeout(1500);
-		const answer = await feedbackText(page);
+		// 1 回読んで終わりにしない（フル実行では前のケースの知らせが残っていることがあり、
+		// 答えが出るまでの時間もぶれる）。出るまで数回見て、出たら進む
+		let answer = '';
+		for (let i = 0; i < 12; i++) {
+			await page.waitForTimeout(500);
+			answer = await feedbackText(page);
+			if (answer.includes('止まっていません')) {
+				break;
+			}
+		}
 		await page.keyboard.press('Escape');
 		await page.waitForTimeout(300);
 		ctx.expect(
