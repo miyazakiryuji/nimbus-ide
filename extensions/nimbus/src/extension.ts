@@ -266,6 +266,29 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 他の拡張が足した前提・指示を預かる（T-092）
 	const pluginApi = new NimbusApiHost(log);
 
+	/**
+	 * 画面に出るビューにだけツリーを作る（T-267）。
+	 *
+	 * `contributes.views` から外したビューに `createTreeView` を掛けると、VS Code は
+	 * **「No view is registered with id: …」をエラー通知で出す**（`mainThreadTreeViews.ts` 実測）。
+	 * 出しどころが無いのにバッジのためだけに作ろうとして、起動のたびに赤い通知が出ていた。
+	 * 宣言（package.json）を正として、載っていないビューには作らない。
+	 * 中身（プロバイダ）は残すので、コマンドからは今までどおり読める。
+	 */
+	function treeViewFor<T>(id: string, provider: vscode.TreeDataProvider<T>): vscode.TreeView<T> | undefined {
+		const contributed = (
+			context.extension.packageJSON as {
+				contributes?: { views?: Record<string, { id: string }[]> };
+			}
+		).contributes?.views;
+		const declared = Object.values(contributed ?? {}).some((views) => views.some((view) => view.id === id));
+		if (!declared) {
+			log(`[views] ${id} は画面に出さないので、ツリーは作りません`);
+			return undefined;
+		}
+		return vscode.window.createTreeView(id, { treeDataProvider: provider });
+	}
+
 	const sessionAllowAll = new Set<string>();
 	const previewer = new ProposedEditPreviewer();
 	const contextView = new ContextViewProvider();
@@ -296,10 +319,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const outbox = new Outbox();
 	// どこまで見たか（T-160）。大きな変更を分割して見るときに要る
 	const reviewView = new ReviewViewProvider(context.workspaceState, () => workspaceCwd(currentScope(context.workspaceState)), log);
-	const reviewTree = vscode.window.createTreeView('nimbus.review', { treeDataProvider: reviewView });
+	const reviewTree = treeViewFor('nimbus.review', reviewView);
 	// 承認の横断キュー（T-010）。バッジを出すため registerTreeDataProvider ではなく createTreeView を使う
 	const approvalsView = new ApprovalsViewProvider();
-	const approvals = vscode.window.createTreeView('nimbus.approvals', { treeDataProvider: approvalsView });
+	const approvals = treeViewFor('nimbus.approvals', approvalsView);
 	let pendingApprovals = 0;
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
@@ -337,9 +360,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				? pending.filter((item) => item.sessionId !== activeSessionId)
 				: pending;
 			approvalsView.update(listed);
-			approvals.badge = listed.length > 0
-				? { value: listed.length, tooltip: `他のセッションの承認待ち ${listed.length} 件` }
-				: undefined;
+			if (approvals) {
+				approvals.badge = listed.length > 0
+					? { value: listed.length, tooltip: `他のセッションの承認待ち ${listed.length} 件` }
+					: undefined;
+			}
 			updateStatus(activeSessionId ? sessions.get(activeSessionId) : undefined);
 		},
 		// コックピットが開いていれば、モーダルで窓ごと止めずに会話の中で受ける（T-266）。
@@ -2858,7 +2883,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		previewer,
 		terminals,
 		clipboardHints,
-		approvals,
+		...(approvals ? [approvals] : []),
 		approvalsView,
 		// 承認の横断キュー（T-010）。行から直接答える。キューモードでないときは
 		// モーダルが正の入口なので、ボタンは package.json 側の when で隠してある
@@ -3249,28 +3274,44 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			})
 		),
 		// 競合を 1 件ずつ解決する。判断がつかないものは Claude に相談文を投げる（T-115）
-		reviewTree,
+		...(reviewTree ? [reviewTree] : []),
 		reviewView,
 		// どこまで見たか（T-160）
 		vscode.commands.registerCommand('nimbus.refreshReview', async () => {
 			await reviewView.refresh();
-			reviewTree.description = reviewView.progressLabel();
+			if (reviewTree) {
+				if (reviewTree) {
+					reviewTree.description = reviewView.progressLabel();
+				}
+			}
 		}),
 		vscode.commands.registerCommand('nimbus.markReviewed', async (entry?: ReviewEntry) => {
 			if (entry) {
 				await reviewView.setReviewed(entry, true);
-				reviewTree.description = reviewView.progressLabel();
+				if (reviewTree) {
+				if (reviewTree) {
+					reviewTree.description = reviewView.progressLabel();
+				}
+			}
 			}
 		}),
 		vscode.commands.registerCommand('nimbus.markUnreviewed', async (entry?: ReviewEntry) => {
 			if (entry) {
 				await reviewView.setReviewed(entry, false);
-				reviewTree.description = reviewView.progressLabel();
+				if (reviewTree) {
+				if (reviewTree) {
+					reviewTree.description = reviewView.progressLabel();
+				}
+			}
 			}
 		}),
 		vscode.commands.registerCommand('nimbus.clearReviewMarks', async () => {
 			await reviewView.clearAll();
-			reviewTree.description = reviewView.progressLabel();
+			if (reviewTree) {
+				if (reviewTree) {
+					reviewTree.description = reviewView.progressLabel();
+				}
+			}
 		}),
 		// 行をクリックしたら差分を開く。印だけの画面にしないため
 		vscode.commands.registerCommand('nimbus.openReviewDiff', async (entry?: ReviewEntry) => {
