@@ -52,3 +52,6 @@ dist
 
 # Nimbus: 生成したブランディング素材の中間物
 nimbus/branding/out/
+
+# Nimbus: 手元の見張り役が置くロック（リポジトリの成果物ではない）
+.observer.lock
