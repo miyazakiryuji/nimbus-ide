@@ -29,6 +29,21 @@
 	 * 英数の桁揃えを優先し、日本語は読めればよい面（ツール出力・コード）に使う。
 	 */
 	--nimbus-mono-font: var(--vscode-editor-font-family), 'Hiragino Sans', 'Noto Sans JP', monospace;
+	/*
+	 * 型ラムと角丸の段（T-272・design-philosophy）。
+	 *
+	 * **自由な大きさを増やさない。** 文字は役割で選び（`heading3` / `body1-2` / `label1-2`）、
+	 * 太さは 400 と 600 の 2 つだけ。角丸は段（Control 4px / Inner 6px）に乗せる。
+	 * webview にはワークベンチの `--vscode-cornerRadius-*` が届かないので、
+	 * **段の名前で書き、段の値を控えに置く**（同じ数字が散らないように）。
+	 */
+	--nimbus-heading3: 15px;
+	--nimbus-body1: var(--vscode-font-size, 13px);
+	--nimbus-body2: 0.92em;
+	--nimbus-label1: 12px;
+	--nimbus-label2: 11px;
+	--nimbus-radius-control: var(--vscode-cornerRadius-small, 4px);
+	--nimbus-radius-inner: var(--vscode-cornerRadius-medium, 6px);
 }
 
 * {
@@ -56,7 +71,7 @@
 	background: var(--vscode-tab-inactiveBackground);
 	color: var(--vscode-tab-inactiveForeground);
 	cursor: pointer;
-	font-size: 12px;
+	font-size: var(--nimbus-label1);
 }
 
 .session-tab.active {
@@ -68,7 +83,7 @@
 
 .session-tab-mark {
 	flex: 0 0 auto;
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	line-height: 1;
 }
 
@@ -148,7 +163,7 @@ body {
 
 .username {
 	margin: 0;
-	font-size: 13px;
+	font-size: var(--nimbus-body1);
 	font-weight: 600;
 }
 
@@ -213,9 +228,9 @@ body {
 
 .turn-body code.inline {
 	font-family: var(--nimbus-mono-font);
-	font-size: 0.92em;
+	font-size: var(--nimbus-body2);
 	background: var(--vscode-textCodeBlock-background);
-	border-radius: 3px;
+	border-radius: var(--nimbus-radius-control);
 	padding: 1px 4px;
 }
 
@@ -232,7 +247,7 @@ body {
 .codeblock {
 	margin: 0 0 10px;
 	border: 1px solid var(--vscode-panel-border);
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-inner);
 	overflow: hidden;
 	background: var(--vscode-textCodeBlock-background);
 }
@@ -247,7 +262,7 @@ body {
 }
 
 .codeblock-language {
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	color: var(--vscode-descriptionForeground);
 	margin-right: auto;
 	text-transform: lowercase;
@@ -281,7 +296,7 @@ body {
 .collapsible {
 	margin: 0 0 6px;
 	border: 1px solid var(--vscode-panel-border);
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-inner);
 	overflow: hidden;
 }
 
@@ -314,7 +329,7 @@ body {
 
 .collapsible-title {
 	font-family: var(--nimbus-mono-font);
-	font-size: 0.9em;
+	font-size: var(--nimbus-body2);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -322,7 +337,7 @@ body {
 
 .collapsible-note {
 	margin-left: auto;
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	color: var(--vscode-descriptionForeground);
 	flex: 0 0 auto;
 }
@@ -334,7 +349,7 @@ body {
 	line-height: 1.55;
 	border-top: 1px solid var(--vscode-panel-border);
 	font-family: var(--nimbus-mono-font);
-	font-size: 0.9em;
+	font-size: var(--nimbus-body2);
 	white-space: pre-wrap;
 	word-break: break-word;
 	max-height: 320px;
@@ -382,13 +397,13 @@ body {
 	gap: 8px;
 	padding: 6px 16px 10px;
 	color: var(--vscode-descriptionForeground);
-	font-size: 0.92em;
+	font-size: var(--nimbus-body2);
 }
 
 .turn.system .turn-body,
 .turn.system {
 	color: var(--vscode-descriptionForeground);
-	font-size: 0.92em;
+	font-size: var(--nimbus-body2);
 	padding-top: 8px;
 	padding-bottom: 8px;
 }
@@ -425,14 +440,14 @@ body {
 
 .welcome h2 {
 	margin: 0;
-	font-size: 15px;
+	font-size: var(--nimbus-heading3);
 	font-weight: 600;
 	color: var(--vscode-foreground);
 }
 
 .welcome p {
 	margin: 0;
-	font-size: 0.92em;
+	font-size: var(--nimbus-body2);
 	line-height: 1.6;
 }
 
@@ -448,7 +463,7 @@ body {
 	text-align: left;
 	background: none;
 	border: 1px solid var(--vscode-panel-border);
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-control);
 	color: var(--vscode-textLink-foreground);
 	font: inherit;
 	padding: 6px 10px;
@@ -464,13 +479,13 @@ body {
 .assumption {
 	margin: 0 0 8px;
 	border: 1px solid var(--vscode-editorWarning-foreground);
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-control);
 	padding: 6px 8px;
 	background: var(--vscode-textBlockQuote-background);
 }
 
 .assumption-label {
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	font-weight: 600;
 	color: var(--vscode-editorWarning-foreground);
 	margin-bottom: 2px;
@@ -495,7 +510,7 @@ body {
 	cursor: text;
 	background: var(--vscode-input-background);
 	border: 1px solid var(--vscode-input-border, transparent);
-	border-radius: 6px;
+	border-radius: var(--nimbus-radius-inner);
 	padding: 6px 6px 4px;
 	display: flex;
 	flex-direction: column;
@@ -546,7 +561,7 @@ body {
 	align-items: baseline;
 	gap: 6px;
 	min-width: 0;
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	color: var(--vscode-descriptionForeground);
 }
 
@@ -571,7 +586,7 @@ body {
 	height: 22px;
 	padding: 0;
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-control);
 	background: none;
 	color: var(--vscode-foreground);
 	cursor: pointer;
@@ -633,9 +648,9 @@ body {
 	background: var(--vscode-badge-background);
 	color: var(--vscode-badge-foreground);
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-control);
 	padding: 2px 6px;
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	cursor: pointer;
 }
 
@@ -656,16 +671,19 @@ body {
 
 .approval {
 	padding: 8px;
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-inner);
 	background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+	/*
+	 * **焦点の色を飾りに使わない**（T-272・*Quiet at rest*）。
+	 * 常時 `focusBorder` を着ていると、本当に焦点があるときに区別がつかず、
+	 * 何も起きていないのに画面が声を上げる。地と枠だけで「面の中の容器」を表す
+	 */
 	border: 1px solid var(--vscode-panel-border);
-	border-left: 2px solid var(--vscode-focusBorder);
 }
 
-/* 危ないものは色ではなく「太さ」で強める。新しい配色は足さない */
+/* 危ないものだけ強める。色は既にその意味を持っているトークンから借りる */
 .approval.risk-high {
-	border-left-color: var(--vscode-errorForeground);
-	border-left-width: 4px;
+	border-left: 4px solid var(--vscode-errorForeground);
 }
 
 .approval-title {
@@ -674,14 +692,14 @@ body {
 }
 
 .approval-who {
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	color: var(--vscode-descriptionForeground);
 	margin-bottom: 2px;
 }
 
 .approval-summary {
 	font-family: var(--nimbus-mono-font);
-	font-size: 0.9em;
+	font-size: var(--nimbus-body2);
 	color: var(--vscode-descriptionForeground);
 	white-space: pre-wrap;
 	word-break: break-all;
@@ -700,7 +718,7 @@ body {
 	color: var(--vscode-button-foreground);
 	background: var(--vscode-button-background);
 	border: none;
-	border-radius: 2px;
+	border-radius: var(--nimbus-radius-control);
 	padding: 4px 12px;
 	cursor: pointer;
 }
@@ -729,7 +747,7 @@ body {
 	overflow-y: auto;
 	background: var(--vscode-editorWidget-background, var(--vscode-input-background));
 	border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
-	border-radius: 4px;
+	border-radius: var(--nimbus-radius-control);
 	box-shadow: 0 2px 8px var(--vscode-widget-shadow, transparent);
 	z-index: 10;
 }
@@ -756,11 +774,11 @@ body {
 
 .slash-name {
 	font-weight: 600;
-	font-size: 0.95em;
+	font-size: var(--nimbus-body2);
 }
 
 .slash-detail {
-	font-size: 11px;
+	font-size: var(--nimbus-label2);
 	opacity: 0.8;
 	white-space: nowrap;
 	overflow: hidden;
