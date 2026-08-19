@@ -1,7 +1,7 @@
 # 直したものが戻らないようにする
 
 **タスク**: T-274 / **実装**: `nimbus/scripts/regression-guard.mjs`,
-`nimbus/scripts/doctor.mjs`（台帳照合）/ **規約**: [CLAUDE.md](../../CLAUDE.md)「直したら、戻らないようにする」
+`nimbus/scripts/doctor.mjs`（台帳照合）/ **規約**: [CLAUDE.md](../../../CLAUDE.md)「直したら、戻らないようにする」
 
 ## なぜ
 

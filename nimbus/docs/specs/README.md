@@ -103,6 +103,90 @@ IDE 基礎機能:
 - [`workspace-trust.md`](workspace-trust.md) — 信頼していないフォルダでの振る舞い
 - [`display-language.md`](display-language.md) — 表示言語（既定を日本語にする）
 
+## 索引の追補（2026-08-19 の棚卸し・T-281）
+
+実装が先に進んで索引から漏れていた 68 本。上の一覧と同じ「今どう動くべきか」の正本です。
+
+セッションの土台・並列・画面（追補）:
+
+- [`approval-in-conversation.md`](approval-in-conversation.md) — 承認を会話の中で受ける
+- [`cockpit-chat.md`](cockpit-chat.md) — コックピットの作り（VS Code のチャットに寄せる）
+- [`cockpit-fullscreen.md`](cockpit-fullscreen.md) — 全画面のコックピットと、セッションのタブ、右半分
+- [`debug-tools.md`](debug-tools.md) — デバッガ連携（T-104）
+- [`debug-view.md`](debug-view.md) — デバッグ面（詰まったときに見るもの）
+- [`decisions.md`](decisions.md) — 決めたことを残す（ADR）（T-060）
+- [`editor-tabs.md`](editor-tabs.md) — コックピットとタスク板をエディタタブで開く
+- [`headless-and-mcp-tools.md`](headless-and-mcp-tools.md) — ヘッドレス実行と MCP ツールの単体実行
+- [`herdr.md`](herdr.md) — Herdr のセッションを読む
+- [`import-rules.md`](import-rules.md) — 他のツールの設定を取り込む（T-068）
+- [`localization.md`](localization.md) — 多言語化（T-091）
+- [`managed-policy-and-plugins.md`](managed-policy-and-plugins.md) — 組織ポリシーとプラグイン API
+- [`market.md`](market.md) — 共有マーケット — 入れる側（T-070）
+- [`memory-and-startup.md`](memory-and-startup.md) — メモリの増え方と、起動時間
+- [`monorepo-scope.md`](monorepo-scope.md) — モノレポのスコープ切り替え（T-078）
+- [`permission-rules.md`](permission-rules.md) — 承認ルールの編集
+- [`regression-guard.md`](regression-guard.md) — 直したものが戻らないようにする
+- [`remote-approval.md`](remote-approval.md) — 手元の端末から承認だけする
+- [`session-registry.md`](session-registry.md) — セッションの台帳（持ち主・横断の上限・続きから・場所の重なり）
+- [`session-repeats.md`](session-repeats.md) — 走っている最中に繰り返しに気づく（T-237）
+- [`session-sync.md`](session-sync.md) — マシンをまたいでセッションを続ける
+- [`signature-attachment.md`](signature-attachment.md) — 型定義とバージョンの自動添付（T-175 / T-083）
+- [`task-board-shared.md`](task-board-shared.md) — 板をウィンドウ横断で持つ（担当・進捗・点検）
+- [`version-watch.md`](version-watch.md) — Claude Code の更新に気づく（T-094）
+- [`workspace-roots.md`](workspace-roots.md) — マルチルートワークスペース対応（T-173）
+
+Git とレビュー（追補）:
+
+- [`archaeology.md`](archaeology.md) — なぜこうなっているのかを辿る（T-079）
+- [`ci-failure.md`](ci-failure.md) — 落ちた CI を調べる（T-131）
+- [`codeowners.md`](codeowners.md) — コードオーナーへの通知
+- [`commit-split.md`](commit-split.md) — コミットの分けかたの提案
+- [`conflicts.md`](conflicts.md) — コンフリクトの解決を手伝う
+- [`diff-summary.md`](diff-summary.md) — 変更の要約（差分の見取り図）
+- [`equivalence.md`](equivalence.md) — 移行前後の等価性確認（T-179）
+- [`error-monitor.md`](error-monitor.md) — 監視ツールの障害を取り込む
+- [`impact-preview.md`](impact-preview.md) — 変更の影響範囲
+- [`pr-review.md`](pr-review.md) — PR レビューの取り込み
+- [`pr-stack.md`](pr-stack.md) — 積み上げた PR
+- [`repo-summary.md`](repo-summary.md) — リポジトリの構造要約カード（T-176）
+- [`rollback-and-hotfix.md`](rollback-and-hotfix.md) — 戻す道と、急ぐ道
+- [`schema-impact.md`](schema-impact.md) — 型の変更が壊す場所を洗い出す（T-123）
+- [`snapshot-review.md`](snapshot-review.md) — スナップショットの更新レビュー（T-181）
+- [`wiki-export.md`](wiki-export.md) — 社内 Wiki / Notion へ出す
+
+IDE 基礎機能（追補）:
+
+- [`bookmarks.md`](bookmarks.md) — ブックマーク（ニーモニック付き）
+- [`command-completion.md`](command-completion.md) — Command completion（ドットから IDE アクション）
+- [`dependency-matrix.md`](dependency-matrix.md) — 依存構造マトリクス（DSM）
+- [`editor-actions.md`](editor-actions.md) — エディタから直接頼む（T-171 / T-172）
+- [`macros.md`](macros.md) — マクロ（記録・再生）
+- [`productivity-guide.md`](productivity-guide.md) — Productivity Guide
+- [`run-anything.md`](run-anything.md) — Run Anything
+- [`search-everywhere.md`](search-everywhere.md) — Search Everywhere
+- [`structural-search.md`](structural-search.md) — 構造検索・置換（SSR）
+
+コードを読む・直す・確かめる（追補）:
+
+- [`agent-compare.md`](agent-compare.md) — 別のツールの結果と並べて比べる
+- [`api-docs.md`](api-docs.md) — 古くなった API ドキュメントを探す（T-209）
+- [`benchmark.md`](benchmark.md) — 改善前後のベンチ比較
+- [`clipboard-hints.md`](clipboard-hints.md) — コピーしたエラー文に気づく（T-170）
+- [`conventions.md`](conventions.md) — プロジェクト固有の書き方（T-103）
+- [`flaky-tests.md`](flaky-tests.md) — 不安定なテストの検出
+- [`lsp-tools.md`](lsp-tools.md) — LSP をエージェントのツールにする（T-098）
+- [`mutations.md`](mutations.md) — テストが守っているかを確かめる（T-182）
+- [`notebooks.md`](notebooks.md) — ノートブック（`.ipynb`）対応（T-174）
+- [`refactor-progress.md`](refactor-progress.md) — 段階的リファクタの進捗管理と一括変更（T-111 / T-110）
+- [`repro-test.md`](repro-test.md) — 再現手順の生成
+- [`reverse-spec.md`](reverse-spec.md) — コードから仕様書を起こす（T-080）
+- [`simulator.md`](simulator.md) — シミュレータ操作
+- [`snippets.md`](snippets.md) — スニペット化（T-177）
+- [`terminal-capture.md`](terminal-capture.md) — ターミナル出力の自動キャプチャ（T-169 / T-106）
+- [`test-runner.md`](test-runner.md) — テストランナー連携（T-039 / T-108 / T-109）
+- [`verify-edits.md`](verify-edits.md) — 生成直後の型検証と自動ループ（T-101 / T-102）
+- [`widget-tests.md`](widget-tests.md) — Widget テスト / ゴールデンテストの生成
+
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 
 ## テンプレート
