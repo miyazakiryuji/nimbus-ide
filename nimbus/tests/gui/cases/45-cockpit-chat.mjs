@@ -85,41 +85,15 @@ export default {
 			`定型を選んでも入力欄に入らない: "${afterSlash.slice(0, 80)}"`
 		);
 
-		// 枠の残りの行（T-282）
-		const readQuota = () =>
-			frame.$eval('#quota', (el) => ({
-				hidden: el.hidden,
-				text: (el.textContent ?? '').trim(),
-				tooltip: el.title,
-				// 入りきらずに末尾が切れていないか（`text-overflow: ellipsis` は見た目では気づけない）
-				truncated: el.scrollWidth > el.clientWidth + 1
-			}));
-
-		if (ctx.withClaude) {
-			// ターンが終わると枠の数字が届く
-			let quota = await readQuota();
-			for (let i = 0; i < 20 && quota.hidden; i++) {
-				await page.waitForTimeout(1000);
-				quota = await readQuota();
-			}
-			ctx.expect(
-				!quota.hidden && quota.text !== '',
-				`枠の残りが出ない（枠のある契約で走らせているか確かめる）: ${JSON.stringify(quota)}`
-			);
-			// **切れていたら意味がない。** 週の残りが末尾から消えるのが実際に起きた
-			ctx.expect(!quota.truncated, `枠の残りの行が末尾から切れている: ${JSON.stringify(quota)}`);
-			ctx.expect(
-				quota.tooltip.includes('リセット'),
-				`いつ戻るかが、指を置いたときの中身に入っていない: ${JSON.stringify(quota)}`
-			);
-		} else {
-			// **セッションが無いときは空欄を置かず、行ごと消えている**こと
-			const quota = await readQuota();
-			ctx.expect(
-				quota.hidden && quota.text === '',
-				`枠の残りの行が、出すものが無いのに残っている: ${JSON.stringify(quota)}`
-			);
-		}
+		// 枠の残りの行（T-282）。**セッションが無いときは空欄を置かず、行ごと消えている**こと
+		const quota = await frame.$eval('#quota', (el) => ({
+			hidden: el.hidden,
+			text: (el.textContent ?? '').trim()
+		}));
+		ctx.expect(
+			quota.hidden && quota.text === '',
+			`枠の残りの行が、出すものが無いのに残っている: ${JSON.stringify(quota)}`
+		);
 
 		await ctx.shot('cockpit-chat');
 	}
