@@ -1559,7 +1559,7 @@
         },
         "nimbus.dialogue.confirmVaguePrompt": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "%config.dialogue.confirmVaguePrompt%"
         },
         "nimbus.hotReload.enabled": {
@@ -1696,7 +1696,7 @@
         },
         "nimbus.clarifyVagueJapanese": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "%config.clarifyVagueJapanese%"
         },
         "nimbus.gif.width": {

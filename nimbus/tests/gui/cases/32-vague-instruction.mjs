@@ -14,7 +14,15 @@
  *
  * 1. **判定が送信経路に実際に繋がっているか**（`checkBeforeSending` の配線）
  * 2. **閉じたときに送られないか**（止めないが、勝手に送りもしない）
+ *
+ * ## 既定では出さない（T-268）
+ *
+ * 送るたびに割り込むのが煩わしいという声で、聞き返しは**既定 off** にした。
+ * 機能は残してあるので、ここでは**設定で on にしてから**確かめる。
+ * 既定のまま試すと「聞き返さない」のが正しい振る舞いになってしまい、配線が切れても気づけない。
  */
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { openNimbusSidebar } from '../helpers.mjs';
 
 /**
@@ -52,8 +60,14 @@ async function modalOpen(page) {
 export default {
 	name: '曖昧な指示は、送る前に一度だけ聞き返す',
 	async run(page, ctx) {
+		// 既定 off（T-268）。この経路を通すために、このケースだけ on に戻す
+		mkdirSync(join(ctx.workspace, '.vscode'), { recursive: true });
+		writeFileSync(
+			join(ctx.workspace, '.vscode', 'settings.json'),
+			JSON.stringify({ 'nimbus.dialogue.confirmVaguePrompt': true, 'nimbus.clarifyVagueJapanese': true }, null, '\t')
+		);
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
-		await page.waitForTimeout(1200);
+		await page.waitForTimeout(2500);
 
 		// 対象の書かれていない指示語だけの指示（`core/ambiguity.ts` の demonstrative）
 		ctx.expect(await typeInCockpit(page, 'それを直して'), 'コックピットの入力欄が見つからない');
