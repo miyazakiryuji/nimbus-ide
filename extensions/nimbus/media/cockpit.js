@@ -37,6 +37,8 @@
 	let historyIndex = -1;
 	/** スラッシュコマンドの候補（拡張から届く） */
 	let commands = [];
+	/** 使い始めの「準備」（T-285）。足りないものは、詰まる場所に出す */
+	let readiness = [];
 
 	const STATUS_LABEL = {
 		'starting': '起動中',
@@ -353,6 +355,67 @@
 		'テストを走らせて、落ちたら直して'
 	];
 
+	/**
+	 * 足りていないものを、コックピットの中に出す（T-285）。
+	 *
+	 * これまで案内は**送ろうとして初めて**トーストで出て、しかも設定名を告げるだけだった。
+	 * 詰まる場所と直す場所を同じにする（人間工学 E2）。ボタンは押したら直るところまで（T-244）。
+	 */
+	function renderReadiness(parent) {
+		const blocked = readiness.filter((check) => check.state === 'blocked');
+		if (blocked.length === 0) {
+			return false;
+		}
+		const box = document.createElement('div');
+		box.className = 'readiness';
+
+		const title = document.createElement('h2');
+		title.textContent = '使い始める前に';
+		box.appendChild(title);
+
+		const lead = document.createElement('p');
+		lead.textContent = `あと ${blocked.length} 件で送れるようになります。`;
+		box.appendChild(lead);
+
+		for (const check of blocked) {
+			const row = document.createElement('div');
+			row.className = 'readiness-item';
+
+			const head = document.createElement('div');
+			head.className = 'readiness-head';
+			head.appendChild(icon('error', 'state-icon'));
+			const name = document.createElement('span');
+			name.className = 'readiness-title';
+			name.textContent = check.title;
+			head.appendChild(name);
+			row.appendChild(head);
+
+			const detail = document.createElement('p');
+			detail.className = 'readiness-detail';
+			detail.textContent = check.detail;
+			row.appendChild(detail);
+
+			if (check.actions.length > 0) {
+				const actions = document.createElement('div');
+				actions.className = 'readiness-actions';
+				check.actions.forEach((action, index) => {
+					const button = document.createElement('button');
+					button.type = 'button';
+					// 先頭を主にする。並べるほど、どれを押せばよいか分からなくなる
+					button.className = index === 0 ? 'readiness-action' : 'readiness-action secondary';
+					button.textContent = action.label;
+					button.addEventListener('click', () => vscode.postMessage({ type: 'run', command: action.command }));
+					actions.appendChild(button);
+				});
+				row.appendChild(actions);
+			}
+			box.appendChild(row);
+		}
+
+		parent.appendChild(box);
+		return true;
+	}
+
 	function clearWelcome() {
 		const welcome = document.getElementById('welcome');
 		if (welcome) {
@@ -367,6 +430,14 @@
 		const box = document.createElement('div');
 		box.id = 'welcome';
 		box.className = 'welcome';
+
+		// 足りないものがあるなら、頼みかたの案内より先に出す。
+		// 送れない状態で「Enter で送ります」だけ読ませても、迷わせるだけ
+		if (renderReadiness(box)) {
+			log.appendChild(box);
+			return;
+		}
+
 		const title = document.createElement('h2');
 		title.textContent = `${ASSISTANT} に頼む`;
 		box.appendChild(title);
@@ -838,6 +909,14 @@
 			log.scrollTop = log.scrollHeight;
 		} else if (message.type === 'commands') {
 			commands = message.items ?? [];
+		} else if (message.type === 'readiness') {
+			readiness = message.checks ?? [];
+			// 開いたまま直したときに、その場で消えるように描き直す
+			const welcome = document.getElementById('welcome');
+			if (welcome) {
+				welcome.remove();
+				showWelcome();
+			}
 		} else if (message.type === 'attachments') {
 			for (const item of message.items ?? []) {
 				pending.push(item);

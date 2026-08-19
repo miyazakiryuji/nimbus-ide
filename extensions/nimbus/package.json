@@ -1183,6 +1183,26 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.showSetup",
+        "title": "はじめの準備を開く",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.locateClaude",
+        "title": "Claude Code の場所を指定する",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.openClaudeInstall",
+        "title": "Claude Code の入れかたを見る",
+        "category": "Nimbus"
+      },
+      {
+        "command": "nimbus.recheckSetup",
+        "title": "準備をもう一度さがす",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.showDebug",
         "title": "デバッグを開く",
         "category": "Nimbus"
