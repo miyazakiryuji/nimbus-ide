@@ -30,6 +30,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
+- [ ] T-273 **フォントを日本語前提で決め直す** — 表示言語を日本語にした（T-245）のに、フォントの積みかたは upstream のまま。調べた事実は 3 つ。(1) **等幅の積み（macOS は `Menlo, Monaco, 'Courier New', monospace`）に日本語が 1 文字も無い** — ツール出力やコードブロックの日本語は OS の字ごとのフォールバックで**プロポーショナルな Hiragino** に落ち、等幅が崩れる。macOS には日本語の等幅が**プリインストールされていない**（Osaka-Mono は現行 OS から消えた）(2) UI の積み（`-apple-system, BlinkMacSystemFont, sans-serif`）も日本語を名指ししておらず、macOS では Hiragino に落ちて実用になるが、Linux（`system-ui, Ubuntu, Droid Sans`）では保証が無い (3) Hiragino Sans は **W0〜W9** あるので、家族を名指しすれば semiBold(600) が実体で出る。名指ししないと合成太字（faux bold）になり小さい字でつぶれる。**同梱するか・積みを名指しするか・利用者に委ねるかを決める**（同梱はライセンスと容量の判断が要る）[P2]
+- [x] T-274 文字のスキルを足す（`design-philosophy` の型ラムが決めない「どのフォントで出るか」を、日本語の側から補う）— 2026-08-19 / `.agents/skills/typography/SKILL.md`。積みに日本語があるか・太さが実体か合成か・行間・和欧の字面の 4 原則。`ergonomics` と同じく upstream を触らず Nimbus 側の横断レイヤーとして置く
 - [ ] T-272 **コックピットの意匠を design-philosophy に合わせる** — 色はテーマ変数だけで組めていて、そこは良い。崩れているのは 4 点（値ではなく**役割**で直す）。**T-269 の作り替えと同じファイルなので、そちらが落ち着いてから当てる**
       1. **角丸が段（tier）に乗っていない** — `3px` はどの段でもない。吹き出し・カードは面の中に座る容器なので **Inner（`--vscode-cornerRadius-medium`）**、入力欄とボタンは **Control（`--vscode-cornerRadius-small`）**。いま `2px` / `3px` / `4px` が混在している（*Elevation is encoded* 5）
       2. **文字の大きさが役割ではなく目分量** — `11px` / `0.9em` / `0.92em` / `13px` / `15px` が並ぶ。同じ格の「静かな文字」に 3 通りの大きさを使っていて、同じものが同じに見えない。型ラム（`body1-2` / `label1-3` ＋ 2 ウェイト）の役割で選ぶ（*Sameness signals sameness* 6）
