@@ -72,15 +72,30 @@
 	};
 
 	/** @param {string} name @param {string} [className] */
-	function icon(name, className) {
+	/**
+	 * アイコンを 1 つ作る。
+	 *
+	 * **寸法と色はここで付ける。** 付けないと、SVG は既定の 300×150 まで伸び、
+	 * 塗りは黒になる。実際にシェブロンがそうなっていて、折りたたみの見出しが
+	 * **巨大な黒い三角形**になっていた（T-287）。呼ぶ側の CSS 頼みにすると、
+	 * 書き忘れた 1 か所がこうなるので、作るところで決めきる。
+	 *
+	 * 大きさは 16（base）か 12（compact）の 2 つだけ。**14 は常に間違い**
+	 * （design-philosophy「Icon sizes」）。文字の横に並ぶ小さな字面は compact。
+	 */
+	function icon(name, className, size = 16) {
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.setAttribute('viewBox', '0 0 16 16');
+		svg.setAttribute('width', String(size));
+		svg.setAttribute('height', String(size));
 		svg.setAttribute('aria-hidden', 'true');
 		if (className) {
 			svg.setAttribute('class', className);
 		}
 		const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 		path.setAttribute('d', PATHS[name] ?? PATHS.check);
+		// テーマに従う。指定が無いと既定の黒になり、暗いテーマで沈む
+		path.setAttribute('fill', 'currentColor');
 		svg.appendChild(path);
 		return svg;
 	}
@@ -279,7 +294,7 @@
 		const summary = document.createElement('button');
 		summary.type = 'button';
 		summary.className = 'collapsible-summary';
-		summary.appendChild(icon('chevron', 'chevron'));
+		summary.appendChild(icon('chevron', 'chevron', 12));
 		const stateIcon = icon(state ?? 'spinner', `state-icon${state ? '' : ' running'}`);
 		summary.appendChild(stateIcon);
 		const label = document.createElement('span');

@@ -155,8 +155,9 @@ body {
 }
 
 .avatar svg {
-	width: 14px;
-	height: 14px;
+	/* アイコンは 16（base）か 12（compact）だけ。14 は常に間違い（design-philosophy） */
+	width: 16px;
+	height: 16px;
 	fill: currentColor;
 	opacity: 0.9;
 }
@@ -366,8 +367,9 @@ body {
 
 .state-icon {
 	flex: 0 0 auto;
-	width: 14px;
-	height: 14px;
+	/* 見出しの文字の横に並ぶ字面なので compact（12）。14 は常に間違い（design-philosophy） */
+	width: 12px;
+	height: 12px;
 }
 
 .state-icon.running {
@@ -660,8 +662,9 @@ body {
 }
 
 .icon-button svg {
-	width: 14px;
-	height: 14px;
+	/* 押せるものの中なので base（16）。14 は常に間違い（design-philosophy） */
+	width: 16px;
+	height: 16px;
 	fill: currentColor;
 }
 
