@@ -27,7 +27,7 @@ async function readQuota(page) {
 			truncated: el.scrollWidth > el.clientWidth + 1,
 			// バー・数字・絵文字が揃っているか（T-295）
 			bars: el.querySelectorAll('.quota-bar').length,
-			marks: [...el.querySelectorAll('.quota-mark')].map((mark) => mark.textContent).join('')
+			marks: el.querySelectorAll('.quota-mark').length
 		}));
 	}
 	return undefined;
@@ -86,10 +86,11 @@ export default {
 			quota.tooltip.includes('リセット'),
 			`いつ戻るかが、指を置いたときの中身に入っていない: ${JSON.stringify(quota)}`
 		);
-		// **数字だけにしない**（T-295）。バーと絵文字が同じことを言っていること
+		// **数字だけにしない**（T-295 / T-302）。バーと印が同じことを言っていること。
+		// 印は絵文字ではなく、テーマトークンで塗った SVG
 		ctx.expect(
-			quota.bars >= 2 && /[🟢🟡🔴]/u.test(quota.marks),
-			`枠の目盛り（バー・絵文字）が出ていない: ${JSON.stringify(quota)}`
+			quota.bars >= 2 && quota.marks >= 2,
+			`枠の目盛り（バー・印）が出ていない: ${JSON.stringify(quota)}`
 		);
 
 		// 走らせかたの札（T-291）。セッションがあるので出ているはず

@@ -75,7 +75,7 @@ export type OutboundMessage =
 	 * 前面のセッションの状態（T-298）。**タブの列は 2 本以上のときしか出ない**ので、
 	 * 1 本のときに状態がどこにも出なくなる。列とは別に帯へ出す。
 	 */
-	| { type: 'sessionState'; state?: { mark: string; symbol: string; label: string; color: string } }
+	| { type: 'sessionState'; state?: { symbol: string; label: string; color: string } }
 	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
@@ -122,7 +122,7 @@ export interface CockpitHandlers {
 		/** 走らせかた（T-291）。モデルと思考量 */
 		run?: { model?: string; effort: string; canPickEffort: boolean };
 		/** 前面のセッションの状態（T-298） */
-		state?: { mark: string; symbol: string; label: string; color: string };
+		state?: { symbol: string; label: string; color: string };
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];

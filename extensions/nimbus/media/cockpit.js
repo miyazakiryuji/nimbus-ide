@@ -70,6 +70,7 @@
 		insert: 'M8 1v9.2l3.1-3.1.9.9L7.5 12.6 3 8l.9-.9L7 10.2V1zM2 14h12v1H2z',
 		newFile: 'M9 1H3v14h10V5zm3 4h-3V2zM7 7h1v2h2v1H8v2H7v-2H5V9h2z',
 		terminal: 'M2 3h12v10H2zm1 1v8h10V4zM4.5 6l2 2-2 2 .7.7L7.9 8 5.2 5.3zM8.5 10h3v1h-3z',
+		dot: 'M8 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z',
 		add: 'M7.25 3h1.5v4.25H13v1.5H8.75V13h-1.5V8.75H3v-1.5h4.25z',
 		chevron: 'M6 4l4 4-4 4z',
 		check: 'M6.3 12.7 2 8.4l1-1 3.3 3.3L13 4l1 1z',
@@ -881,13 +882,14 @@
 			const button = document.createElement('button');
 			button.type = 'button';
 			button.className = `session-tab${tab.active ? ' active' : ''}`;
-			button.title = `${tab.title} — ${tab.label}`;
+			// 指を置けば全文が読める（幅が無くても失われない・T-301）
+			button.title = `${tab.number}. ${tab.full ?? tab.title} — ${tab.label}`;
 			button.setAttribute('aria-current', tab.active ? 'true' : 'false');
 
-			// 色つきの丸（T-298）。記号だけだと小さくて読み取れないという声が出た
-			const dot = document.createElement('span');
-			dot.className = 'session-tab-dot';
-			dot.textContent = tab.mark ?? '';
+			// 色つきの丸（T-298 / T-302）。記号だけだと小さくて読み取れないという声が出た。
+			// 色はテーマトークンから引く（絵文字だとテーマに従わない）
+			const dot = icon('dot', 'session-tab-dot', 8);
+			dot.style.color = `var(--vscode-${tab.color})`;
 			button.appendChild(dot);
 
 			const mark = document.createElement('span');
@@ -895,6 +897,13 @@
 			mark.textContent = tab.symbol;
 			mark.style.color = `var(--vscode-${tab.color})`;
 			button.appendChild(mark);
+
+			// **番号は幅が無くても残す**（T-301）。3 本並ぶと名前に使えるのは 30px ほどで、
+			// 先頭から削るとどのタブも同じ書き出しになって見分けがつかない
+			const number = document.createElement('span');
+			number.className = 'session-tab-number';
+			number.textContent = String(tab.number ?? '');
+			button.appendChild(number);
 
 			const name = document.createElement('span');
 			name.className = 'session-tab-name';
@@ -954,10 +963,8 @@
 			const item = document.createElement('span');
 			item.className = `quota-item tone-${gauge.tone}`;
 
-			const mark = document.createElement('span');
-			mark.className = 'quota-mark';
-			// 絵文字は行の高さを跳ねさせるので、字面の箱を固定する（CSS 側）
-			mark.textContent = gauge.mark;
+			// 残りの少なさを、テーマの色で塗った丸で（T-302）
+			const mark = icon('dot', 'quota-mark', 8);
 			item.appendChild(mark);
 
 			const label = document.createElement('span');
@@ -991,9 +998,10 @@
 			sessionState.textContent = '';
 			sessionState.hidden = !message.state;
 			if (message.state) {
-				const mark = document.createElement('span');
-				mark.className = 'state-mark';
-				mark.textContent = message.state.mark;
+				// **テーマの色で塗った丸**（T-302）。絵文字はテーマに従わず、
+				// 他がすべて SVG なのでそこだけ質感が変わる
+				const mark = icon('dot', 'state-mark', 8);
+				mark.style.color = `var(--vscode-${message.state.color})`;
 				sessionState.appendChild(mark);
 
 				const word = document.createElement('span');

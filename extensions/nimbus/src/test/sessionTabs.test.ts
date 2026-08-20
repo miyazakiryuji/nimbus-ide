@@ -44,38 +44,47 @@ test('タブの並びは始めた順で、状態では動かない', () => {
 		{ activeSessionId: 'b', pendingSessionIds: new Set(['a']), titles: new Map([['a', 'ログインを直す']]) }
 	);
 	assert.deepStrictEqual(
-		tabs.map((tab) => [tab.sessionId, tab.title, tab.state, tab.symbol, tab.active]),
+		tabs.map((tab) => [tab.sessionId, tab.number, tab.title, tab.state, tab.symbol, tab.active]),
 		[
-			['a', 'ログインを直す', 'waiting-approval', '!', false],
-			['b', 'b', 'running', '●', true],
-			['c', 'c', 'error', '✕', false]
+			// 番号は始めた順。**幅が無くてもこれだけは残る**（T-301）
+			['a', 1, 'ログインを直す', 'waiting-approval', '!', false],
+			['b', 2, 'b', 'running', '●', true],
+			['c', 3, 'c', 'error', '✕', false]
 		]
 	);
 });
 
-test('名前は 1 行に畳んで切り詰め、無ければ ID の頭を使う', () => {
+test('名前は意味の切れ目で切って短い見出しにする（T-301）', () => {
+	// **先頭から数えて切らない。** 3 本並ぶと名前に使えるのは 30px ほどで、
+	// 機械的に削るとどれも同じ書き出し（「この」「テストを」）になり見分けがつかない
 	assert.deepStrictEqual(
-		[tabTitle('  直す\nすぐ  ', 'abcdefgh1234'), tabTitle(undefined, 'abcdefgh1234'), tabTitle('あ'.repeat(40), 'x', 10)],
-		['直す すぐ', 'abcdefgh', `${'あ'.repeat(9)}…`]
+		[
+			tabTitle('ログイン画面のバリデーションを直して。今日中に', 'x'),
+			tabTitle('テストを走らせて、落ちたら直して', 'x'),
+			tabTitle('  直す\nすぐ  ', 'abcdefgh1234'),
+			tabTitle(undefined, 'abcdefgh1234'),
+			tabTitle('あ'.repeat(40), 'x', 10)
+		],
+		['ログイン画面のバリ…', 'テストを走らせて', '直す すぐ', 'abcdefgh', `${'あ'.repeat(9)}…`]
 	);
 });
 
-test('状態は記号・丸・言葉・色の 4 つで同じことを言う（T-298）', () => {
-	// **記号だけだと小さくて読み取れない**という声が出た。
-	// 色覚の違い・モノクロのスクリーンショット・小さな字面のどれでも、
-	// どれか 1 つは必ず読める形にしておく
+test('状態は記号・言葉・テーマの色で言う（絵文字は使わない）（T-298 / T-302）', () => {
+	// **記号だけだと小さくて読み取れない**という声が出たので言葉と色を添える。
+	// ただし**絵文字は使わない**（T-302）— テーマの色に従わず、他がすべて SVG なので
+	// そこだけ質感が変わる。色つきの印は webview がテーマトークンで塗る
 	assert.deepStrictEqual(
 		(['waiting-approval', 'running', 'asking', 'done', 'stopped', 'error'] as const).map((state) => {
 			const look = lookOf(state);
-			return [look.symbol, look.mark, look.label];
+			return [look.symbol, look.label, look.color];
 		}),
 		[
-			['!', '🟡', '許可待ち'],
-			['●', '🔵', '作業中'],
-			['?', '⚪', 'あなたの番'],
-			['✓', '🟢', '完了'],
-			['■', '⚫', '中断'],
-			['✕', '🔴', 'エラー']
+			['!', '許可待ち', 'list-warningForeground'],
+			['●', '作業中', 'progressBar-background'],
+			['?', 'あなたの番', 'editorInfo-foreground'],
+			['✓', '完了', 'testing-iconPassed'],
+			['■', '中断', 'descriptionForeground'],
+			['✕', 'エラー', 'list-errorForeground']
 		]
 	);
 });

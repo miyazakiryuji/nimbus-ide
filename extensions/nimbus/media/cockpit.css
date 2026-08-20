@@ -779,12 +779,17 @@ body {
 	display: none;
 }
 
-/* 丸は字面が大きい。幅と大きさを決めて、行の高さを跳ねさせない */
+/* 状態の丸（T-302）。色はテーマトークンを付ける側が決める */
 .state-mark,
 .session-tab-dot {
-	width: 12px;
-	font-size: 10px;
-	text-align: center;
+	flex: 0 0 auto;
+}
+
+/* 通し番号（T-301）。**幅が足りなくてもこれだけは残す**ので、縮ませない */
+.session-tab-number {
+	flex: 0 0 auto;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.7;
 }
 
 .session-tab-state {
@@ -851,11 +856,18 @@ body {
 	margin-left: 8px;
 }
 
+/* 残りの少なさの丸（T-302）。既定は落ち着いた色、危ないときだけ寄せる */
 .quota-mark {
-	/* 絵文字だけ別の字面になるので、幅も揃えて並びを乱さない */
-	width: 12px;
-	font-size: 10px;
-	text-align: center;
+	flex: 0 0 auto;
+	color: var(--vscode-testing-iconPassed, currentColor);
+}
+
+.quota-item.tone-warn .quota-mark {
+	color: var(--vscode-list-warningForeground, currentColor);
+}
+
+.quota-item.tone-low .quota-mark {
+	color: var(--vscode-list-errorForeground, currentColor);
 }
 
 .quota-bar {

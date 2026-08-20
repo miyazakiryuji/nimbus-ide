@@ -6,7 +6,10 @@
  * `SessionStatus`（`events.ts`）と、**承認を待っているかどうか**（`core/approvalQueue.ts` 側の待ち行列）。
  * `SessionStatus` に「許可待ち」は無いので、ここで合流させる。
  *
- * **色だけに頼らない。** 記号を必ず添える（色覚の違いと、モノクロのスクリーンショットで潰れるため）。
+ * **色だけに頼らない。** 記号と言葉を必ず添える（色覚の違いと、モノクロのスクリーンショットで潰れるため）。
+ * **絵文字は使わない**（T-302）。テーマの色に従わないうえ、他がすべて codicon なので
+ * そこだけ質感が変わる（design-philosophy「Color comes from the theme」「Sameness signals sameness」）。
+ * 色つきの印が要るときは、**テーマトークンで塗った SVG** を webview 側で描く。
  * 色は新しく作らず、**既にその意味を持っている VS Code のトークン**へ寄せる（`core/persona.ts` と同じ方針）。
  *
  * VS Code に依存しないので単体で検証できる。
@@ -29,12 +32,6 @@ export type TabState =
 export interface TabLook {
 	/** 色に頼らないための記号 */
 	symbol: string;
-	/**
-	 * 色つきの丸（T-298）。**記号だけだと小さくて読み取れない**という声が出た。
-	 * 絵文字はテーマに関わらず色が出るので、記号・色・言葉に続く 4 本目の手がかりになる。
-	 * **これだけで状態を表さない**（T-295 と同じ約束）。
-	 */
-	mark: string;
 	/** 読み上げ・tooltip 用の 1 語 */
 	label: string;
 	/** VS Code のテーマ色トークン（webview では `--vscode-` 変数として引ける） */
@@ -43,15 +40,15 @@ export interface TabLook {
 
 const LOOK: Record<TabState, TabLook> = {
 	// 止まっていることを知らせる色は、既に警告が持っている
-	'waiting-approval': { symbol: '!', mark: '🟡', label: '許可待ち', color: 'list-warningForeground' },
+	'waiting-approval': { symbol: '!', label: '許可待ち', color: 'list-warningForeground' },
 	// 進行中を表すトークンをそのまま借りる
-	running: { symbol: '●', mark: '🔵', label: '作業中', color: 'progressBar-background' },
+	running: { symbol: '●', label: '作業中', color: 'progressBar-background' },
 	// 人間の番＝知らせであって異常ではない
-	asking: { symbol: '?', mark: '⚪', label: 'あなたの番', color: 'editorInfo-foreground' },
+	asking: { symbol: '?', label: 'あなたの番', color: 'editorInfo-foreground' },
 	// 「通った」を既に意味しているトークン
-	done: { symbol: '✓', mark: '🟢', label: '完了', color: 'testing-iconPassed' },
-	stopped: { symbol: '■', mark: '⚫', label: '中断', color: 'descriptionForeground' },
-	error: { symbol: '✕', mark: '🔴', label: 'エラー', color: 'list-errorForeground' }
+	done: { symbol: '✓', label: '完了', color: 'testing-iconPassed' },
+	stopped: { symbol: '■', label: '中断', color: 'descriptionForeground' },
+	error: { symbol: '✕', label: 'エラー', color: 'list-errorForeground' }
 };
 
 /**
@@ -83,24 +80,35 @@ export function lookOf(state: TabState): TabLook {
 
 export interface SessionTab {
 	sessionId: string;
-	/** タブに出す名前 */
+	/** タブに出す短い見出し（T-301） */
 	title: string;
+	/** 指を置いたときに出す、頼んだことの全文（T-301） */
+	full: string;
+	/** 始めた順の通し番号（T-301）。**幅が無くてもこれだけは残る** */
+	number: number;
 	state: TabState;
 	symbol: string;
-	/** 色つきの丸（T-298） */
-	mark: string;
 	label: string;
 	color: string;
 	active: boolean;
 }
 
-/** タブに出す名前。最初に頼んだことが無ければ ID の頭を使う */
-export function tabTitle(title: string | undefined, sessionId: string, max = 24): string {
+/**
+ * タブに出す名前。最初に頼んだことが無ければ ID の頭を使う。
+ *
+ * **先頭から数えて切らない**（T-301）。3 本並ぶとサイドバーでは 1 本 86px ほどしかなく、
+ * 名前に使えるのは 30px 程度＝ほぼ「…」だけになる。頼んだ文の先頭を機械的に削ると、
+ * どのタブも同じ書き出し（「この」「テストを」）になって**見分けがつかない**。
+ * 意味の切れ目（句読点・助詞の直後）で切って、**短い見出し**にする。
+ */
+export function tabTitle(title: string | undefined, sessionId: string, max = 10): string {
 	const folded = title?.replace(/\s+/g, ' ').trim();
 	if (!folded) {
 		return sessionId.slice(0, 8);
 	}
-	return folded.length > max ? `${folded.slice(0, max - 1)}…` : folded;
+	// 最初の切れ目まで。読点・句点・改行・コロンのどれか
+	const head = folded.split(/[。．.、，,：:；;\n]/)[0].trim() || folded;
+	return head.length > max ? `${head.slice(0, max - 1)}…` : head;
 }
 
 /**
@@ -120,15 +128,17 @@ export function buildTabs(
 	const pending = options.pendingSessionIds ?? new Set<string>();
 	return [...sessions]
 		.sort((a, b) => a.createdAt - b.createdAt)
-		.map((session) => {
+		.map((session, index) => {
 			const state = tabStateOf(session.status, pending.has(session.sessionId));
 			const look = lookOf(state);
+			const full = options.titles?.get(session.sessionId);
 			return {
 				sessionId: session.sessionId,
-				title: tabTitle(options.titles?.get(session.sessionId), session.sessionId),
+				title: tabTitle(full, session.sessionId),
+				full: full?.replace(/\s+/g, ' ').trim() ?? session.sessionId,
+				number: index + 1,
 				state,
 				symbol: look.symbol,
-				mark: look.mark,
 				label: look.label,
 				color: look.color,
 				active: session.sessionId === options.activeSessionId
