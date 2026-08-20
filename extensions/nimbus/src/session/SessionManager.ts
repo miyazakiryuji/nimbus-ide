@@ -15,6 +15,7 @@ import type {
 import type { NimbusEvent, SessionStatus, SessionSummary } from '../events'
 import { AsyncMessageQueue } from './AsyncMessageQueue'
 import { normalizeSdkMessage } from './normalize'
+import type { SdkModelInfo } from '../core/runSettings'
 
 interface ManagedSession {
   /** Nimbus 内部 ID（全イベント・DB のキー。SDK の session_id とは別物） */
@@ -283,14 +284,53 @@ export class SessionManager extends EventEmitter {
     }
   }
 
-  /** 使えるモデルの一覧（T-232 の割り当てで候補として出す） */
-  async supportedModels(sessionId: string): Promise<{ id?: string }[]> {
+  /**
+   * 使えるモデルの一覧（T-232 の割り当て・T-291 の切り替えで候補に出す）。
+   *
+   * **SDK が返すのは `value`**（`id` ではない）。名前・説明・使えるエフォートの段まで
+   * 付いてくるので、そのまま渡す — 手で並べた一覧は必ず古くなる。
+   */
+  async supportedModels(sessionId: string): Promise<SdkModelInfo[]> {
     const session = this.sessions.get(sessionId)
     if (!session) return []
     try {
-      return (await session.handle.supportedModels()) as { id?: string }[]
+      return (await session.handle.supportedModels()) as SdkModelInfo[]
     } catch {
       return []
+    }
+  }
+
+  /**
+   * いま話しているセッションのモデルを変える（T-291）。
+   * **次の応答から効く**（走っている最中でも受け付ける）。
+   */
+  async setModel(sessionId: string, model?: string): Promise<boolean> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return false
+    try {
+      await session.handle.setModel(model)
+      session.model = model ?? session.model
+      return true
+    } catch {
+      // 変えられなかったことは呼び手が画面に出す（ここは黙って false）
+      return false
+    }
+  }
+
+  /**
+   * エフォート（思考量）を変える（T-291）。
+   *
+   * 専用の口は無いが、`applyFlagSettings` の `effortLevel` が**セッションの残りに効く**。
+   * `max` はセッション限りで、設定ファイルには残らない（SDK の約束）。
+   */
+  async setEffort(sessionId: string, effort: string): Promise<boolean> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return false
+    try {
+      await session.handle.applyFlagSettings({ effortLevel: effort as never })
+      return true
+    } catch {
+      return false
     }
   }
 

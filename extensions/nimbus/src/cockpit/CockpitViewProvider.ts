@@ -13,6 +13,7 @@ import { extractAssumptions } from '../core/assumptions';
 import { parseMarkdown, type Block } from '../core/chatMarkdown';
 import { runCodeAction } from './codeActions';
 import { isAllowedAction, type ReadyCheck } from '../core/readiness';
+import type { QuotaGauge } from '../core/usage';
 import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
@@ -64,7 +65,12 @@ export type OutboundMessage =
 	 * `text` が無いときは「出すものが無い」— 行ごと消す（空欄を置かない）。
 	 * `tooltip` は 1 行に入りきらない中身（いつ戻るか）。
 	 */
-	| { type: 'quota'; text?: string; tooltip?: string }
+	| { type: 'quota'; text?: string; tooltip?: string; gauges?: readonly QuotaGauge[] }
+	/**
+	 * 走らせかた（T-291）。モデルと思考量を、入力欄の下の帯に出す。
+	 * `model` が無いときはセッションが無い＝帯ごと消す。
+	 */
+	| { type: 'runSettings'; model?: string; effort?: string; canPickEffort?: boolean }
 	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
@@ -107,7 +113,9 @@ export interface CockpitHandlers {
 		/** セッションのタブ（T-269）。面を作り直したときに列ごと戻す */
 		tabs?: readonly SessionTab[];
 		/** 枠の残りの 1 行（T-282）。`tooltip` は指を置いたときに出す中身 */
-		quota?: { text: string; tooltip?: string };
+		quota?: { text: string; tooltip?: string; gauges?: readonly QuotaGauge[] };
+		/** 走らせかた（T-291）。モデルと思考量 */
+		run?: { model?: string; effort: string; canPickEffort: boolean };
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
@@ -183,7 +191,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
-					const { events, session, approvals, tabs, quota } = this.handlers.snapshot();
+					const { events, session, approvals, tabs, quota, run } = this.handlers.snapshot();
 					this.handlers.log(`[cockpit] Webview から ready（復元イベント ${events.length} 件）`);
 					this.post({ type: 'history', events, session });
 					if (approvals && approvals.length > 0) {
@@ -193,7 +201,10 @@ export class CockpitViewProvider extends WebviewViewHost {
 						this.post({ type: 'sessions', tabs });
 					}
 					if (quota) {
-						this.post({ type: 'quota', text: quota.text, tooltip: quota.tooltip });
+						this.post({ type: 'quota', ...quota });
+					}
+					if (run) {
+						this.post({ type: 'runSettings', ...run });
 					}
 					const items = this.handlers.slashCommands?.() ?? [];
 					if (items.length > 0) {
@@ -297,7 +308,11 @@ export class CockpitViewProvider extends WebviewViewHost {
 	<main id="log" class="chat-list" aria-live="polite"></main>
 	<div class="chat-input-area">
 		<div id="approvals" class="approvals" hidden></div>
-		<div id="quota" class="chat-quota" hidden></div>
+		<div id="runbar" class="chat-runbar">
+			<button id="pickModel" class="chat-chip" type="button" hidden></button>
+			<button id="pickEffort" class="chat-chip" type="button" hidden></button>
+			<div id="quota" class="chat-quota" hidden></div>
+		</div>
 		<div id="composer" class="chat-input-container">
 			<div id="attachments" class="chat-attachments" hidden></div>
 			<textarea id="input" rows="1" placeholder="${this.options.placeholder}"></textarea>

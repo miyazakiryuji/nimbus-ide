@@ -19,6 +19,8 @@
 	const approvalsArea = /** @type {HTMLElement} */ (document.getElementById('approvals'));
 	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
 	const quotaLine = /** @type {HTMLElement} */ (document.getElementById('quota'));
+	const pickModel = /** @type {HTMLButtonElement} */ (document.getElementById('pickModel'));
+	const pickEffort = /** @type {HTMLButtonElement} */ (document.getElementById('pickEffort'));
 	const statusText = /** @type {HTMLElement} */ (document.getElementById('statusText'));
 	const statusMeta = /** @type {HTMLElement} */ (document.getElementById('statusMeta'));
 
@@ -902,14 +904,74 @@
 		);
 	}
 
+	/**
+	 * 枠の残り（T-282 / T-295）。
+	 *
+	 * **バー・数字・絵文字の 3 つが同じことを言う。** 色だけ・絵文字だけにすると、
+	 * 色覚の違いやモノクロのスクリーンショットで読めなくなる。
+	 * 目盛りが取れないときは文字だけに落とす（何も出さないよりは読める）。
+	 */
+	function renderQuota(message) {
+		quotaLine.textContent = '';
+		quotaLine.title = message.tooltip ?? '';
+		quotaLine.hidden = !message.text;
+		if (!message.text) {
+			return;
+		}
+		const gauges = message.gauges ?? [];
+		if (gauges.length === 0) {
+			quotaLine.textContent = message.text;
+			return;
+		}
+		for (const gauge of gauges) {
+			const item = document.createElement('span');
+			item.className = `quota-item tone-${gauge.tone}`;
+
+			const mark = document.createElement('span');
+			mark.className = 'quota-mark';
+			// 絵文字は行の高さを跳ねさせるので、字面の箱を固定する（CSS 側）
+			mark.textContent = gauge.mark;
+			item.appendChild(mark);
+
+			const label = document.createElement('span');
+			label.textContent = gauge.label;
+			item.appendChild(label);
+
+			const track = document.createElement('span');
+			track.className = 'quota-bar';
+			const fill = document.createElement('i');
+			fill.style.width = `${Math.max(0, Math.min(100, gauge.left))}%`;
+			track.appendChild(fill);
+			item.appendChild(track);
+
+			const value = document.createElement('span');
+			value.className = 'quota-value';
+			value.textContent = `${gauge.left}%`;
+			item.appendChild(value);
+
+			quotaLine.appendChild(item);
+		}
+	}
+
+	pickModel.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseModel' }));
+	pickEffort.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseEffort' }));
+
 	window.addEventListener('message', (e) => {
 		const message = e.data;
+		if (message.type === 'runSettings') {
+			// 走らせかた（T-291）。セッションが無ければボタンごと消す（押せない口を置かない）
+			pickModel.textContent = message.model ?? '';
+			pickModel.title = 'このセッションのモデルを変える（次の応答から効きます）';
+			pickModel.hidden = !message.model;
+			pickEffort.textContent = message.effort ? `思考 ${message.effort}` : '';
+			pickEffort.title = 'このセッションの思考量を変える（このセッションの残りに効きます）';
+			// エフォートを持たないモデルでは出さない
+			pickEffort.hidden = !message.model || !message.canPickEffort;
+			return;
+		}
 		if (message.type === 'quota') {
 			// 枠が無い環境・取れなかったときは行ごと消す（空欄を置かない・T-282）
-			quotaLine.textContent = message.text ?? '';
-			// いつ戻るかは 1 行に入らないので、指を置いたときに出す
-			quotaLine.title = message.tooltip ?? '';
-			quotaLine.hidden = !message.text;
+			renderQuota(message);
 			return;
 		}
 		if (message.type === 'sessions') {

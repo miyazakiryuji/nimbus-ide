@@ -587,6 +587,18 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.chooseModel",
+        "title": "%command.chooseModel%",
+        "category": "Nimbus",
+        "icon": "$(chip)"
+      },
+      {
+        "command": "nimbus.chooseEffort",
+        "title": "%command.chooseEffort%",
+        "category": "Nimbus",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "nimbus.showSessions",
         "title": "%command.showSessions%",
         "category": "Nimbus",

@@ -99,7 +99,15 @@ import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
 import { buildTabs } from './core/sessionTabs';
-import { quotaLine, quotaTooltip } from './core/usage';
+import { quotaGauges, quotaLine, quotaTooltip, type QuotaGauge } from './core/usage';
+import {
+	effortLabel,
+	effortsFor,
+	modelLabel,
+	toModelOptions,
+	EFFORT_LABELS,
+	type EffortLevel
+} from './core/runSettings';
 import { SessionSidePane, type SideMode } from './sessionSide';
 import { listAgents as listHerdrAgents } from './herdr';
 import { describePane, toTabState as herdrTabState } from './core/herdr';
@@ -465,7 +473,16 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	/** 全画面（T-269）。戻すときにサイドバーを開き直すために覚えておく */
 	let cockpitFullscreen = false;
 	/** 枠の残りの 1 行（T-282）。面を作り直したときに出し直すために覚えておく */
-	let lastQuota: { text: string; tooltip?: string } | undefined;
+	let lastQuota: { text: string; tooltip?: string; gauges?: readonly QuotaGauge[] } | undefined;
+	/**
+	 * 走らせかた（T-291）。セッションごとに選んだエフォートを覚えておく。
+	 * モデルは SDK が `session-init` で名乗るので、そちらを正とする。
+	 */
+	const sessionEfforts = new Map<string, EffortLevel>();
+	/** 使えるモデルの一覧。セッションごとに一度だけ引いて使い回す（毎回聞くと遅い） */
+	const modelCatalog = new Map<string, Awaited<ReturnType<typeof sessions.supportedModels>>>();
+	/** 帯に出している走らせかた。面を作り直したときに出し直す */
+	let lastRun: { model?: string; effort: string; canPickEffort: boolean } | undefined;
 	/**
 	 * 全画面の右半分（T-270）。端末も差分もワークベンチの実物を置く。
 	 * 控え（`archived`）をそのまま材料にするので、タブで切り替えても同じ見かたができる
@@ -515,6 +532,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			approvals: broker.pending(),
 			// 枠の残りも戻す（T-282）
 			quota: lastQuota,
+			// 走らせかた（モデル・エフォート）も戻す（T-291）
+			run: lastRun,
 			// タブの列も戻す（T-269）
 			tabs: buildTabs(tabbableSessions(), {
 				activeSessionId,
@@ -1162,14 +1181,20 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			return;
 		}
 		const available = activeSessionId ? await sessions.supportedModels(activeSessionId) : [];
-		const models = await vscode.window.showQuickPick(
-			available.map((entry) => entry.id ?? String(entry)),
+		// SDK が返すのは `value`。`id` を読んでいたので、候補が `[object Object]` になっていた（T-291）
+		const picked = await vscode.window.showQuickPick(
+			toModelOptions(available).map((option) => ({
+				label: option.label,
+				description: option.description,
+				value: option.value
+			})),
 			{ title: 'Nimbus: 比べるモデル（選ばなければ既定のモデルだけ）', canPickMany: true }
 		);
+		const models = (picked ?? []).map((entry) => entry.value);
 		await runEvaluation(
 			sessions,
 			cwd,
-			{ testCase, attempts: Number(attemptsText), models: models ?? [] },
+			{ testCase, attempts: Number(attemptsText), models },
 			log
 		);
 	}
@@ -1618,7 +1643,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 実際に使えるモデルはセッションから引く。無ければ手で入れてもらう
 		const available = activeSessionId ? await sessions.supportedModels(activeSessionId) : [];
 		const model = await vscode.window.showQuickPick(
-			[CLEAR, ...available.map((entry) => entry.id ?? String(entry))],
+			[CLEAR, ...toModelOptions(available).map((option) => option.value)],
 			{ title: `Nimbus: ${chosen.file.name} に使うモデル`, placeHolder: available.length === 0 ? 'セッションを開始すると候補が出ます' : '' }
 		);
 		if (!model) {
@@ -1908,6 +1933,110 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		);
 	}
 
+	/**
+	 * いま話しているセッションの走らせかた（T-291）を帯へ流す。
+	 *
+	 * **サブエージェントへの割り当て（T-232）とは別物。** こちらは目の前の会話そのもの。
+	 * 候補はセッションごとに一度だけ SDK から引いて使い回す（モデルごとに使えるエフォートが違う）。
+	 */
+	async function refreshRunSettings(): Promise<void> {
+		if (!activeSessionId) {
+			lastRun = undefined;
+			cockpit.post({ type: 'runSettings' });
+			return;
+		}
+		const sessionId = activeSessionId;
+		let catalog = modelCatalog.get(sessionId);
+		if (!catalog) {
+			catalog = await sessions.supportedModels(sessionId);
+			modelCatalog.set(sessionId, catalog);
+		}
+		const current = sessions.get(sessionId)?.model;
+		lastRun = {
+			model: modelLabel(catalog, current),
+			effort: effortLabel(sessionEfforts.get(sessionId)),
+			// エフォートを持たないモデル（Haiku など）では、押せる口を出さない
+			canPickEffort: effortsFor(catalog, current).length > 0
+		};
+		cockpit.post({ type: 'runSettings', ...lastRun });
+	}
+
+	/** モデルを選び直す（T-291）。**次の応答から効く** */
+	async function chooseModel(): Promise<void> {
+		if (!activeSessionId) {
+			void vscode.window.showInformationMessage('Nimbus: セッションが始まっていません。');
+			return;
+		}
+		const sessionId = activeSessionId;
+		const catalog = modelCatalog.get(sessionId) ?? (await sessions.supportedModels(sessionId));
+		modelCatalog.set(sessionId, catalog);
+		const options = toModelOptions(catalog);
+		if (options.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 使えるモデルの一覧を取れませんでした。');
+			return;
+		}
+		const current = sessions.get(sessionId)?.model;
+		const chosen = await vscode.window.showQuickPick(
+			options.map((option) => ({
+				label: option.label,
+				description: option.value === current ? 'いま使っています' : option.description,
+				detail: option.value === current ? option.description : undefined,
+				value: option.value
+			})),
+			{ title: 'Nimbus: このセッションのモデル', placeHolder: '選ぶと次の応答から効きます' }
+		);
+		if (!chosen) {
+			return;
+		}
+		const ok = await sessions.setModel(sessionId, chosen.value);
+		if (!ok) {
+			void vscode.window.showWarningMessage('Nimbus: モデルを変えられませんでした（セッションを開き直すと変えられます）。');
+			return;
+		}
+		log(`[session] モデルを ${chosen.value} にしました`);
+		void vscode.window.showInformationMessage(`Nimbus: モデルを「${chosen.label}」にしました（次の応答から）。`);
+		await refreshRunSettings();
+	}
+
+	/** エフォート（思考量）を選び直す（T-291）。セッションの残りに効く */
+	async function chooseEffort(): Promise<void> {
+		if (!activeSessionId) {
+			void vscode.window.showInformationMessage('Nimbus: セッションが始まっていません。');
+			return;
+		}
+		const sessionId = activeSessionId;
+		const catalog = modelCatalog.get(sessionId) ?? (await sessions.supportedModels(sessionId));
+		modelCatalog.set(sessionId, catalog);
+		const levels = effortsFor(catalog, sessions.get(sessionId)?.model);
+		if (levels.length === 0) {
+			void vscode.window.showInformationMessage(
+				'Nimbus: このモデルは思考量の段を持っていません（モデルを変えると選べます）。'
+			);
+			return;
+		}
+		const now = sessionEfforts.get(sessionId);
+		const chosen = await vscode.window.showQuickPick(
+			levels.map((level) => ({
+				label: EFFORT_LABELS[level],
+				description: level === now ? `${level} · いま使っています` : level,
+				value: level
+			})),
+			{ title: 'Nimbus: このセッションの思考量', placeHolder: '上げるほど深く考え、枠を多く使います' }
+		);
+		if (!chosen) {
+			return;
+		}
+		const ok = await sessions.setEffort(sessionId, chosen.value);
+		if (!ok) {
+			void vscode.window.showWarningMessage('Nimbus: 思考量を変えられませんでした。');
+			return;
+		}
+		sessionEfforts.set(sessionId, chosen.value);
+		log(`[session] エフォートを ${chosen.value} にしました`);
+		void vscode.window.showInformationMessage(`Nimbus: 思考量を「${chosen.label}」にしました（このセッションの残りに効きます）。`);
+		await refreshRunSettings();
+	}
+
 	/** 枠の消費と文脈の使用量を取り直してビューへ流す */
 	async function refreshUsage(sessionId: string): Promise<void> {
 		if (sessionId !== activeSessionId) {
@@ -1920,8 +2049,17 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 枠の残りは入力欄の下にも出す（T-282）。下のパネルにしか無いと、走らせている最中に見えない。
 		// 取れない・枠が無い環境では text を渡さない＝行ごと消える
 		const quotaText = quotaLine(usage?.rate_limits);
-		lastQuota = quotaText ? { text: quotaText, tooltip: quotaTooltip(usage?.rate_limits) } : undefined;
-		cockpit.post({ type: 'quota', text: lastQuota?.text, tooltip: lastQuota?.tooltip });
+		lastQuota = quotaText
+			? {
+					text: quotaText,
+					tooltip: quotaTooltip(usage?.rate_limits),
+					// バー・数字・絵文字の 3 つで同じことを言う（T-295）
+					gauges: quotaGauges(usage?.rate_limits)
+				}
+			: undefined;
+		cockpit.post({ type: 'quota', ...(lastQuota ?? {}) });
+		// 走らせかた（T-291）も同じ帯に出す。モデルは途中で変わりうるので、ターンごとに見直す
+		await refreshRunSettings();
 		if (context) {
 			checkContextBudget(context.totalTokens, budget);
 		}
@@ -3312,6 +3450,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// このセッションの走らせかた（T-291）。帯のボタンからも、名前からも引ける
+		vscode.commands.registerCommand('nimbus.chooseModel', () => chooseModel()),
+		vscode.commands.registerCommand('nimbus.chooseEffort', () => chooseEffort()),
 		// 右半分に「いま何が起きているか」を出す（T-270）
 		vscode.commands.registerCommand('nimbus.showSessionSide', () => chooseSessionSide()),
 		sidePane,

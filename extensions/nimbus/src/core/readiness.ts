@@ -92,7 +92,10 @@ export const ALLOWED_ACTIONS: readonly string[] = [
 	'nimbus.runSetupWizard',
 	'nimbus.openEnvCheck',
 	'vscode.openFolder',
-	'workbench.trust.manage'
+	'workbench.trust.manage',
+	// 走らせかたの帯（T-291）。押せる場所を作るために、この 2 つも通す
+	'nimbus.chooseModel',
+	'nimbus.chooseEffort'
 ];
 
 export function isAllowedAction(command: string): boolean {

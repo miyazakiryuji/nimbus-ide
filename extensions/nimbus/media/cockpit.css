@@ -746,9 +746,42 @@ body {
 
 /* ───────────────────────── 承認カード（T-266） ───────────────────────── */
 
+/* 走らせかたと枠の残りの帯（T-291 / T-282）。
+   **折り返せるようにする** — サイドバーの幅ではモデル・思考量・枠が 1 行に入らない。
+   幅があるとき（全画面）は 1 行、狭いときは 2 行になる。切るより折るほうが読める */
+.chat-runbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	padding: 2px 2px 4px;
+}
+
+/* 押せる小さな札。地の色は持たせず、境界だけで「押せる」を示す */
+.chat-chip {
+	flex: 0 0 auto;
+	padding: 1px 8px;
+	border: 1px solid var(--vscode-input-border, transparent);
+	border-radius: var(--nimbus-radius-control, 4px);
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	font-size: var(--nimbus-label2);
+	cursor: pointer;
+}
+
+.chat-chip:hover {
+	color: var(--vscode-foreground);
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.chat-chip[hidden] {
+	display: none;
+}
+
 /* 枠の残り（T-282）。視線がいちばん通る場所なので、静かな格の 1 行に収める */
 .chat-quota {
-	padding: 2px 2px 4px;
+	margin-left: auto;
+	padding: 0;
 	font-size: var(--nimbus-label2);
 	color: var(--vscode-descriptionForeground);
 	white-space: nowrap;
@@ -758,6 +791,56 @@ body {
 
 .chat-quota[hidden] {
 	display: none;
+}
+
+/* 枠 1 つぶん（T-295）。絵文字・ラベル・バー・数字が同じことを言う */
+.quota-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	/* 絵文字は字面が大きく、放っておくと行の高さが跳ねる。箱の高さを決めておく */
+	line-height: 16px;
+}
+
+.quota-item + .quota-item {
+	margin-left: 8px;
+}
+
+.quota-mark {
+	/* 絵文字だけ別の字面になるので、幅も揃えて並びを乱さない */
+	width: 12px;
+	font-size: 10px;
+	text-align: center;
+}
+
+.quota-bar {
+	display: inline-block;
+	width: 34px;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--vscode-progressBar-background, currentColor);
+	opacity: 0.25;
+	overflow: hidden;
+}
+
+.quota-bar > i {
+	display: block;
+	height: 100%;
+	background: var(--vscode-progressBar-background, currentColor);
+	opacity: 1;
+}
+
+/* 残りが少ないときだけ、色も同じことを言う（色**だけ**では言わない） */
+.quota-item.tone-warn .quota-bar > i {
+	background: var(--vscode-list-warningForeground, currentColor);
+}
+
+.quota-item.tone-low .quota-bar > i {
+	background: var(--vscode-list-errorForeground, currentColor);
+}
+
+.quota-item.tone-low .quota-value {
+	color: var(--vscode-list-errorForeground, currentColor);
 }
 
 .approvals {

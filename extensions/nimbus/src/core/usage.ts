@@ -166,6 +166,44 @@ export function quotaLine(limits: RateLimitWindows | null | undefined, now: numb
 	return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
+/** 残りの少なさ。**色だけに頼らない**ので、記号と数字も同じことを言う（T-295） */
+export type QuotaTone = 'ok' | 'warn' | 'low';
+
+export interface QuotaGauge {
+	/** `5 時間` / `週` */
+	label: string;
+	/** 残り（%） */
+	left: number;
+	/** いつ戻るか（空のこともある） */
+	reset: string;
+	tone: QuotaTone;
+	/** 絵文字。**これだけで状態を表さない** — 数字とバーが同じことを言う */
+	mark: string;
+}
+
+const TONE_MARKS: Record<QuotaTone, string> = { ok: '🟢', warn: '🟡', low: '🔴' };
+
+function toneOf(left: number): QuotaTone {
+	if (left <= 10) {
+		return 'low';
+	}
+	return left <= 30 ? 'warn' : 'ok';
+}
+
+/**
+ * 枠の行に出す目盛り（T-295）。
+ *
+ * 数字だけだと「94%」が多いのか少ないのか、読んで考えないと分からない。
+ * **バー・数字・絵文字の 3 つが同じことを言う形**にする — 色覚の違いでも、
+ * モノクロのスクリーンショットでも、どれか 1 つは必ず読める。
+ */
+export function quotaGauges(limits: RateLimitWindows | null | undefined, now: number = Date.now()): QuotaGauge[] {
+	return quotaWindows(limits, now).map((row) => {
+		const tone = toneOf(row.left);
+		return { label: row.label, left: row.left, reset: row.reset, tone, mark: TONE_MARKS[tone] };
+	});
+}
+
 /**
  * 枠の行に指を置いたときに出す中身（T-282）。
  * 1 行に入りきらない「いつ戻るか」はここで出す。

@@ -87,6 +87,8 @@
   "command.startFromPreset": "Start from a Template",
   "command.managePresets": "Manage Templates",
   "command.branchSession": "Branch This Work (Plan A / Plan B)",
+  "command.chooseModel": "Change Model for This Session",
+  "command.chooseEffort": "Change Thinking Effort for This Session",
   "command.showSessions": "Show Running Sessions",
   "command.checkTasks": "Check Tasks for Stalls",
   "command.sendDebugStop": "Send the Paused Location to the Session",

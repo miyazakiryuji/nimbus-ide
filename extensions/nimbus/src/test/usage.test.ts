@@ -17,6 +17,7 @@ import {
 	formatCost,
 	formatReset,
 	formatTokens,
+	quotaGauges,
 	quotaLine,
 	quotaTooltip,
 	toGauges
@@ -118,6 +119,38 @@ test('枠の残りは 1 行に収め、枠が無ければ行ごと消す（T-282
 			quotaLine(null, now)
 		],
 		['5 時間 残り 62% · 週 残り 41%', undefined, undefined]
+	);
+});
+
+test('枠の目盛りは、バー・数字・絵文字が同じことを言う（T-295）', () => {
+	const now = Date.parse('2026-08-19T10:00:00Z');
+	assert.deepStrictEqual(
+		quotaGauges(
+			{
+				five_hour: { utilization: 6, resets_at: '2026-08-19T12:00:00Z' },
+				seven_day: { utilization: 95, resets_at: null }
+			},
+			now
+		),
+		[
+			{ label: '5 時間', left: 94, reset: '2 時間後にリセット', tone: 'ok', mark: '🟢' },
+			// 残り 5% は危ない側。**記号も色も数字も**同じことを言う
+			{ label: '週', left: 5, reset: '', tone: 'low', mark: '🔴' }
+		]
+	);
+});
+
+test('残りが 30% を切ったら注意の側に寄せる（T-295）', () => {
+	const now = Date.parse('2026-08-19T10:00:00Z');
+	assert.deepStrictEqual(
+		[
+			// 残り 31% はまだ余裕、30% でちょうど注意側へ入る
+			quotaGauges({ five_hour: { utilization: 69, resets_at: null } }, now)[0].tone,
+			quotaGauges({ five_hour: { utilization: 70, resets_at: null } }, now)[0].tone,
+			quotaGauges({ five_hour: { utilization: 90, resets_at: null } }, now)[0].tone,
+			quotaGauges(null, now)
+		],
+		['ok', 'warn', 'low', []]
 	);
 });
 

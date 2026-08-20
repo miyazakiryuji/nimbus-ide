@@ -87,6 +87,8 @@
   "command.startFromPreset": "テンプレートから始める",
   "command.managePresets": "テンプレートを管理する",
   "command.branchSession": "いまの作業を分岐する（A 案・B 案）",
+  "command.chooseModel": "このセッションのモデルを変える",
+  "command.chooseEffort": "このセッションの思考量を変える",
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
   "command.sendDebugStop": "止まった場所をセッションへ渡す",
