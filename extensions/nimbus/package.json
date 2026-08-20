@@ -122,7 +122,8 @@
       {
         "command": "nimbus.newSession",
         "title": "%command.newSession%",
-        "category": "Nimbus"
+        "category": "Nimbus",
+        "icon": "$(add)"
       },
       {
         "command": "nimbus.interrupt",
@@ -409,7 +410,8 @@
       {
         "command": "nimbus.findSkill",
         "title": "%command.findSkill%",
-        "category": "Nimbus"
+        "category": "Nimbus",
+        "icon": "$(search)"
       },
       {
         "command": "nimbus.askYua",
@@ -1289,14 +1291,29 @@
       ],
       "view/title": [
         {
-          "command": "nimbus.fullscreenCockpit",
+          "command": "nimbus.newSession",
           "when": "view == nimbus.cockpit",
           "group": "navigation@1"
         },
         {
-          "command": "nimbus.openCockpitTab",
+          "command": "nimbus.showSessions",
           "when": "view == nimbus.cockpit",
           "group": "navigation@2"
+        },
+        {
+          "command": "nimbus.fullscreenCockpit",
+          "when": "view == nimbus.cockpit",
+          "group": "navigation@3"
+        },
+        {
+          "command": "nimbus.showSessionSide",
+          "when": "view == nimbus.cockpit",
+          "group": "nimbus@1"
+        },
+        {
+          "command": "nimbus.openCockpitTab",
+          "when": "view == nimbus.cockpit",
+          "group": "nimbus@2"
         },
         {
           "command": "nimbus.openBoardTab",
@@ -1352,6 +1369,28 @@
           "command": "nimbus.findSkill",
           "when": "view == nimbus.skills",
           "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "nimbus.newSession",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@1"
+        },
+        {
+          "command": "nimbus.showSessions",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@2"
+        },
+        {
+          "command": "nimbus.showSessionSide",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@3"
+        },
+        {
+          "command": "nimbus.fullscreenCockpit",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [

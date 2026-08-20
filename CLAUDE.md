@@ -82,6 +82,19 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packag
 - 固め直しで壊れていたら、次の作業へ進まずそこで直す。ビルドが通らない状態で放置しない
 - 手順の詳細・dmg 化・署名の注意は [`nimbus/docs/specs/distribution.md`](nimbus/docs/specs/distribution.md)
 
+## コマンドを足したら、入口も足す（毎回）
+
+**コマンド名でしか引けない機能は、名前を知っている人にしか存在しない。** 実際に
+「実装したはずなのに無い」という報告が続けて 4 件出た（新しいセッション T-290 / 右半分 T-292 /
+セッション一覧 T-293 / 全画面とタブで開く T-289）。どれもコマンドは在り、入口だけが無かった。
+
+- `contributes.commands` に足したら、**同じコミットで**押せる場所も足す —
+  `menus.view/title`（面のタイトル）か、webview の中のボタン
+- タイトルに置くコマンドには **`icon` を必ず付ける**（無いと歯抜けのまま並ぶ）
+- **全画面（エディタタブ）でも押せるか**を確かめる。全画面はサイドバーごと畳むので、
+  `view/title` だけに置くと入口がゼロになる。`editor/title` にも同じものを置く
+- 守りは `src/test/cockpitMenus.test.ts`（並びとアイコンの有無を固定している）
+
 ## 実装したら記録も直す
 
 実装と**同じコミットで** `nimbus/docs/specs/` の仕様書と [`tasks.md`](tasks.md) を直す。

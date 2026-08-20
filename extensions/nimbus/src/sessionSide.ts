@@ -55,6 +55,16 @@ export class SessionSidePane implements vscode.Disposable {
 		return this.mode;
 	}
 
+	/**
+	 * 差分に出せるものがあるか（T-292）。
+	 *
+	 * 全画面にしたときに右半分を自動で出すかの判断に使う。
+	 * **出るのはそのセッションが書いたファイルだけ**で、読んだだけのファイルは出ない。
+	 */
+	hasDiff(sessionId: string | undefined): boolean {
+		return sessionId !== undefined && sessionWrittenFiles(this.deps.events(sessionId)).length > 0;
+	}
+
 	/** 右に出すものを決める。`off` で閉じる（端末は残らない） */
 	async show(mode: SideMode, sessionId: string | undefined): Promise<void> {
 		this.mode = mode;

@@ -62,6 +62,7 @@
 		insert: 'M8 1v9.2l3.1-3.1.9.9L7.5 12.6 3 8l.9-.9L7 10.2V1zM2 14h12v1H2z',
 		newFile: 'M9 1H3v14h10V5zm3 4h-3V2zM7 7h1v2h2v1H8v2H7v-2H5V9h2z',
 		terminal: 'M2 3h12v10H2zm1 1v8h10V4zM4.5 6l2 2-2 2 .7.7L7.9 8 5.2 5.3zM8.5 10h3v1h-3z',
+		add: 'M7.25 3h1.5v4.25H13v1.5H8.75V13h-1.5V8.75H3v-1.5h4.25z',
 		chevron: 'M6 4l4 4-4 4z',
 		check: 'M6.3 12.7 2 8.4l1-1 3.3 3.3L13 4l1 1z',
 		error: 'M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm.8 11H7.2v-1.6h1.6zm0-2.8H7.2V4h1.6z',
@@ -893,6 +894,12 @@
 			});
 			sessionTabs.appendChild(button);
 		}
+		// 列の右端に「+」（T-290）。ブラウザのタブと同じ位置なので、explain されなくても分かる。
+		// **ここだけに置かない** — 列は 2 本以上のときしか出ないので、
+		// 面のタイトルにも同じコマンドを出してある（`view/title` / `editor/title`）
+		sessionTabs.appendChild(
+			iconButton('add', '新しいセッション', () => vscode.postMessage({ type: 'newSession' }), 'session-tab-add')
+		);
 	}
 
 	window.addEventListener('message', (e) => {

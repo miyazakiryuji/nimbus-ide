@@ -81,6 +81,20 @@
 	box-shadow: inset 0 -1px 0 0 var(--vscode-tab-activeBorder, currentColor);
 }
 
+/* 列の右端の「+」（T-290）。タブと同じ高さに座らせ、地の色は持たせない */
+.session-tab-add {
+	flex: 0 0 auto;
+	margin-left: 2px;
+	padding: 4px 8px;
+	background: transparent;
+	color: var(--vscode-tab-inactiveForeground);
+}
+
+.session-tab-add:hover {
+	color: var(--vscode-tab-activeForeground);
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
 .session-tab-mark {
 	flex: 0 0 auto;
 	font-size: var(--nimbus-label2);

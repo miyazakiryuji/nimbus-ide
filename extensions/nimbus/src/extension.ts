@@ -2397,6 +2397,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		cockpitFullscreen = true;
 		void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', true);
+		// **全画面にしたら右半分も出す**（T-292）。仕様では右半分は「選んで初めて出る」作りだったが、
+		// その選ぶコマンドがどこにも出ていなかったので、利用者からは「直したのに出ない」に見えた。
+		// 出すものが無いとき（まだ書いていないセッション）は黙って出さない —
+		// 全画面にするたびに「まだ書いていません」と言われるほうが邪魔になる
+		if (activeSessionId && sidePane.current() === 'off' && sidePane.hasDiff(activeSessionId)) {
+			await sidePane.show('diff', activeSessionId);
+		}
 		log('[cockpit] 全画面にしました');
 	}
 
