@@ -2,8 +2,8 @@
 
 **日付**: 2026-08-20 / **見たもの**: パッケージ版 `.app` ＋ 実セッション /
 **材料**: GUI ケース 53（段階ごとの撮影）・49（帯）・44（承認待ち）が残す `nimbus/tests/gui/out/*.png` /
-**読みかた**: [design-philosophy](../../.agents/skills/design-philosophy/SKILL.md) /
-[ergonomics](../../.agents/skills/ergonomics/SKILL.md) / [typography](../../.agents/skills/typography/SKILL.md)
+**読みかた**: [design-philosophy](../../../.agents/skills/design-philosophy/SKILL.md) /
+[ergonomics](../../../.agents/skills/ergonomics/SKILL.md) / [typography](../../../.agents/skills/typography/SKILL.md)
 
 ## なぜ止まった絵では足りないのか
 
