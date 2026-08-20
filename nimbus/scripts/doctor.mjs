@@ -239,7 +239,10 @@ function checkDuplication() {
 	}
 	for (const [name, where] of exportsByName) {
 		if (where.length > 1) {
-			add('duplication', 'error', `同じ名前の export が ${where.length} 箇所にある`, `${name} — ${where.join(' / ')}`);
+			// **参考にとどめる**（T-296）。同名 export は意図してそうしていることも多く、
+			// 直すかは人が決める（T-234）。要対応にしていたので毎回赤くなり、
+			// 「赤いのが普通」になって**本物の指摘が埋もれた**（実際に T-284 がそうだった）
+			add('duplication', 'warn', `同じ名前の export が ${where.length} 箇所にある`, `${name} — ${where.join(' / ')}`);
 		}
 	}
 
@@ -278,8 +281,9 @@ function checkDuplication() {
 		}
 		reported.add(signature);
 		add(
+			// ここも参考（T-296）。まとめるかどうかは `refactor` スキルの判断
 			'duplication',
-			'error',
+			'warn',
 			`${DUP_BLOCK_LINES} 行以上そっくり同じ実装が ${where.length} 箇所にある`,
 			`${where.join(' / ')}\n           ${key.split('\n')[0].slice(0, 80)} …`
 		);
