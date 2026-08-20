@@ -37,8 +37,15 @@ test('読めない要素は落とし、pane_id のあるものだけを拾う', 
 	assert.deepStrictEqual(
 		parseAgents({
 			agents: [
-				{ pane_id: 'w1:p1', title: 'ログイン修正', cwd: '/w/app', agent_status: 'blocked' },
-				{ title: 'pane_id が無い', agent_status: 'working' },
+				// **本物が返す項目名**（socket API の文書に合わせた・T-297）
+				{
+					pane_id: 'w1:p1',
+					terminal_title_stripped: 'ログイン修正',
+					terminal_title: 'ログイン修正 — zsh',
+					foreground_cwd: '/w/app',
+					agent_status: 'blocked'
+				},
+				{ terminal_title_stripped: 'pane_id が無い', agent_status: 'working' },
 				{ pane_id: 'w1:p2', agent_status: '知らない値' }
 			]
 		}),
@@ -46,6 +53,23 @@ test('読めない要素は落とし、pane_id のあるものだけを拾う', 
 			{ paneId: 'w1:p1', title: 'ログイン修正', cwd: '/w/app', status: 'blocked' },
 			{ paneId: 'w1:p2', title: 'w1:p2', cwd: undefined, status: 'unknown' }
 		]
+	);
+});
+
+test('古い項目名（title / cwd）でも読める（版が違っても落とさない）（T-297）', () => {
+	assert.deepStrictEqual(
+		parseAgents({ agents: [{ pane_id: 'w1:p1', title: '古い形', cwd: '/w/old', agent_status: 'done' }] }),
+		[{ paneId: 'w1:p1', title: '古い形', cwd: '/w/old', status: 'done' }]
+	);
+});
+
+test('飾りを落とした題名を優先する（T-297）', () => {
+	// `terminal_title` は OSC のまま（シェル名などが付く）。読みやすいのは stripped のほう
+	assert.deepStrictEqual(
+		parseAgents({
+			agents: [{ pane_id: 'w1:p1', terminal_title: 'ログイン修正 — zsh', agent_status: 'idle' }]
+		})[0].title,
+		'ログイン修正 — zsh'
 	);
 });
 

@@ -31,9 +31,10 @@ Herdr は**端末の中で CLI を走らせる**前提なので、そのまま�
 
 | | |
 | --- | --- |
-| 置き場所 | `HERDR_SOCKET_PATH` → `HERDR_SESSION` の名前つき → `~/.config/herdr/herdr.sock` |
+| 置き場所 | `HERDR_SOCKET_PATH` → `HERDR_SESSION` の名前つき（`~/.config/herdr/sessions/<名前>/herdr.sock`）→ `~/.config/herdr/herdr.sock` |
 | かたち | 改行区切り JSON。`{"id","method","params"}` → `{"id","result"}` / `{"id","error"}` |
 | 使う口 | `agent.list`（1 往復・1.5 秒で諦める） |
+| 読む項目 | `pane_id` / `agent_status` / `terminal_title_stripped`（無ければ `terminal_title`）/ `foreground_cwd` |
 
 状態の寄せかたは次のとおり。`blocked`（外部の入力待ち）が Nimbus の「許可待ち」と同じ意味になり、
 **止まっているものを先に見せたい**という並べ替えの理由まで一致する。
@@ -46,6 +47,20 @@ Herdr は**端末の中で CLI を走らせる**前提なので、そのまま�
 | `idle` | あなたの番 |
 | `unknown` | 中断 |
 
+### 項目名の突き合わせ（T-297）
+
+公開されている socket API の文書と読み合わせたところ、**題名と作業場所の項目名が違っていた**。
+
+| 読むもの | 直す前 | 実際（文書） |
+| --- | --- | --- |
+| 題名 | `title` | `terminal_title_stripped`（飾りを落とした OSC タイトル）/ `terminal_title` |
+| 作業場所 | `cwd` | `foreground_cwd` |
+
+そのままだと本物に繋いだとき**題名が `w1:p1` のまま**になり、作業場所も出ない。
+古い名前も残してある（版が違っても落とさない）。
+ソケットの置き場所・状態の綴り（`idle` / `working` / `blocked` / `done` / `unknown`）・
+往復の形は文書と一致していた。
+
 ## 確かめかた
 
 Herdr を入れずに確かめる — **文書どおりの受け答えをする偽のソケット**を立てて、読み手が通るかを見る
@@ -53,6 +68,8 @@ Herdr を入れずに確かめる — **文書どおりの受け答えをする�
 
 **実機（本物の Herdr）との突き合わせは未実施。** 入れるかどうかは利用者の選択なので、
 入れた人が最初に触ったときに分かるよう、一覧に出る形にしてある。
+文書との突き合わせ（項目名・状態の綴り・ソケットの置き場所）は済んでいる（T-297）ので、
+残るのは**実物の応答が文書どおりか**と、1.5 秒で足りるかの 2 点。
 
 ## 決めなかったこと
 

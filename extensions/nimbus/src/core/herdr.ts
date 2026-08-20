@@ -71,12 +71,28 @@ export function parseAgents(result: unknown): HerdrPane[] {
 		}
 		panes.push({
 			paneId,
-			title: typeof entry['title'] === 'string' && entry['title'] ? entry['title'] : paneId,
-			cwd: typeof entry['cwd'] === 'string' ? entry['cwd'] : undefined,
+			// **項目名は Herdr の socket API に合わせる**（T-297）。
+			// `title` / `cwd` で読んでいたが、実際に返るのは `terminal_title_stripped`
+			// （飾りを落とした OSC タイトル）と `foreground_cwd`。そのままだと本物に繋いだとき
+			// **題名が pane_id のまま**（`w1:p1`）になり、作業場所も出ない。
+			// 古い名前も残す — 版が違っても落ちないほうがよい
+			title: firstString(entry, ['terminal_title_stripped', 'terminal_title', 'title']) ?? paneId,
+			cwd: firstString(entry, ['foreground_cwd', 'cwd']),
 			status: toStatus(entry['agent_status'])
 		});
 	}
 	return panes;
+}
+
+/** 並べた名前のうち、最初に中身のある文字列を返す */
+function firstString(entry: Record<string, unknown>, keys: readonly string[]): string | undefined {
+	for (const key of keys) {
+		const value = entry[key];
+		if (typeof value === 'string' && value.length > 0) {
+			return value;
+		}
+	}
+	return undefined;
 }
 
 function toStatus(value: unknown): HerdrAgentStatus {
