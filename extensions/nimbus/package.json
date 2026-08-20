@@ -1289,6 +1289,21 @@
       ],
       "view/title": [
         {
+          "command": "nimbus.fullscreenCockpit",
+          "when": "view == nimbus.cockpit",
+          "group": "navigation@1"
+        },
+        {
+          "command": "nimbus.openCockpitTab",
+          "when": "view == nimbus.cockpit",
+          "group": "navigation@2"
+        },
+        {
+          "command": "nimbus.openBoardTab",
+          "when": "view == nimbus.board",
+          "group": "navigation@1"
+        },
+        {
           "command": "nimbus.refreshDebug",
           "when": "view == nimbus.debug",
           "group": "navigation"
