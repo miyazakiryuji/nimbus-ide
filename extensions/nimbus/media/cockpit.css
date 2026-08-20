@@ -757,6 +757,33 @@ body {
 	padding: 2px 2px 4px;
 }
 
+/* 前面のセッションの状態（T-298）。押せないので札の見た目にはしない */
+.chat-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	flex: 0 0 auto;
+	font-size: var(--nimbus-label2);
+	line-height: 16px;
+}
+
+.chat-state[hidden] {
+	display: none;
+}
+
+/* 丸は字面が大きい。幅と大きさを決めて、行の高さを跳ねさせない */
+.state-mark,
+.session-tab-dot {
+	width: 12px;
+	font-size: 10px;
+	text-align: center;
+}
+
+.session-tab-state {
+	font-size: var(--nimbus-label2);
+	opacity: 0.9;
+}
+
 /* 押せる小さな札。地の色は持たせず、境界だけで「押せる」を示す */
 .chat-chip {
 	flex: 0 0 auto;

@@ -72,6 +72,11 @@ export type OutboundMessage =
 	 */
 	| { type: 'runSettings'; model?: string; effort?: string; canPickEffort?: boolean }
 	/**
+	 * 前面のセッションの状態（T-298）。**タブの列は 2 本以上のときしか出ない**ので、
+	 * 1 本のときに状態がどこにも出なくなる。列とは別に帯へ出す。
+	 */
+	| { type: 'sessionState'; state?: { mark: string; symbol: string; label: string; color: string } }
+	/**
 	 * `/` で引ける定型（T-271）。VS Code のチャットのスラッシュコマンドと同じ位置づけで、
 	 * 中身は Nimbus が既に持っている「指示のテンプレート」を出す。
 	 */
@@ -116,6 +121,8 @@ export interface CockpitHandlers {
 		quota?: { text: string; tooltip?: string; gauges?: readonly QuotaGauge[] };
 		/** 走らせかた（T-291）。モデルと思考量 */
 		run?: { model?: string; effort: string; canPickEffort: boolean };
+		/** 前面のセッションの状態（T-298） */
+		state?: { mark: string; symbol: string; label: string; color: string };
 	};
 	/** `/` で引ける定型（T-271）。無ければ候補を出さない */
 	slashCommands?(): readonly SlashCommand[];
@@ -191,7 +198,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			switch (message.type) {
 				case 'ready': {
-					const { events, session, approvals, tabs, quota, run } = this.handlers.snapshot();
+					const { events, session, approvals, tabs, quota, run, state } = this.handlers.snapshot();
 					this.handlers.log(`[cockpit] Webview から ready（復元イベント ${events.length} 件）`);
 					this.post({ type: 'history', events, session });
 					if (approvals && approvals.length > 0) {
@@ -205,6 +212,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 					}
 					if (run) {
 						this.post({ type: 'runSettings', ...run });
+					}
+					if (state) {
+						this.post({ type: 'sessionState', state });
 					}
 					const items = this.handlers.slashCommands?.() ?? [];
 					if (items.length > 0) {
@@ -309,6 +319,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 	<div class="chat-input-area">
 		<div id="approvals" class="approvals" hidden></div>
 		<div id="runbar" class="chat-runbar">
+			<span id="sessionState" class="chat-state" hidden></span>
 			<button id="pickModel" class="chat-chip" type="button" hidden></button>
 			<button id="pickEffort" class="chat-chip" type="button" hidden></button>
 			<div id="quota" class="chat-quota" hidden></div>

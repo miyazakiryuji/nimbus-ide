@@ -41,6 +41,21 @@ async function clickTitleAction(page, name) {
 	}, name);
 }
 
+/** 状態の置き場（T-298） */
+async function sessionStateBox(page) {
+	for (const frame of page.frames()) {
+		const found = await frame.$('#sessionState').catch(() => undefined);
+		if (!found) {
+			continue;
+		}
+		return frame.$eval('#sessionState', (el) => ({
+			hidden: el.hidden,
+			text: (el.textContent ?? '').trim()
+		}));
+	}
+	return undefined;
+}
+
 export default {
 	name: 'コックピットのタイトルから、新規セッション・一覧・全画面が押せる',
 	async run(page, ctx) {
@@ -76,6 +91,18 @@ export default {
 		);
 
 		await page.keyboard.press('Escape');
+		await page.waitForTimeout(600);
+
+		// 状態の帯（T-298）。**セッションが無いときは出さない**が、置き場所は在ること。
+		// 実際の文字は実セッションが要るので GUI ケース 49（--with-claude）が見る。
+		// ここは「要素ごと消えていない」を捕まえる — 名前を変えたときに気づける
+		const state = await sessionStateBox(page);
+		ctx.expect(state !== undefined, 'コックピットの状態の置き場（#sessionState）が見つからない');
+		ctx.expect(
+			state.hidden && state.text === '',
+			`セッションが無いのに状態が出ている: ${JSON.stringify(state)}`
+		);
+
 		await ctx.shot('cockpit-entrances');
 	}
 };

@@ -43,11 +43,14 @@ async function readRun(page) {
 		return frame.evaluate(() => {
 			const model = document.getElementById('pickModel');
 			const effort = document.getElementById('pickEffort');
+			const state = document.getElementById('sessionState');
 			return {
 				model: (model?.textContent ?? '').trim(),
 				modelHidden: Boolean(model?.hidden),
 				effort: (effort?.textContent ?? '').trim(),
-				effortHidden: Boolean(effort?.hidden)
+				effortHidden: Boolean(effort?.hidden),
+				state: (state?.textContent ?? '').trim(),
+				stateHidden: Boolean(state?.hidden)
 			};
 		});
 	}
@@ -95,6 +98,17 @@ export default {
 		ctx.expect(
 			!run.modelHidden && run.model !== '',
 			`モデルの札が出ていない: ${JSON.stringify(run)}`
+		);
+		// **モデルの名前が出ていること。** 「Default (recommended)」とだけ出て、
+		// どのモデルで走っているのか分からない状態になっていた（T-291）
+		ctx.expect(
+			!run.model.startsWith('Default'),
+			`モデルの札が既定の行の名前のまま（どのモデルか分からない）: ${JSON.stringify(run)}`
+		);
+		// 状態が言葉で読めること（T-298）。記号だけだと読み取れないという声が出た
+		ctx.expect(
+			!run.stateHidden && /完了|作業中|あなたの番|許可待ち|中断|エラー/.test(run.state),
+			`セッションの状態が言葉で出ていない: ${JSON.stringify(run)}`
 		);
 
 		await ctx.shot('quota-line');

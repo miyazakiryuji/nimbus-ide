@@ -483,6 +483,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const modelCatalog = new Map<string, Awaited<ReturnType<typeof sessions.supportedModels>>>();
 	/** 帯に出している走らせかた。面を作り直したときに出し直す */
 	let lastRun: { model?: string; effort: string; canPickEffort: boolean } | undefined;
+	/** 帯に出している前面のセッションの状態（T-298） */
+	let lastState: { mark: string; symbol: string; label: string; color: string } | undefined;
 	/**
 	 * 全画面の右半分（T-270）。端末も差分もワークベンチの実物を置く。
 	 * 控え（`archived`）をそのまま材料にするので、タブで切り替えても同じ見かたができる
@@ -534,6 +536,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			quota: lastQuota,
 			// 走らせかた（モデル・エフォート）も戻す（T-291）
 			run: lastRun,
+			// 前面のセッションの状態も戻す（T-298）
+			state: lastState,
 			// タブの列も戻す（T-269）
 			tabs: buildTabs(tabbableSessions(), {
 				activeSessionId,
@@ -2590,6 +2594,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		lastTabsSignature = signature;
 		cockpit.post({ type: 'sessions', tabs });
+		// **1 本のときは列を出さない**（切り替える先が無い）ので、状態がどこにも出なくなる。
+		// 前面のセッションの状態は、列とは別に帯へ出す（T-298）
+		const active = tabs.find((tab) => tab.active) ?? tabs[0];
+		lastState = active
+			? { mark: active.mark, symbol: active.symbol, label: active.label, color: active.color }
+			: undefined;
+		cockpit.post({ type: 'sessionState', state: lastState });
 	}
 
 	/**

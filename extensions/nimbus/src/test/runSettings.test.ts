@@ -64,15 +64,22 @@ test('知らないエフォートの段は落とす（生の英語を画面に�
 });
 
 test('「既定」の行は名前として使わない（どのモデルで走っているか分からなくなる）（T-291）', () => {
-	// 実機で「Default (recommended)」と出た。既定の行も同じモデルへ解決するため、
-	// 前方一致で先に当たってしまう
-	const withDefault = [
-		{ value: 'default', resolvedModel: 'claude-opus-5', displayName: 'Default (recommended)' },
-		...MODELS
+	// **実物の一覧の形**（`supportedModels()` を実際に叩いて写した）。
+	// `default` の `resolvedModel` がセッションの名乗りと完全一致するので、
+	// 素直に探すと必ず先に当たり、画面には「Default (recommended)」とだけ出ていた
+	const real = [
+		{ value: 'default', resolvedModel: 'claude-opus-5[1m]', displayName: 'Default (recommended)' },
+		{ value: 'opus[1m]', resolvedModel: 'claude-opus-5[1m]', displayName: 'Opus (1M context)' },
+		{ value: 'sonnet', resolvedModel: 'claude-sonnet-5', displayName: 'Sonnet' }
 	];
 	assert.deepStrictEqual(
-		[modelLabel(withDefault, 'claude-opus-5[1m]'), modelLabel(withDefault, 'default')],
-		['Opus 5', 'Default (recommended)']
+		[
+			modelLabel(real, 'claude-opus-5[1m]'),
+			// 打った値そのものなら、それが答え
+			modelLabel(real, 'default'),
+			modelLabel(real, 'claude-sonnet-5')
+		],
+		['Opus (1M context)', 'Default (recommended)', 'Sonnet']
 	);
 });
 

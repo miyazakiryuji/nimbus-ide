@@ -21,6 +21,7 @@
 	const quotaLine = /** @type {HTMLElement} */ (document.getElementById('quota'));
 	const pickModel = /** @type {HTMLButtonElement} */ (document.getElementById('pickModel'));
 	const pickEffort = /** @type {HTMLButtonElement} */ (document.getElementById('pickEffort'));
+	const sessionState = /** @type {HTMLElement} */ (document.getElementById('sessionState'));
 	const statusText = /** @type {HTMLElement} */ (document.getElementById('statusText'));
 	const statusMeta = /** @type {HTMLElement} */ (document.getElementById('statusMeta'));
 
@@ -878,6 +879,12 @@
 			button.title = `${tab.title} — ${tab.label}`;
 			button.setAttribute('aria-current', tab.active ? 'true' : 'false');
 
+			// 色つきの丸（T-298）。記号だけだと小さくて読み取れないという声が出た
+			const dot = document.createElement('span');
+			dot.className = 'session-tab-dot';
+			dot.textContent = tab.mark ?? '';
+			button.appendChild(dot);
+
 			const mark = document.createElement('span');
 			mark.className = 'session-tab-mark';
 			mark.textContent = tab.symbol;
@@ -888,6 +895,15 @@
 			name.className = 'session-tab-name';
 			name.textContent = tab.title;
 			button.appendChild(name);
+
+			// **前面のタブには言葉も出す**（T-298）。記号の意味を覚えていなくても読める
+			if (tab.active) {
+				const word = document.createElement('span');
+				word.className = 'session-tab-state';
+				word.textContent = tab.label;
+				word.style.color = `var(--vscode-${tab.color})`;
+				button.appendChild(word);
+			}
 
 			button.addEventListener('click', () => {
 				if (!tab.active) {
@@ -958,6 +974,26 @@
 
 	window.addEventListener('message', (e) => {
 		const message = e.data;
+		if (message.type === 'sessionState') {
+			// 状態は**記号・丸・言葉・色の 4 つ**で同じことを言う（T-298）。
+			// 記号だけ・色だけだと、小さくて読み取れないという声が出た
+			sessionState.textContent = '';
+			sessionState.hidden = !message.state;
+			if (message.state) {
+				const mark = document.createElement('span');
+				mark.className = 'state-mark';
+				mark.textContent = message.state.mark;
+				sessionState.appendChild(mark);
+
+				const word = document.createElement('span');
+				word.textContent = `${message.state.symbol} ${message.state.label}`;
+				word.style.color = `var(--vscode-${message.state.color})`;
+				sessionState.appendChild(word);
+
+				sessionState.title = `このセッションはいま「${message.state.label}」です`;
+			}
+			return;
+		}
 		if (message.type === 'runSettings') {
 			// 走らせかた（T-291）。セッションが無ければボタンごと消す（押せない口を置かない）
 			pickModel.textContent = message.model ?? '';

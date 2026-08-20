@@ -86,17 +86,22 @@ export function findModel(
 		return undefined;
 	}
 	const list = models ?? [];
-	const exact =
-		list.find((model) => model.value === current) ?? list.find((model) => model.resolvedModel === current);
-	if (exact) {
-		return exact;
+	// 打った値そのものなら、それが答え（`default` を選んだなら「既定」と出してよい）
+	const literal = list.find((model) => model.value === current);
+	if (literal) {
+		return literal;
 	}
-	// 前方一致でも拾う（`claude-opus-5[1m]` のような後ろ足しがある）。
-	// **`default` の行は名前として使わない** — 実機で「Default (recommended)」と出て、
-	// どのモデルで走っているのか分からなくなった。既定の行も同じモデルへ解決するので先に当たる。
-	// 当たりが複数あるときは**長いほう**を採る
-	const prefixed = list
-		.filter((model) => model.value !== 'default')
+	// **`default` の行は名前として使わない。**
+	// 実物の一覧では `default` の `resolvedModel` が `claude-opus-5[1m]` — つまり
+	// セッションが名乗る id と**完全一致**するので、素直に探すと必ず先に当たり、
+	// 画面には「Default (recommended)」とだけ出る（どのモデルで走っているのか分からない）。
+	const named = list.filter((model) => model.value !== 'default');
+	const resolved = named.find((model) => model.resolvedModel === current);
+	if (resolved) {
+		return resolved;
+	}
+	// 後ろ足し（`[1m]` など）が付いた形も拾う。当たりが複数なら長いほうを採る
+	const prefixed = named
 		.map((model) => ({ model, key: model.resolvedModel ?? model.value }))
 		.filter((entry) => entry.key.length > 0 && current.startsWith(entry.key))
 		.sort((a, b) => b.key.length - a.key.length);

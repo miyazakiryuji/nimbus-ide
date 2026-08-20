@@ -29,6 +29,12 @@ export type TabState =
 export interface TabLook {
 	/** 色に頼らないための記号 */
 	symbol: string;
+	/**
+	 * 色つきの丸（T-298）。**記号だけだと小さくて読み取れない**という声が出た。
+	 * 絵文字はテーマに関わらず色が出るので、記号・色・言葉に続く 4 本目の手がかりになる。
+	 * **これだけで状態を表さない**（T-295 と同じ約束）。
+	 */
+	mark: string;
 	/** 読み上げ・tooltip 用の 1 語 */
 	label: string;
 	/** VS Code のテーマ色トークン（webview では `--vscode-` 変数として引ける） */
@@ -37,15 +43,15 @@ export interface TabLook {
 
 const LOOK: Record<TabState, TabLook> = {
 	// 止まっていることを知らせる色は、既に警告が持っている
-	'waiting-approval': { symbol: '!', label: '許可待ち', color: 'list-warningForeground' },
+	'waiting-approval': { symbol: '!', mark: '🟡', label: '許可待ち', color: 'list-warningForeground' },
 	// 進行中を表すトークンをそのまま借りる
-	running: { symbol: '●', label: '作業中', color: 'progressBar-background' },
+	running: { symbol: '●', mark: '🔵', label: '作業中', color: 'progressBar-background' },
 	// 人間の番＝知らせであって異常ではない
-	asking: { symbol: '?', label: 'あなたの番', color: 'editorInfo-foreground' },
+	asking: { symbol: '?', mark: '⚪', label: 'あなたの番', color: 'editorInfo-foreground' },
 	// 「通った」を既に意味しているトークン
-	done: { symbol: '✓', label: '完了', color: 'testing-iconPassed' },
-	stopped: { symbol: '■', label: '中断', color: 'descriptionForeground' },
-	error: { symbol: '✕', label: 'エラー', color: 'list-errorForeground' }
+	done: { symbol: '✓', mark: '🟢', label: '完了', color: 'testing-iconPassed' },
+	stopped: { symbol: '■', mark: '⚫', label: '中断', color: 'descriptionForeground' },
+	error: { symbol: '✕', mark: '🔴', label: 'エラー', color: 'list-errorForeground' }
 };
 
 /**
@@ -81,6 +87,8 @@ export interface SessionTab {
 	title: string;
 	state: TabState;
 	symbol: string;
+	/** 色つきの丸（T-298） */
+	mark: string;
 	label: string;
 	color: string;
 	active: boolean;
@@ -120,6 +128,7 @@ export function buildTabs(
 				title: tabTitle(options.titles?.get(session.sessionId), session.sessionId),
 				state,
 				symbol: look.symbol,
+				mark: look.mark,
 				label: look.label,
 				color: look.color,
 				active: session.sessionId === options.activeSessionId

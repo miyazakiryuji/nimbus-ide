@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import type { SessionSummary } from '../events';
-import { buildTabs, tabStateOf, tabTitle } from '../core/sessionTabs';
+import { buildTabs, lookOf, tabStateOf, tabTitle } from '../core/sessionTabs';
 
 function summary(overrides: Partial<SessionSummary> & { sessionId: string }): SessionSummary {
 	return {
@@ -57,5 +57,25 @@ test('名前は 1 行に畳んで切り詰め、無ければ ID の頭を使う'
 	assert.deepStrictEqual(
 		[tabTitle('  直す\nすぐ  ', 'abcdefgh1234'), tabTitle(undefined, 'abcdefgh1234'), tabTitle('あ'.repeat(40), 'x', 10)],
 		['直す すぐ', 'abcdefgh', `${'あ'.repeat(9)}…`]
+	);
+});
+
+test('状態は記号・丸・言葉・色の 4 つで同じことを言う（T-298）', () => {
+	// **記号だけだと小さくて読み取れない**という声が出た。
+	// 色覚の違い・モノクロのスクリーンショット・小さな字面のどれでも、
+	// どれか 1 つは必ず読める形にしておく
+	assert.deepStrictEqual(
+		(['waiting-approval', 'running', 'asking', 'done', 'stopped', 'error'] as const).map((state) => {
+			const look = lookOf(state);
+			return [look.symbol, look.mark, look.label];
+		}),
+		[
+			['!', '🟡', '許可待ち'],
+			['●', '🔵', '作業中'],
+			['?', '⚪', 'あなたの番'],
+			['✓', '🟢', '完了'],
+			['■', '⚫', '中断'],
+			['✕', '🔴', 'エラー']
+		]
 	);
 });
