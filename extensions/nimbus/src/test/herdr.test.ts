@@ -8,7 +8,7 @@
  */
 import * as assert from 'assert';
 import { createServer } from 'net';
-import { mkdtempSync } from 'fs';
+import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { test } from 'node:test';
@@ -107,6 +107,18 @@ test('文書どおりの受け答えをするソケットから、動いてい�
 	const panes = await listAgents({ path });
 	server.close();
 	assert.deepStrictEqual(panes, [{ paneId: 'w1:p1', title: '直す', cwd: undefined, status: 'working' }]);
+});
+
+test('古いソケットが残っていても、待たずに空で返す（T-299）', async () => {
+	// **本物で確かめた形。** herdr を止めるとソケットは消えるが、落ちかたによっては
+	// ファイルだけが残る。`existsSync` は true になるので、繋いでみるまで分からない
+	const dir = mkdtempSync(join(tmpdir(), 'nimbus-herdr-'));
+	const stale = join(dir, 'stale.sock');
+	writeFileSync(stale, '');
+	const started = Date.now();
+	const panes = await listAgents({ path: stale, timeoutMs: 1500 });
+	// 上限まで待ってしまうと、面が 1.5 秒固まる
+	assert.deepStrictEqual([panes, Date.now() - started < 500], [[], true]);
 });
 
 test('居ない・答えないときは、空で返して画面を止めない', async () => {
