@@ -102,7 +102,7 @@ async function main() {
 		console.error('先に組み立ててください: cd extensions/nimbus && npm run compile');
 		return 2;
 	}
-	const { classify, inspect, needsAttention, summaryLine } = await import(pathToFileURL(OUT).href);
+	const { inspectLedger, needsAttention, summaryLine } = await import(pathToFileURL(OUT).href);
 
 	const dirs = ledgerDirs();
 	if (dirs.length === 0) {
@@ -115,7 +115,7 @@ async function main() {
 	const report = [];
 	for (const dir of dirs) {
 		const { records, broken } = readRecords(dir);
-		report.push({ dir, broken, records, health: inspect(records, now) });
+		report.push({ dir, broken, records, health: inspectLedger(records, now) });
 	}
 
 	if (flag('json')) {

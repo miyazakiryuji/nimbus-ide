@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import { OWNER_TTL_MS, type SessionRecord } from '../core/sessionRegistry';
-import { classify, inspect, needsAttention, overlaps, summaryLine } from '../core/sessionHealth';
+import { classifySession, inspectLedger, needsAttention, overlaps, summaryLine } from '../core/sessionHealth';
 
 const NOW = 1_000_000_000;
 
@@ -30,20 +30,20 @@ test('持ち主が生きているかで、走行中と残骸を分ける', () =>
 	const alive = record({ sessionId: 'a', heartbeatAgo: 1_000 });
 	const dead = record({ sessionId: 'b', heartbeatAgo: OWNER_TTL_MS + 1_000 });
 
-	assert.deepStrictEqual([classify(alive, NOW), classify(dead, NOW)], ['running', 'orphaned']);
+	assert.deepStrictEqual([classifySession(alive, NOW), classifySession(dead, NOW)], ['running', 'orphaned']);
 });
 
 test('入力待ちでも、持ち主がいなければ残骸として数える', () => {
 	const waiting = record({ sessionId: 'a', heartbeatAgo: 1_000, status: 'awaiting-input' });
 	const abandoned = record({ sessionId: 'b', heartbeatAgo: OWNER_TTL_MS + 1, status: 'awaiting-input' });
 
-	assert.deepStrictEqual([classify(waiting, NOW), classify(abandoned, NOW)], ['idle', 'orphaned']);
+	assert.deepStrictEqual([classifySession(waiting, NOW), classifySession(abandoned, NOW)], ['idle', 'orphaned']);
 });
 
 test('終わった記録は、持ち主がいなくても残骸にしない（復帰の候補として正常）', () => {
 	const done = record({ sessionId: 'a', heartbeatAgo: OWNER_TTL_MS + 1, status: 'completed' });
 
-	assert.strictEqual(classify(done, NOW), 'finished');
+	assert.strictEqual(classifySession(done, NOW), 'finished');
 });
 
 test('古くなったものは、残骸ではなく「忘れてよい」に倒す', () => {
@@ -53,7 +53,7 @@ test('古くなったものは、残骸ではなく「忘れてよい」に倒�
 		updatedAt: NOW - 8 * 24 * 60 * 60 * 1000
 	});
 
-	assert.strictEqual(classify(old, NOW), 'forgettable');
+	assert.strictEqual(classifySession(old, NOW), 'forgettable');
 });
 
 test('同じフォルダを生きた持ち主が 2 つ以上で持っていたら、重なりとして出す', () => {
@@ -74,7 +74,7 @@ test('台帳ぜんぶを数えて、直すところがあるかを言う', () =>
 		record({ sessionId: 'b', heartbeatAgo: OWNER_TTL_MS + 1 }),
 		record({ sessionId: 'c', heartbeatAgo: OWNER_TTL_MS + 1, status: 'completed' })
 	];
-	const report = inspect(records, NOW);
+	const report = inspectLedger(records, NOW);
 
 	assert.deepStrictEqual(report.counts, { running: 1, idle: 0, finished: 1, orphaned: 1, forgettable: 0 });
 	assert.deepStrictEqual(report.orphaned.map((r) => r.sessionId), ['b']);
@@ -83,12 +83,12 @@ test('台帳ぜんぶを数えて、直すところがあるかを言う', () =>
 });
 
 test('きれいなときは、直すところが無いと言う', () => {
-	const report = inspect([record({ sessionId: 'a', heartbeatAgo: 1_000 })], NOW);
+	const report = inspectLedger([record({ sessionId: 'a', heartbeatAgo: 1_000 })], NOW);
 
 	assert.strictEqual(needsAttention(report), false);
 	assert.strictEqual(summaryLine(report), '1 件 — 走行中 1 / 待機 0 / 終了 0');
 });
 
 test('記録が無ければ、空だと言う（数えられないのと区別する）', () => {
-	assert.strictEqual(summaryLine(inspect([], NOW)), '台帳は空です（記録なし）。');
+	assert.strictEqual(summaryLine(inspectLedger([], NOW)), '台帳は空です（記録なし）。');
 });

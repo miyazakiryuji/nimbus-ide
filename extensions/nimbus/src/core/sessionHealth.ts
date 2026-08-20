@@ -45,7 +45,7 @@ export interface HealthOptions {
 /**
  * 1 件を仕分ける。**古いものが先**（忘れてよいものは、残骸として数え直さない）。
  */
-export function classify(record: SessionRecord, now: number, options?: HealthOptions): SessionHealth {
+export function classifySession(record: SessionRecord, now: number, options?: HealthOptions): SessionHealth {
 	const ttlMs = options?.ttlMs ?? OWNER_TTL_MS;
 	const forgetAfterMs = options?.forgetAfterMs ?? FORGET_AFTER_MS;
 	const alive = isOwnerAlive(record, now, ttlMs);
@@ -64,7 +64,7 @@ export function classify(record: SessionRecord, now: number, options?: HealthOpt
 }
 
 /** 同じフォルダを、生きている持ち主が 2 つ以上で持っている状態 */
-export interface Overlap {
+export interface CwdOverlap {
 	cwd: string;
 	sessionIds: string[];
 }
@@ -80,7 +80,7 @@ export function overlaps(
 	records: readonly SessionRecord[],
 	now: number,
 	options?: HealthOptions
-): Overlap[] {
+): CwdOverlap[] {
 	const ttlMs = options?.ttlMs ?? OWNER_TTL_MS;
 	const byCwd = new Map<string, string[]>();
 	for (const record of records) {
@@ -106,12 +106,12 @@ export interface HealthReport {
 	/** 古くなって、もう残す意味のない記録 */
 	forgettable: SessionRecord[];
 	/** 同じフォルダを生きた持ち主が 2 つ以上で持っている */
-	overlaps: Overlap[];
+	overlaps: CwdOverlap[];
 	total: number;
 }
 
 /** 台帳ぜんぶを見て、数えて返す */
-export function inspect(
+export function inspectLedger(
 	records: readonly SessionRecord[],
 	now: number,
 	options?: HealthOptions
@@ -125,7 +125,7 @@ export function inspect(
 	};
 	const orphaned: SessionRecord[] = [];
 	for (const record of records) {
-		const health = classify(record, now, options);
+		const health = classifySession(record, now, options);
 		counts[health] += 1;
 		if (health === 'orphaned') {
 			orphaned.push(record);
