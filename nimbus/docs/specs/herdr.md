@@ -34,7 +34,7 @@ Herdr は**端末の中で CLI を走らせる**前提なので、そのまま�
 | 置き場所 | `HERDR_SOCKET_PATH` → `HERDR_SESSION` の名前つき（`~/.config/herdr/sessions/<名前>/herdr.sock`）→ `~/.config/herdr/herdr.sock` |
 | かたち | 改行区切り JSON。`{"id","method","params"}` → `{"id","result"}` / `{"id","error"}` |
 | 使う口 | `agent.list`（1 往復・1.5 秒で諦める） |
-| 読む項目 | `pane_id` / `agent_status` / `terminal_title_stripped`（無ければ `terminal_title`）/ `foreground_cwd` |
+| 読む項目 | `pane_id` / `agent_status` / 題名（下記）/ `foreground_cwd`（無ければ `cwd`）|
 
 状態の寄せかたは次のとおり。`blocked`（外部の入力待ち）が Nimbus の「許可待ち」と同じ意味になり、
 **止まっているものを先に見せたい**という並べ替えの理由まで一致する。
@@ -47,29 +47,42 @@ Herdr は**端末の中で CLI を走らせる**前提なので、そのまま�
 | `idle` | あなたの番 |
 | `unknown` | 中断 |
 
-### 項目名の突き合わせ（T-297）
+### 本物と突き合わせた結果（T-297 / T-299）
 
-公開されている socket API の文書と読み合わせたところ、**題名と作業場所の項目名が違っていた**。
+**herdr 0.8.2 を入れて実際に叩いた。** 文書だけを見て直した T-297 は、実物では外れていた。
 
-| 読むもの | 直す前 | 実際（文書） |
-| --- | --- | --- |
-| 題名 | `title` | `terminal_title_stripped`（飾りを落とした OSC タイトル）/ `terminal_title` |
-| 作業場所 | `cwd` | `foreground_cwd` |
+実測の応答（エージェントを 1 つ立てた状態）:
 
-そのままだと本物に繋いだとき**題名が `w1:p1` のまま**になり、作業場所も出ない。
-古い名前も残してある（版が違っても落とさない）。
-ソケットの置き場所・状態の綴り（`idle` / `working` / `blocked` / `done` / `unknown`）・
-往復の形は文書と一致していた。
+```json
+{"id":"nimbus-1","result":{"type":"agent_list","agents":[
+  {"terminal_id":"term_…","name":"login-fix","agent":"claude","agent_status":"working",
+   "workspace_id":"w1","tab_id":"w1:t1","pane_id":"w1:p1","focused":true,
+   "cwd":"/w/app","foreground_cwd":"/w/app","revision":0}]}}
+```
+
+- **題名は `name`（人が付けた名前）**。`title` / `terminal_title*` は**端末が OSC で題名を
+  出していないと入らない**ので、普通のエージェントのペインでは空になる。
+  文書に載っていた `terminal_title_stripped` を先頭にしていたら、全部 `w1:p1` と出るところだった。
+  並びは `name` → `title` → `terminal_title_stripped` → `terminal_title` → `display_agent` →
+  `agent` → `pane_id`。**最後の砦は種類（`claude`）** — pane_id よりは何が動いているか分かる
+- **作業場所は `foreground_cwd` → `cwd`。** どちらも返る（前面のプロセスの場所のほうが実態に近い）
+- ソケットは `~/.config/herdr/herdr.sock`（`herdr status` の表示と一致）
+- **往復は 105 ms**（諦める上限 1.5 秒に十分な余裕）
+- 状態の綴りは `idle` / `working` / `blocked` / `done` / `unknown` — 寄せかたの表と一致。
+  ただし**外から報告できるのは `idle` / `working` / `blocked` / `unknown`** の 4 つで、
+  `done` はサーバーが導く（「idle でまだ見ていない」）
+
+**偽のソケット（GUI ケース 48）も本物の形に直した。** 自分で書いた形に答えていたので、
+食い違いを捕まえられない作りになっていた — これがズレを見逃した原因。
 
 ## 確かめかた
 
 Herdr を入れずに確かめる — **文書どおりの受け答えをする偽のソケット**を立てて、読み手が通るかを見る
 （`src/test/herdr.test.ts`）。居ないとき・答えないときに画面が止まらないことも同じところで見る。
 
-**実機（本物の Herdr）との突き合わせは未実施。** 入れるかどうかは利用者の選択なので、
-入れた人が最初に触ったときに分かるよう、一覧に出る形にしてある。
-文書との突き合わせ（項目名・状態の綴り・ソケットの置き場所）は済んでいる（T-297）ので、
-残るのは**実物の応答が文書どおりか**と、1.5 秒で足りるかの 2 点。
+**実機（本物の Herdr 0.8.2）との突き合わせは済み**（T-299・利用者の了解を得て導入）。
+上の「本物と突き合わせた結果」がそれ。ふだんの回帰は偽のソケット（GUI ケース 48）が見る —
+ただし**偽の形は本物に合わせて書く**こと。合っていない偽ソケットは、通っても何も守らない。
 
 ## 決めなかったこと
 
