@@ -63,6 +63,19 @@ test('知らないエフォートの段は落とす（生の英語を画面に�
 	);
 });
 
+test('「既定」の行は名前として使わない（どのモデルで走っているか分からなくなる）（T-291）', () => {
+	// 実機で「Default (recommended)」と出た。既定の行も同じモデルへ解決するため、
+	// 前方一致で先に当たってしまう
+	const withDefault = [
+		{ value: 'default', resolvedModel: 'claude-opus-5', displayName: 'Default (recommended)' },
+		...MODELS
+	];
+	assert.deepStrictEqual(
+		[modelLabel(withDefault, 'claude-opus-5[1m]'), modelLabel(withDefault, 'default')],
+		['Opus 5', 'Default (recommended)']
+	);
+});
+
 test('セッションが名乗る id と一覧の別名を突き合わせる（T-291）', () => {
 	assert.deepStrictEqual(
 		[

@@ -818,8 +818,9 @@ body {
 	width: 34px;
 	height: 4px;
 	border-radius: 2px;
-	background: var(--vscode-progressBar-background, currentColor);
-	opacity: 0.25;
+	/* **溝に opacity を使わない。** 親を薄くすると子（塗り）も同じだけ薄くなり、
+	   バーが一様な線に見える（実機で確認）。溝はスクロールバーの地の色を借りる */
+	background: var(--vscode-scrollbarSlider-background, rgba(127, 127, 127, 0.3));
 	overflow: hidden;
 }
 
@@ -827,7 +828,6 @@ body {
 	display: block;
 	height: 100%;
 	background: var(--vscode-progressBar-background, currentColor);
-	opacity: 1;
 }
 
 /* 残りが少ないときだけ、色も同じことを言う（色**だけ**では言わない） */
