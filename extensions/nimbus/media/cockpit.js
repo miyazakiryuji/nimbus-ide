@@ -43,10 +43,15 @@
 	/** 使い始めの「準備」（T-285）。足りないものは、詰まる場所に出す */
 	let readiness = [];
 
+	/**
+	 * 状態の言葉。**帯（`core/sessionTabs.ts` の `label`）と同じ語を使う**（T-288）。
+	 * 実物を見たら、帯が「作業中」・入力欄が「実行中」と、隣り合う 2 か所で
+	 * 同じ状態を別の言葉で言っていた。読む側は別の状態だと思う。
+	 */
 	const STATUS_LABEL = {
-		'starting': '起動中',
-		'running': '実行中',
-		'awaiting-input': '入力待ち',
+		'starting': '作業中',
+		'running': '作業中',
+		'awaiting-input': 'あなたの番',
 		'interrupted': '中断',
 		'completed': '完了',
 		'error': 'エラー'

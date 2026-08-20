@@ -92,8 +92,9 @@ export default {
 			const pane = document.querySelector('.pane-body');
 			return pane ? pane.innerText : '';
 		});
+		// 状態の言葉は帯と揃えた（T-288）ので、走り出していれば「作業中」と出る
 		ctx.expect(
-			!sidebar.includes('実行中'),
+			!sidebar.includes('作業中') && !sidebar.includes('実行中'),
 			`確認を閉じたのにセッションが始まっている:\n${sidebar.slice(0, 300)}`
 		);
 	}

@@ -614,6 +614,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		);
 		updateStatus(sessions.get(event.sessionId));
 		logEvent(event);
+		if (event.kind === 'session-init') {
+			// **最初のターンが終わるまで帯が空**では、走らせている最中に見えない（T-282 の眼目）。
+			// セッションが名乗った時点で一度取りに行き、モデルと枠を埋める（T-288 の見直しで判明）
+			void refreshUsage(event.sessionId);
+		}
 		if (event.kind === 'turn-result') {
 			notify('Nimbus — ターンが終わりました', oneLine(event.resultText ?? '応答が返りました'));
 			void runHotReload(event.sessionId);
