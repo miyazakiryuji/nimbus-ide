@@ -350,6 +350,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const approvalsView = new ApprovalsViewProvider();
 	const approvals = treeViewFor('nimbus.approvals', approvalsView);
 	let pendingApprovals = 0;
+	/**
+	 * まだ 1 通も送っていないセッション（T-303）。`sessions.list()` には載らないので、
+	 * 「+」で用意したぶんはここで持ってタブに出す。送った時点で本物に置き換わる。
+	 */
+	const drafts: { id: string; createdAt: number }[] = [];
+	let activeDraftId: string | undefined;
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
 	/** ホットリロードで自動投入した回数（T-072）。指示のたびに 0 に戻す */
@@ -1863,7 +1869,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!(await admitNewSession())) {
 			return;
 		}
-		await newSession();
+		resetToBlank();
 		const sessionId = randomUUID();
 		activeSessionId = sessionId;
 		await sessions.createSession({
@@ -1931,7 +1937,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!(await admitNewSession())) {
 			return;
 		}
-		await newSession();
+		resetToBlank();
 		const sessionId = randomUUID();
 		activeSessionId = sessionId;
 		await sessions.createSession({ cwd, resumeClaudeSessionId: chosen.sessionId, reuseSessionId: sessionId });
@@ -2350,7 +2356,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!(await admitNewSession())) {
 			return;
 		}
-		await newSession();
+		resetToBlank();
 		activeSessionId = record.sessionId;
 		await sessions.createSession({
 			cwd: record.cwd,
@@ -2588,8 +2594,18 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	/** タブの列を作って送る（T-269）。中身が変わったときだけ送る */
 	function updateSessionTabs(): void {
+		// 下書きが本物のセッションになったら、下書きとしては畳む
+		if (activeSessionId && activeDraftId) {
+			const index = drafts.findIndex((draft) => draft.id === activeDraftId);
+			if (index >= 0) {
+				drafts.splice(index, 1);
+			}
+			activeDraftId = undefined;
+		}
 		const tabs = buildTabs(tabbableSessions(), {
 			activeSessionId,
+			drafts,
+			activeDraftId,
 			pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
 			titles: sessionTitles
 		});
@@ -2613,6 +2629,16 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 控えは全セッションぶん貯めてあるので、戻っても会話が空にならない。
 	 */
 	function switchSession(sessionId: string): void {
+		// 下書きのタブ（T-303）。まだ中身が無いので、面を白紙にして選び直すだけ
+		if (drafts.some((draft) => draft.id === sessionId)) {
+			if (activeDraftId === sessionId) {
+				return;
+			}
+			resetToBlank();
+			activeDraftId = sessionId;
+			updateSessionTabs();
+			return;
+		}
 		const summary = sessions.get(sessionId);
 		if (!summary || sessionId === activeSessionId) {
 			return;
@@ -3033,10 +3059,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		void vscode.window.showInformationMessage(`Nimbus: ${stopped} 件のセッションを止めました。`);
 	}
 
-	async function newSession(): Promise<void> {
-		if (activeSessionId && sessions.isActive(activeSessionId)) {
-			sessions.close(activeSessionId);
-		}
+	/**
+	 * 会話の面を白紙に戻す。**セッションは閉じない。**
+	 *
+	 * 「+」で呼ぶときは `newSession()` を使う（下書きのタブを 1 枚足す）。
+	 * ここは、別のセッションを作る前段としての内部用。
+	 */
+	function resetToBlank(): void {
 		activeSessionId = undefined;
 		lastApiKeySource = undefined;
 		retained.length = 0;
@@ -3052,7 +3081,26 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		contextPercent = undefined;
 		updateStatus(undefined);
 		cockpit.post({ type: 'history', events: [], session: undefined });
-		void cockpit.reveal();
+	}
+
+	/**
+	 * 「+」— セッションを**足す**（T-303）。
+	 *
+	 * 以前はここで `sessions.close()` を呼んでいた。つまり「足す」ではなく
+	 * **いまのを閉じて作り直す**操作で、押してもタブが増えず、押した手応えも無かった。
+	 * さらに `cockpit.reveal()` を無条件に呼んでいたので、**全画面タブで押すと
+	 * 閉じているサイドバーまで勝手に開いた**。
+	 *
+	 * まだ始まっていないセッションは `sessions.list()` に載らないので、
+	 * **下書きとして自分で持ち**、タブに出す。最初の 1 通を送った時点で本物になる。
+	 */
+	async function newSession(): Promise<void> {
+		resetToBlank();
+		const draft = { id: `draft-${randomUUID()}`, createdAt: Date.now() };
+		drafts.push(draft);
+		activeDraftId = draft.id;
+		updateSessionTabs();
+		await cockpit.reveal();
 	}
 
 	// ヘルプ（ゆあ）。コックピットとは別セッションで、ツールを一切渡さない
@@ -3588,7 +3636,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// 仕込んだものは Nimbus が開いている間だけ見張る（常駐はしない）
 		watchSchedule(context, (prompt, autoApprove) => {
 			void (async () => {
-				await newSession();
+				resetToBlank();
 				await send(prompt);
 				// 承認を自動で通すのは、仕込むときに明示的に選ばれたときだけ（T-051）
 				if (autoApprove && activeSessionId) {

@@ -78,6 +78,16 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 		return this.view !== undefined || this.panel !== undefined;
 	}
 
+	/**
+	 * いま**見えている**か。`isLive()`（面が在るか）とは別物。
+	 *
+	 * 面が在っても畳まれていれば見えていない。逆に見えているなら、
+	 * 前へ出す必要は無い — 頼まれていないのに別の面を開くのは割り込みになる（T-303）。
+	 */
+	isVisible(): boolean {
+		return this.view?.visible === true || this.panel?.visible === true;
+	}
+
 	/** ビューの HTML。CSP の nonce は `createNonce()` を使う */
 	protected abstract render(webview: vscode.Webview): string;
 

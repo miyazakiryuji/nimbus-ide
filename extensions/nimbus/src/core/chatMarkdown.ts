@@ -26,6 +26,11 @@ export type Block =
 	| { kind: 'code'; language: string; text: string }
 	| { kind: 'list'; ordered: boolean; items: Inline[][] }
 	| { kind: 'quote'; spans: Inline[] }
+	/**
+	 * 表（T-304）。Claude はよく表で答えるのに種類が無く、
+	 * `| 項目 | 値 |` がそのまま段落として並んでいた。
+	 */
+	| { kind: 'table'; header: Inline[][]; rows: Inline[][][] }
 	| { kind: 'rule' };
 
 /**
@@ -91,6 +96,9 @@ const NUMBER = /^\s*\d+[.)]\s+(.*)$/;
  * コードブロックは**閉じていなくても塊として出す** ── 応答は流れてくる途中で
  * 描かれるので、閉じるまで出さないと「書いている最中が見えない」ことになる。
  */
+/** 表の区切り行（`| --- | :---: |` など） */
+const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+
 export function parseMarkdown(text: string): Block[] {
 	const blocks: Block[] = [];
 	const lines = text.split('\n');
@@ -155,6 +163,28 @@ export function parseMarkdown(text: string): Block[] {
 			flush();
 			blocks.push({ kind: 'rule' });
 			index += 1;
+			continue;
+		}
+
+		// 表（T-304）。ヘッダ行の次が区切り行（|---|---|）なら表として読む。
+		// 区切りが無いものは表ではないので、段落のまま流す
+		if (line.includes('|') && index + 1 < lines.length && TABLE_DIVIDER.test(lines[index + 1])) {
+			flush();
+			const cells = (row: string): Inline[][] =>
+				row
+					.trim()
+					.replace(/^\|/, '')
+					.replace(/\|$/, '')
+					.split('|')
+					.map((cell) => parseInline(cell.trim()));
+			const header = cells(line);
+			index += 2;
+			const rows: Inline[][][] = [];
+			while (index < lines.length && lines[index].includes('|') && lines[index].trim().length > 0) {
+				rows.push(cells(lines[index]));
+				index += 1;
+			}
+			blocks.push({ kind: 'table', header, rows });
 			continue;
 		}
 

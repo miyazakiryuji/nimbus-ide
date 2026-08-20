@@ -314,6 +314,30 @@ body {
 	tab-size: 4;
 }
 
+/* 表（T-304）。狭いサイドバーでは横へ逃がす — 縦に潰すと読めなくなる */
+.md-table-scroll {
+	overflow-x: auto;
+	margin: 6px 0;
+}
+
+.md-table {
+	border-collapse: collapse;
+	font-size: var(--nimbus-body2);
+}
+
+.md-table th,
+.md-table td {
+	border: 1px solid var(--vscode-panel-border);
+	padding: 4px 8px;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.md-table th {
+	background: var(--vscode-editorWidget-background, transparent);
+	font-weight: 600;
+}
+
 /* ───────────────────────── ツール呼び出し・思考 ───────────────────────── */
 
 .collapsible {

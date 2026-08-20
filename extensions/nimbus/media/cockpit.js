@@ -250,6 +250,38 @@
 				case 'code':
 					appendCodeBlock(parent, block);
 					break;
+				case 'table': {
+					// 表（T-304）。Claude はよく表で答えるのに種類が無く、
+					// `| 項目 | 値 |` がそのまま段落として並んでいた
+					const table = document.createElement('table');
+					table.className = 'md-table';
+					const head = document.createElement('thead');
+					const headRow = document.createElement('tr');
+					for (const cell of block.header) {
+						const th = document.createElement('th');
+						appendSpans(th, cell);
+						headRow.appendChild(th);
+					}
+					head.appendChild(headRow);
+					table.appendChild(head);
+					const body = document.createElement('tbody');
+					for (const row of block.rows) {
+						const tr = document.createElement('tr');
+						for (const cell of row) {
+							const td = document.createElement('td');
+							appendSpans(td, cell);
+							tr.appendChild(td);
+						}
+						body.appendChild(tr);
+					}
+					table.appendChild(body);
+					// 幅の狭いサイドバーでは表がはみ出す。**横に逃がす**（縦に潰さない）
+					const scroller = document.createElement('div');
+					scroller.className = 'md-table-scroll';
+					scroller.appendChild(table);
+					parent.appendChild(scroller);
+					break;
+				}
 				case 'list': {
 					const list = document.createElement(block.ordered ? 'ol' : 'ul');
 					for (const item of block.items) {

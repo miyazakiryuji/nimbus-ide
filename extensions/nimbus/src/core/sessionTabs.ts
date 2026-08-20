@@ -123,10 +123,16 @@ export function buildTabs(
 		pendingSessionIds?: ReadonlySet<string>;
 		/** sessionId → 最初に頼んだこと */
 		titles?: ReadonlyMap<string, string>;
+		/**
+		 * まだ 1 通も送っていないセッション（T-303）。`sessions` には載らないので別に受ける。
+		 * これが無いと「+」を押してもタブが増えず、押した手応えが無い。
+		 */
+		drafts?: readonly { id: string; createdAt: number }[];
+		activeDraftId?: string;
 	} = {}
 ): SessionTab[] {
 	const pending = options.pendingSessionIds ?? new Set<string>();
-	return [...sessions]
+	const started = [...sessions]
 		.sort((a, b) => a.createdAt - b.createdAt)
 		.map((session, index) => {
 			const state = tabStateOf(session.status, pending.has(session.sessionId));
@@ -144,4 +150,19 @@ export function buildTabs(
 				active: session.sessionId === options.activeSessionId
 			};
 		});
+
+	// 下書きは、始まった順のうしろに並べる。中身が無いので状態は「あなたの番」に倒す
+	const draftLook = lookOf('asking');
+	const draftTabs: SessionTab[] = (options.drafts ?? []).map((draft, index) => ({
+		sessionId: draft.id,
+		title: '新しいセッション',
+		full: 'まだ何も送っていません',
+		number: started.length + index + 1,
+		state: 'asking',
+		symbol: draftLook.symbol,
+		label: draftLook.label,
+		color: draftLook.color,
+		active: draft.id === options.activeDraftId
+	}));
+	return [...started, ...draftTabs];
 }

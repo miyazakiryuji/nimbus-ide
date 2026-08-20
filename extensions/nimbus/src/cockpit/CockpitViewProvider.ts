@@ -297,10 +297,18 @@ export class CockpitViewProvider extends WebviewViewHost {
 	 * 呼び終わったときに面が立っていることを、呼び手が待てるように Promise を返す。
 	 */
 	async reveal(): Promise<void> {
+		// **見えているなら何もしない**（T-303）。全画面のタブで作業している人の背後で
+		// サイドバーを開くのは、頼まれていない割り込み。実際に「+」を押すと
+		// 閉じているサイドバーが勝手に開くと報告された
+		if (this.isVisible()) {
+			return;
+		}
+		// 面はあるが畳まれている。前へ出す
 		if (this.isLive()) {
 			this.view?.show?.(true);
 			return;
 		}
+		// 面がまだ無い。作らせるところからやる（T-286）
 		await vscode.commands.executeCommand('nimbus.cockpit.focus');
 	}
 
