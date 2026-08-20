@@ -64,6 +64,14 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	/*
+	 * **縮めて全部見せる**（T-291）。`max-width` だけだとタブは中身の幅で居座り、
+	 * サイドバー（300px）に 1.6 枚しか入らない。実測で 3 本開くと列が 567px に伸び、
+	 * 前面のタブが右へ隠れて「どのセッションに居るか」が分からなくなっていた。
+	 * `min-width: 0` を置いて初めて `.session-tab-name` の省略記号が効く。
+	 */
+	flex: 1 1 auto;
+	min-width: 0;
 	max-width: 180px;
 	padding: 4px 10px;
 	border: none;
@@ -780,6 +788,16 @@ body {
 }
 
 .session-tab-state {
+	/*
+	 * **折り返させない**（T-291）。タブを縮められるようにしたら、日本語は文字単位で
+	 * 折り返すので「あなたの番」が縦 1 列に積まれ、列の高さが 59px → 92px に膨らんだ。
+	 * 幅が足りないときは、積むのではなく削る。
+	 */
+	flex: 0 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	font-size: var(--nimbus-label2);
 	opacity: 0.9;
 }

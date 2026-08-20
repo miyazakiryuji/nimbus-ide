@@ -916,6 +916,12 @@
 				}
 			});
 			sessionTabs.appendChild(button);
+			// **前面のタブが画面外にいると、どのセッションに居るのか分からない**（T-291）。
+			// 実測でサイドバー 299px に対し列は 567px まで伸び、3 本目が右へ隠れていた。
+			// 縮められるようにしたうえで、それでも溢れるときは見える位置まで送る
+			if (tab.active) {
+				requestAnimationFrame(() => button.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+			}
 		}
 		// 列の右端に「+」（T-290）。ブラウザのタブと同じ位置なので、explain されなくても分かる。
 		// **ここだけに置かない** — 列は 2 本以上のときしか出ないので、
