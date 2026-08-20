@@ -71,12 +71,22 @@ export function parseAgents(result: unknown): HerdrPane[] {
 		}
 		panes.push({
 			paneId,
-			// **項目名は Herdr の socket API に合わせる**（T-297）。
-			// `title` / `cwd` で読んでいたが、実際に返るのは `terminal_title_stripped`
-			// （飾りを落とした OSC タイトル）と `foreground_cwd`。そのままだと本物に繋いだとき
-			// **題名が pane_id のまま**（`w1:p1`）になり、作業場所も出ない。
-			// 古い名前も残す — 版が違っても落ちないほうがよい
-			title: firstString(entry, ['terminal_title_stripped', 'terminal_title', 'title']) ?? paneId,
+			// **本物の Herdr（0.8.2）に繋いで確かめた並び**（T-299）。
+			// 実際に返ってくるのは `name`（人が付けた名前）と `agent`（`claude` などの種類）で、
+			// `title` / `terminal_title*` は**端末が OSC で題名を出していないと入らない**。
+			// 文書だけを見て `terminal_title_stripped` を先頭にしていたが、それだと
+			// 普通のエージェントのペインが**すべて `w1:p1` と出る**（実測）。
+			// 最後の砦は種類（`claude`）— pane_id よりは「何が動いているか」が分かる
+			title:
+				firstString(entry, [
+					'name',
+					'title',
+					'terminal_title_stripped',
+					'terminal_title',
+					'display_agent',
+					'agent'
+				]) ?? paneId,
+			// どちらも返る。前面のプロセスの場所のほうが実態に近い
 			cwd: firstString(entry, ['foreground_cwd', 'cwd']),
 			status: toStatus(entry['agent_status'])
 		});

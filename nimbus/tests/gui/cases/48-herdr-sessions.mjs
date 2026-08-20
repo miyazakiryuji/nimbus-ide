@@ -18,8 +18,24 @@ export default {
 					`${JSON.stringify({
 						id: request.id,
 						result: {
+							// **本物の Herdr 0.8.2 が返す形**（T-299 で実物に繋いで写した）。
+							// 以前は `title` / `cwd` だけの、自分で書いた形に答えていたので、
+							// 本物との食い違い（題名が `w1:p1` になる）を捕まえられなかった
+							type: 'agent_list',
 							agents: [
-								{ pane_id: 'w1:p1', title: 'HERDR_GUI_PANE', cwd: ctx.workspace, agent_status: 'blocked' }
+								{
+									terminal_id: 'term_6597312c885531',
+									name: 'HERDR_GUI_PANE',
+									agent: 'claude',
+									agent_status: 'blocked',
+									workspace_id: 'w1',
+									tab_id: 'w1:t1',
+									pane_id: 'w1:p1',
+									focused: true,
+									cwd: ctx.workspace,
+									foreground_cwd: ctx.workspace,
+									revision: 0
+								}
 							]
 						}
 					})}\n`

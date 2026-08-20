@@ -33,26 +33,43 @@ test('Herdr の状態を、Nimbus のタブの状態へ寄せる（blocked は�
 	);
 });
 
-test('読めない要素は落とし、pane_id のあるものだけを拾う', () => {
+test('`agent.list` の結果を、扱いやすい形に畳む（T-297 / T-299）', () => {
 	assert.deepStrictEqual(
 		parseAgents({
 			agents: [
-				// **本物が返す項目名**（socket API の文書に合わせた・T-297）
+				// **本物の Herdr 0.8.2 に繋いで写した形**（T-299）。
+				// `name` は人が付けた名前、`agent` は種類。`title` 系は OSC が無いと入らない
 				{
+					terminal_id: 'term_6597312c885531',
+					name: 'login-fix',
+					agent: 'claude',
+					agent_status: 'blocked',
+					workspace_id: 'w1',
+					tab_id: 'w1:t1',
 					pane_id: 'w1:p1',
-					terminal_title_stripped: 'ログイン修正',
-					terminal_title: 'ログイン修正 — zsh',
-					foreground_cwd: '/w/app',
-					agent_status: 'blocked'
+					focused: true,
+					cwd: '/w/app',
+					foreground_cwd: '/w/app/packages/api',
+					revision: 0
 				},
-				{ terminal_title_stripped: 'pane_id が無い', agent_status: 'working' },
+				{ name: 'pane_id が無い', agent_status: 'working' },
 				{ pane_id: 'w1:p2', agent_status: '知らない値' }
 			]
 		}),
 		[
-			{ paneId: 'w1:p1', title: 'ログイン修正', cwd: '/w/app', status: 'blocked' },
+			// 前面のプロセスの場所のほうが実態に近いので `foreground_cwd` を採る
+			{ paneId: 'w1:p1', title: 'login-fix', cwd: '/w/app/packages/api', status: 'blocked' },
 			{ paneId: 'w1:p2', title: 'w1:p2', cwd: undefined, status: 'unknown' }
 		]
+	);
+});
+
+test('名前が無いときは、せめて種類を出す（pane_id より読める）（T-299）', () => {
+	// 名前を付けていないエージェントのペインは、実際に `name` も `title` も返ってこない。
+	// 文書だけを見て `terminal_title_stripped` を先頭にしていたら、全部 `w1:p1` になっていた
+	assert.deepStrictEqual(
+		parseAgents({ agents: [{ pane_id: 'w1:p1', agent: 'claude', agent_status: 'working' }] })[0].title,
+		'claude'
 	);
 });
 
