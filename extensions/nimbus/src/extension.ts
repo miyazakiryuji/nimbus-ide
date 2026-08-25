@@ -4618,18 +4618,31 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	// 置き去りの記録を掃除してから、前回の続きを出す（T-252）。
 	// 自動確認（GUI テスト）のときは黙っている — 画面に出す知らせが操作の邪魔になる
-	void sessionStore.sweep().then(async () => {
-		// 前回のセッションをタブへ戻す（T-318）。開き直して全損に見えるのを、ここで止める
+	/** 台帳から「前回のセッション」を拾ってタブへ戻す（T-318）。増えたときだけ描き直す */
+	async function restoreResumables(): Promise<void> {
 		const candidates = resumeCandidates(await sessionStore.refresh(), {
 			now: Date.now(),
 			cwd: workspaceCwd(currentScope(context.workspaceState))
 		});
+		let added = false;
 		for (const record of candidates.slice(0, 8)) {
-			resumableRecords.set(record.sessionId, record);
+			if (!resumableRecords.has(record.sessionId) && !sessions.get(record.sessionId)) {
+				resumableRecords.set(record.sessionId, record);
+				added = true;
+			}
 		}
-		if (candidates.length > 0) {
+		if (added) {
 			updateSessionTabs();
 		}
+	}
+
+	void sessionStore.sweep().then(async () => {
+		// 前回のセッションをタブへ戻す（T-318）。開き直して全損に見えるのを、ここで止める
+		await restoreResumables();
+		// **すぐ開き直したときは、起動時点でまだ前の窓が生きて見える**（持ち主の心拍 TTL 20 秒）。
+		// 開き直しはたいてい「すぐ」なので、心拍が切れたころにもう一度だけ見る
+		const recheck = setTimeout(() => void restoreResumables(), 30_000);
+		context.subscriptions.push({ dispose: () => clearTimeout(recheck) });
 		if (!process.env['NIMBUS_SMOKE']) {
 			return offerResume();
 		}
