@@ -74,9 +74,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-fable | T-316 | 2026-08-25 22:05 | extensions/nimbus/src/extension.ts（showSessions のみ）, nimbus/docs/specs/cockpit-home.md
-
-- 🔒 @session-fable | T-320 | 2026-08-25 21:45 | extensions/nimbus/src/webview/WebviewViewHost.ts, extensions/nimbus/src/cockpit/CockpitViewProvider.ts, extensions/nimbus/src/extension.ts, extensions/nimbus/media/cockpit.js, nimbus/docs/specs/cockpit-split.md
 
 
 ## 進行中
@@ -89,27 +86,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 
 
-- [x] T-321 **着手前にファイルを板で予約する運用を入れる** — 利用者指示（2026-08-25）。どのセッションも
-      編集の前に、触るファイルを板の「作業予約」へ 1 行（`- 🔒 …`）で書き出し、終わったら消して解放する。
-      他セッションはそれを見て、解放を待つ・重ならないタスクへ進む・利用者に聞く、を選べるようにする。
-      CLAUDE.md（手順の本文）・README「始めかたと終わりかた」（組み込み）・板（この上の節の新設）・
-      `board.mjs`（予約の表示＋モジュールテスト）を同じコミットで揃えた @session-g — 2026-08-25
-      （導入した数分後から実働: 並行の T-322 が自分で 🔒 を立て、README.md の解放待ちに入った）
 
-- [ ] T-320（旧 T-315・ID が重複したので採番し直し）**セッションをソースコードと同じく画面分割で並べて見る** — いまはコックピットの面（サイドバー・エディタタブ）がすべて**同じアクティブセッションの鏡**で、2 面開いても同じものが映る。並べるには**面ごとに「どのセッションを見るか」を束ねる**作り替えが要る: (1) `WebviewViewHost` の post を面ごとに分ける (2) スナップショットと会話の記録をセッション別に引けるようにする (3) 入力・承認カードをその面のセッションへ向ける。エディタグループに置く器（`openInEditor`）は既に有るので、残りは配線の問題。大きいので設計から [P2] @session-fable 2026-08-25（設計済み: [cockpit-split](nimbus/docs/specs/cockpit-split.md)。実装は同じ配線を触る T-314 / T-318 の後）
-
-- [ ] T-316 **Herdr のように、セッション同士を束ねて関連づける** — Herdr は
-      workspace > tab > pane の階層でエージェントを束ね、状態を横並びで見せる。Nimbus の台帳
-      （`core/sessionRegistry.ts` の `SessionRecord`）は**平ら**で、持ち主・状態・cwd は持っているが
-      **セッション同士の関係を持っていない**（親子も、同じ仕事のグループも）。足すのは 2 つ:
-      ① **束ね** — グループを持たせ、タブ列と一覧をグループで畳めるようにする。束ねの単位は
-      「板のタスク（T-xxx）／ブランチ／worktree」のどれにするかを決める（自動で束ねるか手で束ねるかも）。
-      分岐（T-036 のセッションの分岐）は**親子**として残し、どこから枝分かれしたかを辿れるようにする
-      ② **束ね単位で横断して見る** — 「この仕事はいまどこが止まっているか（許可待ち）」を 1 枚で。
-      材料は揃っている: 場所の重なり検出（`OverlapHit`）・横断の上限（`Admission`）・
-      Herdr のぶんも混ぜた一覧（T-279）。
-      約束: 台帳のスキーマを増やすので、**古い記録が読めなくならない**こと（欠けていたら「束ね無し」
-      として扱う）。操作は Nimbus のセッションだけに効かせ、**Herdr のぶんは今までどおり読むだけ** [P1] @session-fable 2026-08-25（① の束ねと単位は T-314 で合意・実装済み。残りは ② 横断の一覧を束で見る。親子は T-036 が未実装なので保留）
 
 <!-- 着手したら 次にやる / やりたいこと からこの下へ行ごと移し、担当と開始日を書く -->
 
@@ -316,6 +293,29 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-321 **着手前にファイルを板で予約する運用を入れる** — 利用者指示（2026-08-25）。どのセッションも
+      編集の前に、触るファイルを板の「作業予約」へ 1 行（`- 🔒 …`）で書き出し、終わったら消して解放する。
+      他セッションはそれを見て、解放を待つ・重ならないタスクへ進む・利用者に聞く、を選べるようにする。
+      CLAUDE.md（手順の本文）・README「始めかたと終わりかた」（組み込み）・板（この上の節の新設）・
+      `board.mjs`（予約の表示＋モジュールテスト）を同じコミットで揃えた @session-g — 2026-08-25
+      （導入した数分後から実働: 並行の T-322 が自分で 🔒 を立て、README.md の解放待ちに入った）
+
+- [x] T-320（旧 T-315）**セッションを画面分割で並べて見る** — 面ごとに `sessionId` を束ねられるようにした:
+      `WebviewViewHost.openBeside()`（束縛面と宛先つき post）→ `snapshotFor(sessionId)`（会話・承認の別引き）→
+      入力・中断・承認カードはその面のセッションへ。入口はコマンド「セッションを横に並べて見る」
+      （view/title の `...` とパレット）。束縛面にはタブ列・帯を出さず「1 本を見続ける面」にする。
+      パッケージ版 GUI ケース 58（--with-claude・実セッション 2 本）で、別々の会話が並ぶ・束縛面の入力が
+      その面だけへ届く・前面に混ざらない、を実際に押して確認（1/1）— 2026-08-25 /
+      仕様 [cockpit-split](nimbus/docs/specs/cockpit-split.md)（設計からの差分も同ページ）
+
+- [x] T-316 **セッションを束ねて関連づける（② 束ね単位の横断一覧）** — ① の束ね（グループ台帳と
+      タブ列の畳み）は T-314 で実装済みだったので、残りの「この仕事はいまどこが止まっているか」を
+      一覧（セッションの一覧 QuickPick）に入れた: グループごとの区切り見出し `名前（N 本 · 許可待ち M）`、
+      **許可待ちを各束の先頭に**。`listByGroup` はモジュールテスト（`sessionGroups.test.ts`）で守り、
+      束の画面操作はケース 57（T-314）・一覧の導線はケース 54 が押して確認（どちらもパッケージ版で 1/1）。
+      古い記録は「束ね無し」として読む・Herdr のぶんは読むだけ、の約束は不変。親子（分岐の系譜）は
+      T-036 が未実装なので保留のまま — 2026-08-25 / 仕様 [cockpit-home](nimbus/docs/specs/cockpit-home.md)
 
 - [x] T-324 oneShot の時間切れでイベント購読が残る件を直した（T-323 の点検の指摘どおり）。
       時間切れの枝でも `sessions.off('event', onEvent)` を呼ぶ。放置すると返らないセッションの
@@ -1126,7 +1126,7 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 - [x] F0 調査と方針決定（ライセンス・商標・Marketplace・ビルド前提）— 2026-08-12 / `nimbus/docs/history/vscode-fork-migration.md`
 - [x] T-145 ドクター（不要ファイル・宣言と実装のズレ・台帳の記載漏れを機械で洗い出す）— 2026-08-13 / `node nimbus/scripts/doctor.mjs` / 仕様 [quality-commands](nimbus/docs/specs/quality-commands.md)
 - [x] T-146 テストコマンド（モジュールテスト＋GUI 操作テスト）— 2026-08-13 / `bash nimbus/scripts/test.sh` / スキル `nimbus-doctor` `spec-drift` `nimbus-test`
-- [x] T-234 重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
+- [x] T-326（旧 T-234・ID が「毎回の指示」の行と重複していたので採番し直し）重複検出とリファクタリング用スキル、テスト雛形の自動生成 — 2026-08-13 / `doctor.mjs duplication|coverage` / `scaffold-test.mjs` / スキル `refactor` `write-tests`
 - [x] T-002 `localize()` の "VS Code" 直書き 152 箇所 — 2026-08-13 / nls の集約点（`_format`）で置換。1 ファイルの変更で全部に効き、upstream の新しい文言にも追随する
 - [x] T-005 Copilot をソースとビルドスクリプトからも除去 — 2026-08-13 / `extensions/copilot/`（4193 ファイル・1.8GB）を削除し、npm スクリプトとビルド配線からも外した。**依存 `@github/copilot-sdk` `@vscode/copilot-api` はコアの agent host が使うため残す**（台帳に理由を記載）
 - [x] T-185 着手前の確認強制（曖昧な指示を走らせる前に止める）— 2026-08-13 / 仕様 [pre-send-confirmation](nimbus/docs/specs/pre-send-confirmation.md) / 判定は `src/core/clarify.ts`・テスト 12 件
