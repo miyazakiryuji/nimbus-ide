@@ -61,7 +61,7 @@
 - [x] 完了時、未コミットの変更が WIP コミットとしてブランチに残る
 - [x] 再起動後、実行中・承認待ちだったタスクがレビュー待ちになる
 - [x] worktree を別ウィンドウで開ける
-- [ ] 画面確認（`nimbus/docs/testing/f3-f6.md` §6・未実施）
+- [x] 画面確認（`nimbus/docs/testing/f3-f6.md` §6）— GUI ケース `09-task-board.mjs` / `13-worktree-window.mjs`（タスクが板に出ることは `41-task-registry.mjs`）
 
 確認記録: `nimbus/docs/testing/f3-f6.md` §3
 

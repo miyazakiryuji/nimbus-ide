@@ -51,7 +51,7 @@ frontmatter は `name` と `description` の 2 つしか要らないので、YAM
 - [x] 名前一致が説明一致より強い
 - [x] ゆあが日本語で名乗り、Nimbus の仕様を正しく案内する
 - [x] ゆあにツールが渡っていない
-- [ ] 画面確認（`nimbus/docs/testing/f3-f6.md` §6・未実施）
+- [x] 画面確認（`nimbus/docs/testing/f3-f6.md` §6）— GUI ケース `11-help-yua.mjs` / `12-skill-quickpick.mjs`
 
 確認記録: `nimbus/docs/testing/f3-f6.md` §4
 
