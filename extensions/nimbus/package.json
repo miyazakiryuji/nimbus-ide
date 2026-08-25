@@ -592,6 +592,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.createClaudeMd",
+        "title": "%command.createClaudeMd%",
+        "category": "Nimbus",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "nimbus.assistConflictAt",
         "title": "%command.assistConflictAt%",
         "category": "Nimbus",
@@ -1405,6 +1411,11 @@
           "group": "navigation"
         },
         {
+          "command": "nimbus.createClaudeMd",
+          "when": "view == nimbus.claudeMd",
+          "group": "navigation"
+        },
+        {
           "command": "nimbus.addClaudeMdSection",
           "when": "view == nimbus.claudeMd",
           "group": "navigation"
@@ -1596,6 +1607,12 @@
           "minimum": 1,
           "maximum": 10,
           "description": "%config.tasks.maxConcurrent%"
+        },
+        "nimbus.claudeMd.templates": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {},
+          "description": "%config.claudeMd.templates%"
         },
         "nimbus.commit.style": {
           "type": "string",

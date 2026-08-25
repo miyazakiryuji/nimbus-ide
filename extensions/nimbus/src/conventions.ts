@@ -24,24 +24,14 @@ export interface ConventionsDeps {
 	log: (message: string) => void;
 }
 
-/** 既存ファイルを数え、結果を見せてからセッションへ渡せるようにする */
-export async function showConventions(deps: ConventionsDeps): Promise<void> {
-	const folder = await pickWorkspaceRoot();
-	if (!folder) {
-		return;
-	}
+/** ソースの標本を集める。CLAUDE.md のテンプレート（T-319）も同じ数え方を使う */
+export async function collectSamples(folder: vscode.WorkspaceFolder): Promise<FileSample[]> {
 	const root = folder.uri;
-
 	const files = await vscode.workspace.findFiles(
 		new vscode.RelativePattern(folder, SOURCE_GLOB),
 		EXCLUDE,
 		SAMPLE_LIMIT
 	);
-	if (files.length === 0) {
-		void vscode.window.showInformationMessage('Nimbus: 数えられるソースファイルが見つかりませんでした。');
-		return;
-	}
-
 	const samples: FileSample[] = [];
 	for (const file of files) {
 		try {
@@ -56,6 +46,21 @@ export async function showConventions(deps: ConventionsDeps): Promise<void> {
 		} catch {
 			// 読めないファイルは飛ばす（数が減るだけ）
 		}
+	}
+	return samples;
+}
+
+/** 既存ファイルを数え、結果を見せてからセッションへ渡せるようにする */
+export async function showConventions(deps: ConventionsDeps): Promise<void> {
+	const folder = await pickWorkspaceRoot();
+	if (!folder) {
+		return;
+	}
+
+	const samples = await collectSamples(folder);
+	if (samples.length === 0) {
+		void vscode.window.showInformationMessage('Nimbus: 数えられるソースファイルが見つかりませんでした。');
+		return;
 	}
 
 	const conventions = detectConventions(samples);

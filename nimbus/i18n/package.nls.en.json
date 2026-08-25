@@ -99,6 +99,8 @@
   "command.syncBranch": "Pull (Rebase) and Push",
   "command.assistConflictAt": "Ask Claude About This Conflict",
   "config.git.enabled": "Expose git tools (mcp__nimbus_git__*) to sessions. Only status is auto-allowed; stage / commit / sync go through approval",
+  "command.createClaudeMd": "Create CLAUDE.md",
+  "config.claudeMd.templates": "Your own CLAUDE.md templates (name → body). {{project}} and {{conventions}} in the body are substituted",
   "command.showSessions": "Show Running Sessions",
   "command.checkTasks": "Check Tasks for Stalls",
   "command.sendDebugStop": "Send the Paused Location to the Session",

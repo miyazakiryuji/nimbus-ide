@@ -71,6 +71,7 @@ import { openPreflight } from './preflight';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
 import { assistConflictAt, assistConflicts } from './conflicts';
+import { createClaudeMd } from './claudeMdCreate';
 import { ConflictLensProvider } from './conflictLens';
 import { showDiffSummary } from './diffSummary';
 import { showImpact } from './impact';
@@ -3856,6 +3857,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.refreshSkills', () => skillsView.refresh()),
 		vscode.commands.registerCommand('nimbus.refreshClaudeMd', () => claudeMdView.refresh()),
 		vscode.commands.registerCommand('nimbus.addClaudeMdSection', () => addClaudeMdSection(claudeMdView)),
+		// テンプレートから CLAUDE.md を作る（T-319）。白紙から書き始めるのが重い
+		vscode.commands.registerCommand('nimbus.createClaudeMd', () =>
+			createClaudeMd({ log, refresh: () => claudeMdView.refresh() })
+		),
 		vscode.commands.registerCommand('nimbus.editProtectedPaths', () => editProtectedPaths()),
 		vscode.commands.registerCommand('nimbus.openDigest', () => openDigest()),
 		vscode.commands.registerCommand('nimbus.explainLockDiff', () => explainLockDiff()),
