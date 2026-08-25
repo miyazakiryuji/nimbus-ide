@@ -101,6 +101,7 @@ import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSyn
 import { buildTabs, lookOf, type SessionTab } from './core/sessionTabs';
 import { quotaGauges, quotaLine, quotaTooltip, type QuotaGauge } from './core/usage';
 import { isOneShotSession } from './oneShot';
+import { abortRebase, describeSyncOutcome, performSync, publishBranch } from './gitSync';
 import { generateCommitMessage } from './commitMessage';
 import {
 	effortLabel,
@@ -2584,6 +2585,61 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	/**
+	 * 取り込んで押し上げる（T-306）。作法は `git pull --rebase` → `git push`。
+	 * 安全装置（autostash しない・競合で止まる）は `gitSync.ts` — `git_sync`（T-307）と同じ道を通る。
+	 */
+	async function syncBranch(): Promise<void> {
+		const folder = await pickWorkspaceRoot();
+		if (!folder) {
+			return;
+		}
+		const cwd = folder.uri.fsPath;
+		const outcome = await vscode.window.withProgress(
+			{ location: vscode.ProgressLocation.SourceControl, title: '取り込んで押し上げています…' },
+			() => performSync(cwd)
+		);
+		const text = describeSyncOutcome(outcome);
+		log(`[sync] ${outcome.kind}: ${text}`);
+		switch (outcome.kind) {
+			case 'ok':
+				void vscode.window.showInformationMessage(`Nimbus: ${text}`);
+				return;
+			case 'dirty':
+				void vscode.window.showWarningMessage(`Nimbus: ${text}`);
+				return;
+			case 'no-upstream': {
+				const PUBLISH = `origin へ公開する（push -u）`;
+				const choice = await vscode.window.showInformationMessage(`Nimbus: ${text}`, PUBLISH);
+				if (choice === PUBLISH) {
+					try {
+						await publishBranch(cwd, outcome.branch);
+						void vscode.window.showInformationMessage(`Nimbus: ${outcome.branch} を公開しました。`);
+					} catch (error) {
+						void vscode.window.showErrorMessage(
+							`Nimbus: 公開に失敗しました: ${error instanceof Error ? error.message : String(error)}`
+						);
+					}
+				}
+				return;
+			}
+			case 'conflict': {
+				const ASSIST = 'コンフリクトの解決を手伝う';
+				const ABORT = '取り込みを取り消す';
+				const choice = await vscode.window.showWarningMessage(`Nimbus: ${text}`, ASSIST, ABORT);
+				if (choice === ASSIST) {
+					await vscode.commands.executeCommand('nimbus.assistConflicts');
+				} else if (choice === ABORT) {
+					await abortRebase(cwd);
+					void vscode.window.showInformationMessage('Nimbus: 取り込みを取り消しました（同期の前の状態に戻っています）。');
+				}
+				return;
+			}
+			default:
+				void vscode.window.showErrorMessage(`Nimbus: ${text}`);
+		}
+	}
+
+	/**
 	 * 右半分に何を出すかを選ぶ（T-270）。
 	 * **どちらか 1 つ**にするのは、2 つ並べると会話が細って読めなくなるため。
 	 */
@@ -3612,6 +3668,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// 取り込んで押し上げる（T-306）
+		vscode.commands.registerCommand('nimbus.syncBranch', () => syncBranch()),
 		// コミットメッセージを作って SCM の入力欄に入れる（T-305 / 型は T-309）
 		vscode.commands.registerCommand('nimbus.generateCommitMessage', () =>
 			generateCommitMessage({ sessions, sanitize: (text) => sanitizer.sanitizeString(text), log })

@@ -27,6 +27,11 @@
     }
   },
   "contributes": {
+    "configurationDefaults": {
+      "git.postCommitCommand": "sync",
+      "git.rebaseWhenSync": true,
+      "git.autofetch": true
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -585,6 +590,12 @@
         "title": "%command.restoreSession%",
         "category": "Nimbus",
         "icon": "$(history)"
+      },
+      {
+        "command": "nimbus.syncBranch",
+        "title": "%command.syncBranch%",
+        "category": "Nimbus",
+        "icon": "$(sync)"
       },
       {
         "command": "nimbus.generateCommitMessage",
@@ -1337,6 +1348,11 @@
           "command": "nimbus.openCockpitTab",
           "when": "view == nimbus.cockpit",
           "group": "nimbus@2"
+        },
+        {
+          "command": "nimbus.syncBranch",
+          "when": "view == nimbus.cockpit",
+          "group": "nimbus@3"
         },
         {
           "command": "nimbus.openBoardTab",

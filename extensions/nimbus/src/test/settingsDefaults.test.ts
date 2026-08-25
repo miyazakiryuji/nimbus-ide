@@ -45,3 +45,16 @@ test('送信前の割り込みは、曖昧さの確認だけ既定 off・資格�
 		}
 	);
 });
+
+test('Git の同期の既定は、Nimbus の作法（pull --rebase → push）に合わせる（T-306）', () => {
+	// **標準の口（Git 拡張の設定）を configurationDefaults で上書きする**。作り直さない。
+	// autostash は含めない — 他セッションの未コミット変更に触ることになる
+	const manifest = JSON.parse(
+		readFileSync(join(process.cwd(), 'extensions', 'nimbus', 'package.json'), 'utf8')
+	);
+	assert.deepStrictEqual(manifest.contributes.configurationDefaults, {
+		'git.postCommitCommand': 'sync',
+		'git.rebaseWhenSync': true,
+		'git.autofetch': true
+	});
+});
