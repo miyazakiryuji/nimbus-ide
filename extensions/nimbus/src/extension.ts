@@ -383,6 +383,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * トーストは消えるが、タブは残る。押すと続きから開き、× で台帳ごと忘れる
 	 */
 	const resumableRecords = new Map<string, SessionRecord>();
+	/**
+	 * この窓で一度でも動いた（見えた）セッション（T-318 の守り）。
+	 * 心拍が切れたころの見直しで、**自分が閉じたばかりのセッションを「前回」として
+	 * 復活させない** — 消したはずが戻るのは、全損に見えるのと同じくらい駄目
+	 */
+	const sessionsSeenHere = new Set<string>();
 	let activeDraftId: string | undefined;
 	/**
 	 * ピン留め（T-311）と利用者が付けた名前（T-313）。workspaceState に持つ。
@@ -659,6 +665,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	});
 
 	sessions.on('event', (event: NimbusEvent) => {
+		// この窓で見たセッションを覚える（T-318 の復元で「閉じたばかり」を除くため）
+		sessionsSeenHere.add(event.sessionId);
 		// 触ったファイルは全セッションぶん覚える。絞り込みの前に置く（T-011 / T-012）
 		sessionFiles.record(event);
 		// 台帳も全セッションぶん更新する（T-247）。下の絞り込みより後ろに置くと、
@@ -4741,7 +4749,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		});
 		let added = false;
 		for (const record of candidates.slice(0, 8)) {
-			if (!resumableRecords.has(record.sessionId) && !sessions.get(record.sessionId)) {
+			if (
+				!resumableRecords.has(record.sessionId) &&
+				!sessions.get(record.sessionId) &&
+				// この窓で動いていたものは戻さない。閉じたのは自分（消したはずが戻るのは駄目）
+				!sessionsSeenHere.has(record.sessionId)
+			) {
 				resumableRecords.set(record.sessionId, record);
 				added = true;
 			}
