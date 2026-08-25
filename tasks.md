@@ -91,6 +91,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
+- 🔒 @session-fable | T-318 | 2026-08-25 21:30 | extensions/nimbus/src/extension.ts, extensions/nimbus/src/core/sessionTabs.ts, extensions/nimbus/src/cockpit/CockpitViewProvider.ts, extensions/nimbus/media/cockpit.js, nimbus/docs/specs/session-registry.md, nimbus/docs/specs/cockpit-home.md
+
 
 ## 進行中
 
