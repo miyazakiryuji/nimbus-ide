@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// tasks.md T-230 の守り（IntelliJ 由来の機能。回帰ガードがここを数える）
+
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { buildMatrix, extractImports, findCycles, IFileImports, moduleKeyFor, renderMatrix, resolveSpecifier } from '../../common/dependencyMatrix.js';

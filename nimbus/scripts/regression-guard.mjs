@@ -52,20 +52,25 @@ function guarded() {
     join(ROOT, 'extensions', 'nimbus', 'src', 'test'),
     join(ROOT, 'nimbus', 'tests', 'gui', 'cases'),
     // リポジトリの道具（板・ドクター）の守りもここに置く（T-283）
-    join(ROOT, 'nimbus', 'tests', 'scripts')
+    join(ROOT, 'nimbus', 'tests', 'scripts'),
+    // コア側（sessions レイヤー）に置いた機能のテスト。IntelliJ 由来（T-224〜T-231）が
+    // ここに居るのに走査していなかったので、「守りが無い」と偽って出ていた
+    join(ROOT, 'src', 'vs', 'sessions')
   ]
   for (const dir of roots) {
     if (!existsSync(dir)) {
       continue
     }
-    for (const name of readdirSync(dir)) {
-      if (!/\.(ts|mjs)$/.test(name)) {
+    // コア側（src/vs/sessions）は入れ子が深いので再帰で読む。テストだけを見る
+    for (const name of readdirSync(dir, { recursive: true })) {
+      const entry = String(name)
+      if (!/\.(test\.ts|mjs)$/.test(entry) && !(dir.endsWith('test') && /\.ts$/.test(entry))) {
         continue
       }
-      const text = readFileSync(join(dir, name), 'utf8')
+      const text = readFileSync(join(dir, entry), 'utf8')
       for (const match of text.matchAll(/T-(\d{3})/g)) {
         const id = `T-${match[1]}`
-        found.set(id, [...(found.get(id) ?? []), name].slice(0, 3))
+        found.set(id, [...(found.get(id) ?? []), String(name)].slice(0, 3))
       }
     }
   }

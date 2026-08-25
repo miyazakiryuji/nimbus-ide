@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// tasks.md T-226 の守り（IntelliJ 由来の機能。回帰ガードがここを数える）
+
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { assignMnemonic, IBookmark, isValidMnemonic, MNEMONICS, nextFreeMnemonic, parseBookmarks, sortBookmarks, stringifyBookmarks, toggleBookmark } from '../../common/bookmarks.js';
