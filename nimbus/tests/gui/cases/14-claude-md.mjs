@@ -1,5 +1,5 @@
 /**
- * CLAUDE.md タブ（`nimbus/docs/testing/claude-md.md` §2 の B-1 / B-2 / B-4 / B-5 / B-10 / B-11 / B-13）。
+ * CLAUDE.md タブ（T-008 / T-009。`nimbus/docs/testing/claude-md.md` §2 の B-1 / B-2 / B-4 / B-5 / B-10 / B-11 / B-13）。
  *
  * 使い捨てワークスペースに**自前の CLAUDE.md を書いてから**確かめる。
  * 利用者の `~/.claude/CLAUDE.md` に頼ると、環境によって中身が変わるうえ、

@@ -2,6 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/**
+ * ツール入力の共通取り出しの守り。ツリービューの共通土台（T-236）のうち
+ * 「ツール入力の取り出しも共通化」の側 — ここが崩れると 4 ビューが同時にズレる。
+ */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { commandOf, filePathOf, READ_TOOLS, WRITE_TOOLS } from '../core/toolInput';
