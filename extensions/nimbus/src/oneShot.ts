@@ -35,7 +35,12 @@ export async function oneShot(
 	let costUsd: number | undefined;
 
 	const done = new Promise<void>((resolve) => {
-		const timer = setTimeout(resolve, options.timeoutMs ?? 120_000);
+		// **時間切れでも購読を外す**（T-324）。外さないと、返らないセッションのたびに
+		// SessionManager へリスナーが 1 本残り、重なると既定の上限（10 本）で警告が出る
+		const timer = setTimeout(() => {
+			sessions.off('event', onEvent);
+			resolve();
+		}, options.timeoutMs ?? 120_000);
 		const onEvent = (event: NimbusEvent): void => {
 			if (event.sessionId !== sessionId) {
 				return;
