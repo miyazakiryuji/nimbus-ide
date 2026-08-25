@@ -11,6 +11,7 @@ import { test } from 'node:test';
 import {
 	DEFAULT_GROUP_ID,
 	addGroup,
+	listByGroup,
 	assignSession,
 	buildHome,
 	emptyGroups,
@@ -119,4 +120,36 @@ test('消えたセッションの所属は掃除される', () => {
 	assert.deepStrictEqual(pruned.members, { s2: 'g1' });
 	// 変わらないときは同じものを返す（無駄な書き出しを起こさない）
 	assert.strictEqual(pruneMembers(pruned, new Set(['s2'])), pruned);
+});
+
+test('横断の一覧は束で畳み、止まっているもの（許可待ち）が先頭（T-316）', () => {
+	let file = emptyGroups();
+	file = addGroup(file, 'g-login', 'ログイン改修', 1);
+	file = assignSession(file, 'b', 'g-login');
+	file = assignSession(file, 'c', 'g-login');
+	const records = [
+		{ sessionId: 'a', updatedAt: 30 },
+		{ sessionId: 'b', updatedAt: 20 },
+		{ sessionId: 'c', updatedAt: 10 }
+	];
+	assert.deepStrictEqual(
+		listByGroup(records, file, new Set(['c'])).map((group) => ({
+			name: group.name,
+			stuck: group.stuck,
+			members: group.members.map((record) => record.sessionId)
+		})),
+		[
+			// 既定タブが先。所属の無い a はここに入る（行き場を失わない）
+			{ name: '作業', stuck: 0, members: ['a'] },
+			// 束の中は許可待ちの c が、より新しい b より先
+			{ name: 'ログイン改修', stuck: 1, members: ['c', 'b'] }
+		]
+	);
+	// 中身の無い束は出さない
+	assert.deepStrictEqual(
+		listByGroup([{ sessionId: 'a', updatedAt: 1 }], addGroup(emptyGroups(), 'g-x', '空', 1), new Set()).map(
+			(group) => group.name
+		),
+		['作業']
+	);
 });

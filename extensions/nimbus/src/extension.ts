@@ -185,6 +185,7 @@ import {
 	buildHome,
 	emptyGroups,
 	groupOf,
+	listByGroup,
 	normalizeGroupName,
 	pruneMembers,
 	removeGroup,
@@ -2390,20 +2391,51 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			return;
 		}
 		const now = Date.now();
-		const items = [...records]
-			.sort((a, b) => b.updatedAt - a.updatedAt)
-			.map((record) => {
-				const alive = isOwnerAlive(record, now);
-				const icon = !alive ? '$(debug-disconnect)' : isRunningStatus(record.status) ? '$(sync~spin)' : '$(cloud)';
-				const where = !alive ? '持ち主なし' : isMine(record, sessionStore.windowId) ? 'このウィンドウ' : '別のウィンドウ';
-				const cost = record.totalCostUsd !== undefined ? ` · $${record.totalCostUsd.toFixed(4)}` : '';
-				return {
-					label: `${icon} ${record.title ?? record.sessionId.slice(0, 8)}`,
-					description: `${record.status} · ${where}${cost}`,
-					detail: record.cwd,
-					record
-				};
-			});
+		// **束（T-316）で畳んで見せる。** 並列が増えるほど、平らな一覧では
+		// 「この仕事はいまどこが止まっているか」が読めない。束の定義は Home（T-314）と同じ
+		// groups.json（globalStorage）なので、**別のウィンドウのぶんも同じ束に入る**
+		const groupsFile = await groupStore.load();
+		const waitingHere = new Set(broker.pending().map((entry) => entry.sessionId));
+		const toItem = (record: SessionRecord): {
+			label: string;
+			description: string;
+			detail: string;
+			record: SessionRecord;
+		} => {
+			const alive = isOwnerAlive(record, now);
+			const waiting = waitingHere.has(record.sessionId);
+			const icon = waiting
+				? '$(report)'
+				: !alive
+					? '$(debug-disconnect)'
+					: isRunningStatus(record.status)
+						? '$(sync~spin)'
+						: '$(cloud)';
+			const where = !alive ? '持ち主なし' : isMine(record, sessionStore.windowId) ? 'このウィンドウ' : '別のウィンドウ';
+			const cost = record.totalCostUsd !== undefined ? ` · $${record.totalCostUsd.toFixed(4)}` : '';
+			return {
+				label: `${icon} ${record.title ?? record.sessionId.slice(0, 8)}`,
+				description: `${waiting ? '許可待ち · ' : ''}${record.status} · ${where}${cost}`,
+				detail: record.cwd,
+				record
+			};
+		};
+		// 束ごとに、止まっているもの（許可待ち）を先頭に。並びの判断は core（テスト済み）
+		const grouped = listByGroup(records, groupsFile, waitingHere);
+		const items: (
+			| { label: string; kind: vscode.QuickPickItemKind; record?: undefined }
+			| ReturnType<typeof toItem>
+		)[] = [];
+		for (const group of grouped) {
+			// 束が 1 つ（既定だけ）なら見出しは出さない — 平らな一覧のままのほうが読める
+			if (grouped.length > 1) {
+				items.push({
+					label: `${group.name}（${group.members.length} 本${group.stuck > 0 ? ` · 許可待ち ${group.stuck}` : ''}）`,
+					kind: vscode.QuickPickItemKind.Separator
+				});
+			}
+			items.push(...group.members.map(toItem));
+		}
 		// Herdr のぶんは、状態の記号だけ Nimbus と揃えて並べる（読み手の頭を切り替えさせない）
 		const herdrItems = herdr.map((pane) => ({
 			label: `$(server) ${lookOf(herdrTabState(pane.status)).symbol} ${pane.title}`,

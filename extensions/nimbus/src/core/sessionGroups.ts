@@ -238,3 +238,40 @@ export function pruneMembers(file: GroupsFile, liveSessionIds: ReadonlySet<strin
 	}
 	return changed ? { ...file, members } : file;
 }
+
+/**
+ * 横断の一覧（T-316）を束で畳むための並び。
+ *
+ * - 束の順は「既定 → 作った順」。中身の無い束は出さない
+ * - 束の中は**止まっているもの（許可待ち）が先頭**、あとは新しい順 —
+ *   一覧を開く動機は「この仕事はいまどこで止まっているか」だから
+ * - 束が 1 つしか無いときは見出しを出さない（平らなままのほうが読める）
+ */
+export function listByGroup<T extends { sessionId: string; updatedAt: number }>(
+	records: readonly T[],
+	file: GroupsFile,
+	waiting: ReadonlySet<string>
+): { groupId: string; name: string; stuck: number; members: T[] }[] {
+	const byGroup = new Map<string, T[]>();
+	for (const record of records) {
+		const groupId = groupOf(file, record.sessionId);
+		byGroup.set(groupId, [...(byGroup.get(groupId) ?? []), record]);
+	}
+	const ordered = [DEFAULT_GROUP_ID, ...file.groups.map((group) => group.id)].filter(
+		(groupId, index, all) => all.indexOf(groupId) === index && byGroup.has(groupId)
+	);
+	return ordered.map((groupId) => {
+		const members = (byGroup.get(groupId) ?? []).sort((a, b) => {
+			const stuck = Number(waiting.has(b.sessionId)) - Number(waiting.has(a.sessionId));
+			return stuck !== 0 ? stuck : b.updatedAt - a.updatedAt;
+		});
+		return {
+			groupId,
+			name:
+				file.groups.find((group) => group.id === groupId)?.name ??
+				(groupId === DEFAULT_GROUP_ID ? DEFAULT_GROUP_NAME : groupId),
+			stuck: members.filter((record) => waiting.has(record.sessionId)).length,
+			members
+		};
+	});
+}
