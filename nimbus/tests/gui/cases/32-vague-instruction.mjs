@@ -87,15 +87,40 @@ export default {
 		await page.keyboard.press('Escape');
 		await page.waitForTimeout(2000);
 
-		// セッションが始まっていないこと。始まっていれば「セッション未開始」が消える
-		const sidebar = await page.evaluate(() => {
-			const pane = document.querySelector('.pane-body');
-			return pane ? pane.innerText : '';
-		});
-		// 状態の言葉は帯と揃えた（T-288）ので、走り出していれば「作業中」と出る
+		// **セッションが始まっていないこと。** ここが空砲だと、閉じたのに送られて
+		// 課金まで走っても緑になる（実際に起きた — pane-body は webview の外なので
+		// 何も読めておらず、必ず通っていた）。コックピットの webview の中を読む
+		let composer = '';
+		for (const frame of page.frames()) {
+			const body = await frame.evaluate(() => document.body?.innerText ?? '').catch(() => '');
+			if (body.includes('Claude に指示')) {
+				composer = body;
+				break;
+			}
+		}
+		ctx.expect(composer.length > 0, 'コックピットの webview が読めない');
 		ctx.expect(
-			!sidebar.includes('作業中') && !sidebar.includes('実行中'),
-			`確認を閉じたのにセッションが始まっている:\n${sidebar.slice(0, 300)}`
+			composer.includes('セッション未開始'),
+			`確認を閉じたのにセッションが始まっている（課金の漏れ）:\n${composer.slice(0, 300)}`
 		);
+
+		// **後始末: 入力欄を空にする。** 取りやめで文が残るのは仕様（書き直すため）だが、
+		// スイートでは後続ケースの迷い Enter が残った文を発射して**課金が漏れた**（実測）。
+		for (const frame of page.frames()) {
+			const cleared = await frame
+				.evaluate(() => {
+					const area = document.querySelector('textarea');
+					if (area && (area.placeholder ?? '').includes('Claude に指示')) {
+						area.value = '';
+						area.dispatchEvent(new Event('input', { bubbles: true }));
+						return true;
+					}
+					return false;
+				})
+				.catch(() => false);
+			if (cleared) {
+				break;
+			}
+		}
 	}
 };
