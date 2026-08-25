@@ -44,7 +44,8 @@ const LOOK: Record<TabState, TabLook> = {
 	// 進行中を表すトークンをそのまま借りる
 	running: { symbol: '●', label: '作業中', color: 'progressBar-background' },
 	// 人間の番＝知らせであって異常ではない
-	asking: { symbol: '?', label: 'あなたの番', color: 'editorInfo-foreground' },
+	// 「あなたの番」に記号は付けない（利用者の指摘）。? はエラーの気配に読めるうえ、色と言葉で足りる
+	asking: { symbol: '', label: 'あなたの番', color: 'editorInfo-foreground' },
 	// 「通った」を既に意味しているトークン
 	done: { symbol: '✓', label: '完了', color: 'testing-iconPassed' },
 	stopped: { symbol: '■', label: '中断', color: 'descriptionForeground' },
@@ -80,8 +81,10 @@ export function lookOf(state: TabState): TabLook {
 
 export interface SessionTab {
 	sessionId: string;
-	/** タブに出す短い見出し（T-301） */
+	/** タブに出す短い見出し（T-301）。利用者が付けた名前があればそれ（T-313） */
 	title: string;
+	/** 先頭に残す印（T-311）。並びとしるしだけで、停止や後片付けの対象からは外さない */
+	pinned: boolean;
 	/** 指を置いたときに出す、頼んだことの全文（T-301） */
 	full: string;
 	/** 始めた順の通し番号（T-301）。**幅が無くてもこれだけは残る** */
@@ -129,20 +132,34 @@ export function buildTabs(
 		 */
 		drafts?: readonly { id: string; createdAt: number }[];
 		activeDraftId?: string;
+		/** 利用者が付けた名前（T-313）。あれば `titles`（最初に頼んだこと）より優先する */
+		names?: ReadonlyMap<string, string>;
+		/** 先頭に残すセッション（T-311） */
+		pinnedSessionIds?: ReadonlySet<string>;
+		/**
+		 * セッション番号の台帳（T-316）。番号は席順ではなく**名札**なので、
+		 * 途中のタブを閉じても残りの番号が詰まらないよう、振った番号を外で覚えて渡す。
+		 * 無ければ従来どおり並び順で振る
+		 */
+		numbers?: ReadonlyMap<string, number>;
 	} = {}
 ): SessionTab[] {
 	const pending = options.pendingSessionIds ?? new Set<string>();
+	const pinnedIds = options.pinnedSessionIds ?? new Set<string>();
 	const started = [...sessions]
 		.sort((a, b) => a.createdAt - b.createdAt)
 		.map((session, index) => {
 			const state = tabStateOf(session.status, pending.has(session.sessionId));
 			const look = lookOf(state);
 			const full = options.titles?.get(session.sessionId);
+			const name = options.names?.get(session.sessionId)?.trim();
 			return {
 				sessionId: session.sessionId,
-				title: tabTitle(full, session.sessionId),
+				// 利用者が付けた名前が最優先（T-313）。無ければ最初に頼んだことから作る
+				title: name || tabTitle(full, session.sessionId),
 				full: full?.replace(/\s+/g, ' ').trim() ?? session.sessionId,
-				number: index + 1,
+				number: options.numbers?.get(session.sessionId) ?? index + 1,
+				pinned: pinnedIds.has(session.sessionId),
 				state,
 				symbol: look.symbol,
 				label: look.label,
@@ -150,14 +167,19 @@ export function buildTabs(
 				active: session.sessionId === options.activeSessionId
 			};
 		});
+	// ピン留めは先頭へ（T-311）。**番号は動かさない** — 番号は席順ではなく名札で、
+	// 並び替えのたびに変わると「2 番のセッション」という会話が壊れる。
+	// sort は安定なので、ピン留め同士・それ以外同士は始めた順のまま
+	started.sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
 	// 下書きは、始まった順のうしろに並べる。中身が無いので状態は「あなたの番」に倒す
 	const draftLook = lookOf('asking');
 	const draftTabs: SessionTab[] = (options.drafts ?? []).map((draft, index) => ({
 		sessionId: draft.id,
 		title: '新しいセッション',
+		pinned: false,
 		full: 'まだ何も送っていません',
-		number: started.length + index + 1,
+		number: options.numbers?.get(draft.id) ?? started.length + index + 1,
 		state: 'asking',
 		symbol: draftLook.symbol,
 		label: draftLook.label,

@@ -14,9 +14,19 @@
 		vscode.postMessage({ type: 'check' });
 	});
 
+	// ラベルの言い換えではなく**押した結果**を書く（T-312）。
+	// とくに「完了」が worktree を片付けることは、押す前に知りたい
+	const HINTS = {
+		start: 'このタスクのセッションを開始します',
+		open: 'このタスクの作業フォルダ（worktree）を新しいウィンドウで開きます',
+		complete: 'セッションを止めて worktree を片付けます。未コミットの成果は WIP コミットで残ります',
+		forget: '一覧から取り除きます。ファイルには触りません'
+	};
+
 	function button(label, kind, taskId, secondary) {
 		const el = document.createElement('button');
 		el.textContent = label;
+		el.title = HINTS[kind] ?? '';
 		if (secondary) {
 			el.className = 'secondary';
 		}

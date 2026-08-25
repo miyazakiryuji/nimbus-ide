@@ -89,7 +89,7 @@ export class BoardViewProvider extends WebviewViewHost {
 			stylesheet: this.mediaUri(webview, 'board.css'),
 			script: this.mediaUri(webview, 'board.js'),
 			body: `	<header class="toolbar">
-		<button id="newTask">新しいタスク</button>
+		<button id="newTask" title="worktree を切って、いまの作業と並列で走るタスクを作ります">新しいタスク</button>
 		<button id="check" class="secondary">点検</button>
 		<span id="summary" class="summary"></span>
 	</header>

@@ -211,6 +211,22 @@ export class SessionManager extends EventEmitter {
     session.queue.close()
   }
 
+  /**
+   * タブの × から呼ぶ（T-316）。入力を閉じ、走っていれば止め、**一覧からも取り除く**。
+   * `close()` は入力を閉じるだけで `list()` に残る — タブを閉じる操作には「消える」が要る。
+   */
+  async discard(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId)
+    if (!session) return
+    session.queue.close()
+    try {
+      await withTimeout(session.handle.interrupt(), INTERRUPT_TIMEOUT_MS)
+    } catch {
+      // 既に終わっている・応じない場合はそのまま取り除く（待ち続けるほうが害）
+    }
+    this.sessions.delete(sessionId)
+  }
+
   /** アプリ終了時に全セッションの入力を閉じ、CLI サブプロセスを解放する */
   closeAll(): void {
     for (const session of this.sessions.values()) {

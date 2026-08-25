@@ -368,9 +368,25 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const sessionNames = new Map<string, string>(
 		context.workspaceState.get<[string, string][]>('nimbus.sessionNames', [])
 	);
+	/**
+	 * セッション番号の台帳（T-316）。番号は席順ではなく**名札** — タブを閉じても残りが詰まらない。
+	 * 下書きが本物になるときは番号を引き継ぐ（見た目のタブは同じものが続いているので）
+	 */
+	const sessionNumbers = new Map<string, number>(
+		context.workspaceState.get<[string, number][]>('nimbus.sessionNumbers', [])
+	);
+	let sessionCounter = context.workspaceState.get<number>('nimbus.sessionCounter', 0);
+	function numberFor(id: string): void {
+		if (!sessionNumbers.has(id)) {
+			sessionCounter += 1;
+			sessionNumbers.set(id, sessionCounter);
+		}
+	}
 	function persistTabMeta(): void {
 		void context.workspaceState.update('nimbus.pinnedSessions', [...pinnedSessions]);
 		void context.workspaceState.update('nimbus.sessionNames', [...sessionNames.entries()]);
+		void context.workspaceState.update('nimbus.sessionNumbers', [...sessionNumbers.entries()]);
+		void context.workspaceState.update('nimbus.sessionCounter', sessionCounter);
 	}
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
@@ -556,6 +572,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		},
 		// タブの名前を変える（T-313）。空にすると自動の見出し（最初に頼んだこと）へ戻る
 		onRenameSession: (sessionId, name) => renameSession(sessionId, name),
+		// タブの ×（T-316）。走っていれば止めてから一覧から取り除く
+		onCloseSession: (sessionId) => void closeSessionTab(sessionId),
 		// 会話の中で承認に答える（T-266）。読んでいる場所と決める場所を同じにする
 		onApprove: (id, decision) => {
 			if (!broker.decide(id, decision)) {
@@ -2683,6 +2701,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 全画面では消える**（複数開いても 1 本に見える）という食い違いになっていた。
 	 */
 	function currentTabs(): SessionTab[] {
+		for (const session of tabbableSessions()) {
+			numberFor(session.sessionId);
+		}
+		for (const draft of drafts) {
+			numberFor(draft.id);
+		}
 		return buildTabs(tabbableSessions(), {
 			activeSessionId,
 			drafts,
@@ -2690,7 +2714,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
 			titles: sessionTitles,
 			names: sessionNames,
-			pinnedSessionIds: pinnedSessions
+			pinnedSessionIds: pinnedSessions,
+			numbers: sessionNumbers
 		});
 	}
 
@@ -2699,6 +2724,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (activeSessionId && activeDraftId) {
 			const index = drafts.findIndex((draft) => draft.id === activeDraftId);
 			if (index >= 0) {
+				// 番号は引き継ぐ（T-316）。見た目のタブは「下書き → 本物」で同じものが続いている
+				const inherited = sessionNumbers.get(activeDraftId);
+				if (inherited !== undefined && !sessionNumbers.has(activeSessionId)) {
+					sessionNumbers.set(activeSessionId, inherited);
+				}
+				sessionNumbers.delete(activeDraftId);
 				drafts.splice(index, 1);
 			}
 			activeDraftId = undefined;
@@ -2715,6 +2746,12 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		for (const id of [...sessionNames.keys()]) {
 			if (!alive.has(id)) {
 				sessionNames.delete(id);
+				pruned = true;
+			}
+		}
+		for (const id of [...sessionNumbers.keys()]) {
+			if (!alive.has(id) && !drafts.some((draft) => draft.id === id)) {
+				sessionNumbers.delete(id);
 				pruned = true;
 			}
 		}
@@ -2741,6 +2778,66 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * `retained` は「前面のセッションのぶん」という約束なので、控えから入れ替える。
 	 * 控えは全セッションぶん貯めてあるので、戻っても会話が空にならない。
 	 */
+	/**
+	 * タブの × でセッションを閉じる（T-316）。
+	 *
+	 * 走っている・許可待ちのときだけ確認を出す（打ちかけの文書と同じ扱い）。
+	 * 終わっているものは黙って閉じる — 毎回聞くと × が「押すと聞かれるボタン」になる。
+	 */
+	async function closeSessionTab(sessionId: string): Promise<void> {
+		// 下書きはそのまま畳む（中身が無い）
+		const draftIndex = drafts.findIndex((draft) => draft.id === sessionId);
+		if (draftIndex >= 0) {
+			drafts.splice(draftIndex, 1);
+			sessionNumbers.delete(sessionId);
+			if (activeDraftId === sessionId) {
+				activeDraftId = undefined;
+			}
+			persistTabMeta();
+			updateSessionTabs();
+			return;
+		}
+		const summary = sessions.get(sessionId);
+		if (!summary) {
+			return;
+		}
+		const busy = summary.status === 'running' || summary.status === 'starting';
+		const waiting = broker.pending().some((entry) => entry.sessionId === sessionId);
+		if (busy || waiting) {
+			const CLOSE = '閉じる';
+			const choice = await vscode.window.showWarningMessage(
+				'このセッションは動いています。閉じると作業が止まります。',
+				{ modal: true, detail: 'worktree と書き込んだファイルはそのまま残ります。会話はタブから消えます。' },
+				CLOSE
+			);
+			if (choice !== CLOSE) {
+				return;
+			}
+		}
+		// 答え待ちの承認は拒否で片付ける（残すと、閉じたセッションが待ち続ける）
+		for (const entry of broker.pending()) {
+			if (entry.sessionId === sessionId) {
+				broker.decide(entry.id, 'deny');
+			}
+		}
+		await sessions.discard(sessionId);
+		pinnedSessions.delete(sessionId);
+		sessionNames.delete(sessionId);
+		sessionNumbers.delete(sessionId);
+		persistTabMeta();
+		if (activeSessionId === sessionId) {
+			resetToBlank();
+			// 残りがあれば隣へ。無ければ白紙のまま
+			const rest = currentTabs().filter((tab) => !tab.sessionId.startsWith('draft-'));
+			if (rest.length > 0) {
+				switchSession(rest[0].sessionId);
+				return; // switchSession が列を作り直す
+			}
+		}
+		updateSessionTabs();
+		log(`[session] タブから閉じました: ${sessionId.slice(0, 8)}`);
+	}
+
 	/** セッションの名前を変える（T-313）。空なら自動の見出しへ戻す */
 	function renameSession(sessionId: string, name: string): void {
 		if (drafts.some((draft) => draft.id === sessionId)) {

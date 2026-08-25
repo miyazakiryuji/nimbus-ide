@@ -81,7 +81,8 @@ test('状態は記号・言葉・テーマの色で言う（絵文字は使わ�
 		[
 			['!', '許可待ち', 'list-warningForeground'],
 			['●', '作業中', 'progressBar-background'],
-			['?', 'あなたの番', 'editorInfo-foreground'],
+			// 「あなたの番」に記号は無し（T-316）。? はエラーの気配に読める・色と言葉で足りる
+			['', 'あなたの番', 'editorInfo-foreground'],
 			['✓', '完了', 'testing-iconPassed'],
 			['■', '中断', 'descriptionForeground'],
 			['✕', 'エラー', 'list-errorForeground']
@@ -103,6 +104,55 @@ test('下書き（まだ送っていないセッション）もタブに出す�
 			['a', 1, 'a', 'running', false],
 			// 下書きは始まった順のうしろ。中身が無いので「あなたの番」に倒す
 			['draft-1', 2, '新しいセッション', 'asking', true]
+		]
+	);
+});
+
+test('ピン留めは先頭へ。ただし番号は動かさない（T-311）', () => {
+	// 番号は席順ではなく**名札**。並び替えのたびに変わると「2 番のセッション」という会話が壊れる。
+	// ピン留め同士・それ以外同士は始めた順のまま（安定ソート）
+	const tabs = buildTabs(
+		[
+			summary({ sessionId: 'a', createdAt: 1, status: 'running' }),
+			summary({ sessionId: 'b', createdAt: 2, status: 'running' }),
+			summary({ sessionId: 'c', createdAt: 3, status: 'running' })
+		],
+		{ pinnedSessionIds: new Set(['c', 'b']), titles: new Map() }
+	);
+	assert.deepStrictEqual(
+		tabs.map((tab) => [tab.sessionId, tab.number, tab.pinned]),
+		[
+			['b', 2, true],
+			['c', 3, true],
+			['a', 1, false]
+		]
+	);
+});
+
+test('利用者が付けた名前は、自動の見出しより優先する（T-313）', () => {
+	// 空白だけの名前は「付けた」と数えない（自動の見出しへ戻る）
+	const tabs = buildTabs(
+		[
+			summary({ sessionId: 'a', createdAt: 1, status: 'running' }),
+			summary({ sessionId: 'b', createdAt: 2, status: 'running' })
+		],
+		{
+			titles: new Map([
+				['a', 'README を読んで直して'],
+				['b', 'テストを走らせて']
+			]),
+			names: new Map([
+				['a', 'リリース準備'],
+				['b', '   ']
+			])
+		}
+	);
+	assert.deepStrictEqual(
+		tabs.map((tab) => [tab.title, tab.full]),
+		[
+			// 名前が付いていても、指を置いたときの全文（最初に頼んだこと）は失わない
+			['リリース準備', 'README を読んで直して'],
+			['テストを走らせて', 'テストを走らせて']
 		]
 	);
 });

@@ -63,6 +63,8 @@
 	// 必要なものだけ SVG で持つ。外から何も読み込まないぶん、確実に出る。
 
 	const PATHS = {
+		close: 'M8 6.9 12.9 2 14 3.1 9.1 8 14 12.9 12.9 14 8 9.1 3.1 14 2 12.9 6.9 8 2 3.1 3.1 2z',
+		pin: 'M9.9 1.2 14.8 6.1l-1.1 1.1-.9-.2-2.5 2.5.4 2.9-1.1 1.1-3.1-3.1-3.4 3.4-.8-.8 3.4-3.4L2.6 6.5l1.1-1.1 2.9.4L9.1 3.3l-.2-.9z',
 		send: 'M1.7 14.3 14.5 8 1.7 1.7 1.6 6.6 10 8l-8.4 1.4z',
 		stop: 'M4 4h8v8H4z',
 		attach: 'M9.5 2a3.5 3.5 0 0 1 3.5 3.5v5a2.5 2.5 0 0 1-5 0V6h1.2v4.5a1.3 1.3 0 0 0 2.6 0v-5A2.3 2.3 0 0 0 9.5 3.2 2.3 2.3 0 0 0 7.2 5.5v5.8a3.5 3.5 0 0 0 7 0V6h1.2v5.3a4.7 4.7 0 0 1-9.4 0V5.5A3.5 3.5 0 0 1 9.5 2z',
@@ -336,6 +338,7 @@
 		const summary = document.createElement('button');
 		summary.type = 'button';
 		summary.className = 'collapsible-summary';
+		summary.title = '中身を開く／閉じる';
 		summary.appendChild(icon('chevron', 'chevron', 12));
 		const stateIcon = icon(state ?? 'spinner', `state-icon${state ? '' : ' running'}`);
 		summary.appendChild(stateIcon);
@@ -698,10 +701,19 @@
 
 			const actions = document.createElement('div');
 			actions.className = 'approval-actions';
+			// ラベルは短くしてあるぶん、**押した結果の違い**はここで説明する（T-312）。
+			// 「許可」と「常に許可」の差を知らずに押すと、覚えの無い自動許可が残る
+			const DECISION_HINTS = {
+				'allow': '今回のこの実行だけを許可します',
+				'allow-session': 'このセッションのあいだは、同じ確認を出さずに許可します',
+				'always-allow': 'ルールとして設定に保存し、以後は確認しません',
+				'deny': '実行させません。セッションは止まらず、拒否されたことが伝わります'
+			};
 			const add = (label, decision, secondary) => {
 				const button = document.createElement('button');
 				button.type = 'button';
 				button.textContent = label;
+				button.title = DECISION_HINTS[decision] ?? '';
 				if (secondary) {
 					button.className = 'secondary';
 				}
@@ -911,12 +923,18 @@
 			return;
 		}
 		for (const tab of tabs) {
-			const button = document.createElement('button');
-			button.type = 'button';
-			button.className = `session-tab${tab.active ? ' active' : ''}`;
-			// 指を置けば全文が読める（幅が無くても失われない・T-301）
-			button.title = `${tab.number}. ${tab.full ?? tab.title} — ${tab.label}`;
-			button.setAttribute('aria-current', tab.active ? 'true' : 'false');
+			// <button> ではなく <div role="tab">（T-311 / T-313）。
+			// **ボタンの中にボタンや入力欄は置けない**（HTML の決まりで、入れ子の操作は
+			// ブラウザが外へ追い出す）。ピンと名前の書き換えを中に住まわせるための構造
+			const button = document.createElement('div');
+			button.setAttribute('role', 'tab');
+			button.tabIndex = 0;
+			const draft = tab.sessionId.startsWith('draft-');
+			button.className = `session-tab${tab.active ? ' active' : ''}${tab.pinned ? ' pinned' : ''}`;
+			// 指を置けば全文が読める（幅が無くても失われない・T-301）。
+			// 名前の変えかたはここでしか案内できない（T-313・鉛筆を常設すると幅が無い）
+			button.title = `${tab.number}. ${tab.full ?? tab.title} — ${tab.label}${draft ? '' : '\nダブルクリックで名前を変更'}`;
+			button.setAttribute('aria-selected', tab.active ? 'true' : 'false');
 
 			// 色つきの丸（T-298 / T-302）。記号だけだと小さくて読み取れないという声が出た。
 			// 色はテーマトークンから引く（絵文字だとテーマに従わない）
@@ -924,11 +942,14 @@
 			dot.style.color = `var(--vscode-${tab.color})`;
 			button.appendChild(dot);
 
-			const mark = document.createElement('span');
-			mark.className = 'session-tab-mark';
-			mark.textContent = tab.symbol;
-			mark.style.color = `var(--vscode-${tab.color})`;
-			button.appendChild(mark);
+			// 記号の無い状態（あなたの番）はスパンごと置かない — 空でも gap の幅を取る
+			if (tab.symbol) {
+				const mark = document.createElement('span');
+				mark.className = 'session-tab-mark';
+				mark.textContent = tab.symbol;
+				mark.style.color = `var(--vscode-${tab.color})`;
+				button.appendChild(mark);
+			}
 
 			// **番号は幅が無くても残す**（T-301）。3 本並ぶと名前に使えるのは 30px ほどで、
 			// 先頭から削るとどのタブも同じ書き出しになって見分けがつかない
@@ -951,11 +972,103 @@
 				button.appendChild(word);
 			}
 
-			button.addEventListener('click', () => {
+			// ピン（T-311）。指を置いたときと、留まっているあいだだけ見せる（常設すると幅が無い）
+			if (!draft) {
+				const pin = document.createElement('span');
+				pin.className = 'session-tab-pin';
+				pin.setAttribute('role', 'button');
+				pin.tabIndex = 0;
+				pin.title = tab.pinned ? 'ピン留めを外す' : 'ピン留めする（タブの先頭に残ります）';
+				pin.setAttribute('aria-label', pin.title);
+				pin.appendChild(icon('pin', 'pin-glyph', 12));
+				const toggle = (e) => {
+					e.stopPropagation();
+					vscode.postMessage({ type: 'togglePin', sessionId: tab.sessionId });
+				};
+				pin.addEventListener('click', toggle);
+				pin.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						toggle(e);
+					}
+				});
+				button.appendChild(pin);
+			}
+
+			// ×（T-316）。エディタのタブと同じ作法 — 指を置いたときとアクティブなときに出す
+			const close = document.createElement('span');
+			close.className = 'session-tab-close';
+			close.setAttribute('role', 'button');
+			close.tabIndex = 0;
+			close.title = draft
+				? 'この下書きを閉じる'
+				: 'セッションを閉じる（走っていれば止まります。worktree とファイルは残ります）';
+			close.setAttribute('aria-label', close.title);
+			close.appendChild(icon('close', 'close-glyph', 12));
+			const requestClose = (e) => {
+				e.stopPropagation();
+				vscode.postMessage({ type: 'closeSession', sessionId: tab.sessionId });
+			};
+			close.addEventListener('click', requestClose);
+			close.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					requestClose(e);
+				}
+			});
+			button.appendChild(close);
+
+			const activate = () => {
 				if (!tab.active) {
 					vscode.postMessage({ type: 'switchSession', sessionId: tab.sessionId });
 				}
+			};
+			button.addEventListener('click', activate);
+			// div にしたぶん、キーボードの道は自分で敷く（Enter / Space で切り替え）
+			button.addEventListener('keydown', (e) => {
+				if ((e.key === 'Enter' || e.key === ' ') && e.target === button) {
+					e.preventDefault();
+					activate();
+				}
 			});
+
+			// ダブルクリックで名前を変える（T-313）。名前の場所がそのまま入力欄になる
+			if (!draft) {
+				button.addEventListener('dblclick', (e) => {
+					e.stopPropagation();
+					if (button.querySelector('.session-tab-rename')) {
+						return;
+					}
+					const field = document.createElement('input');
+					field.type = 'text';
+					field.className = 'session-tab-rename';
+					field.value = tab.title;
+					field.title = '空にして Enter で、自動の見出しへ戻ります';
+					field.maxLength = 60;
+					let finished = false;
+					const finish = (commit) => {
+						if (finished) {
+							return;
+						}
+						finished = true;
+						if (commit) {
+							vscode.postMessage({ type: 'renameSession', sessionId: tab.sessionId, name: field.value });
+						}
+						field.replaceWith(name);
+					};
+					field.addEventListener('keydown', (event) => {
+						event.stopPropagation();
+						if (event.key === 'Enter') {
+							finish(true);
+						} else if (event.key === 'Escape') {
+							finish(false);
+						}
+					});
+					field.addEventListener('blur', () => finish(true));
+					field.addEventListener('click', (event) => event.stopPropagation());
+					name.replaceWith(field);
+					field.focus();
+					field.select();
+				});
+			}
 			sessionTabs.appendChild(button);
 			// **前面のタブが画面外にいると、どのセッションに居るのか分からない**（T-291）。
 			// 実測でサイドバー 299px に対し列は 567px まで伸び、3 本目が右へ隠れていた。
@@ -1037,7 +1150,7 @@
 				sessionState.appendChild(mark);
 
 				const word = document.createElement('span');
-				word.textContent = `${message.state.symbol} ${message.state.label}`;
+				word.textContent = [message.state.symbol, message.state.label].filter(Boolean).join(' ');
 				word.style.color = `var(--vscode-${message.state.color})`;
 				sessionState.appendChild(word);
 

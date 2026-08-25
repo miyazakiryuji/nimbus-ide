@@ -73,6 +73,8 @@
 	flex: 1 1 auto;
 	min-width: 0;
 	max-width: 180px;
+	/* div になった（T-313）。名前変更のダブルクリックで文字が選ばれて光らないように */
+	user-select: none;
 	padding: 4px 10px;
 	border: none;
 	border-radius: 0;
@@ -115,6 +117,63 @@
 	white-space: nowrap;
 }
 
+/* ピン（T-311）。指を置いたときと、留まっているあいだだけ出す — 常設すると幅が無い */
+.session-tab-pin {
+	display: none;
+	flex: 0 0 auto;
+	align-items: center;
+	padding: 1px;
+	border-radius: var(--nimbus-radius-control);
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.session-tab:hover .session-tab-pin,
+.session-tab:focus-within .session-tab-pin,
+.session-tab.pinned .session-tab-pin {
+	display: inline-flex;
+}
+
+.session-tab-pin:hover {
+	background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+}
+
+/* ×（T-316）。エディタのタブと同じ作法で、指を置いたときとアクティブなときに出す */
+.session-tab-close {
+	display: none;
+	flex: 0 0 auto;
+	align-items: center;
+	padding: 1px;
+	border-radius: var(--nimbus-radius-control);
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.session-tab:hover .session-tab-close,
+.session-tab:focus-within .session-tab-close,
+.session-tab.active .session-tab-close {
+	display: inline-flex;
+}
+
+.session-tab-close:hover {
+	background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+	color: var(--vscode-foreground);
+}
+
+/* 名前の書き換え（T-313）。名前の場所がそのまま入力欄になる */
+.session-tab-rename {
+	flex: 1 1 auto;
+	min-width: 0;
+	width: 6em;
+	font: inherit;
+	font-size: var(--nimbus-label1);
+	color: var(--vscode-input-foreground);
+	background: var(--vscode-input-background);
+	border: 1px solid var(--vscode-focusBorder);
+	border-radius: var(--nimbus-radius-control);
+	padding: 0 2px;
+}
+
 body {
 	margin: 0;
 	/*
@@ -151,6 +210,18 @@ body {
 }
 
 /* 依頼の行だけ地を敷いて、応答と見分ける */
+/*
+ * 道具の行と思考は「発言」ではなく舞台裏（T-317）。続けて何行も出るので、
+ * 発言と同じ 12px の上下を着ると**行間だけの画面**になる — 実測で、閉じた 1 行（24px）の
+ * あいだに 30px（12＋6＋12）空いていた。舞台裏どうしの間隔は 10px（2＋6＋2）に落とす。
+ * 発言（あなた・Claude）との境目は、発言側の 12px が保つ
+ */
+.turn.tool,
+.turn.thinking {
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
 .turn.user {
 	background: var(--vscode-chat-requestBackground, var(--vscode-editor-background));
 	border-top: 1px solid var(--vscode-chat-requestBorder, var(--vscode-panel-border));

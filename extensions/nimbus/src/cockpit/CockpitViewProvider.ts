@@ -33,6 +33,12 @@ export type InboundMessage =
 	| { type: 'attach' }
 	/** タブを押してセッションを切り替える（T-269） */
 	| { type: 'switchSession'; sessionId: string }
+	/** タブのピンを押して先頭に残す・外す（T-311） */
+	| { type: 'togglePin'; sessionId: string }
+	/** タブをダブルクリックして名前を変える（T-313）。空なら自動の見出しへ戻す */
+	| { type: 'renameSession'; sessionId: string; name: string }
+	/** タブの × でセッションを閉じる（T-316） */
+	| { type: 'closeSession'; sessionId: string }
 	/**
 	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
 	 * 画面のボタンが任意のコマンドを呼べる状態にはしない。
@@ -106,6 +112,9 @@ export interface CockpitHandlers {
 	onApprove?(id: string, decision: ApprovalDecision): void;
 	/** タブでセッションを切り替えたとき（T-269） */
 	onSwitchSession?(sessionId: string): void;
+	onTogglePin?(sessionId: string): void;
+	onRenameSession?(sessionId: string, name: string): void;
+	onCloseSession?(sessionId: string): void;
 	/**
 	 * Webview が（再）生成されたときに現在の状態を復元するための材料。
 	 * **答え待ちの承認も含める**（T-266）— 面を畳んで開き直したときにカードが消えると、
@@ -241,6 +250,15 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'switchSession':
 					this.handlers.onSwitchSession?.(message.sessionId);
+					break;
+				case 'togglePin':
+					this.handlers.onTogglePin?.(message.sessionId);
+					break;
+				case 'renameSession':
+					this.handlers.onRenameSession?.(message.sessionId, message.name);
+					break;
+				case 'closeSession':
+					this.handlers.onCloseSession?.(message.sessionId);
 					break;
 				case 'code':
 					await runCodeAction(message.action, message.text, message.language, (text) =>
