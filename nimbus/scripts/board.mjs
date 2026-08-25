@@ -2,9 +2,10 @@
  * 板（tasks.md）の今の状態を 1 画面で見る（tasks.md T-264）。
  *
  * 「作業前に必ず板へ書き出す」という運用ルールは、守られているかを**見られないと守れない**。
- * 着手する前にこれを走らせて、同じ範囲に札（`@session-x`）が立っていないかを確かめる。
+ * 着手する前にこれを走らせて、同じ範囲に札（`@session-x`）が立っていないか、
+ * 触るファイルが作業予約（`- 🔒` 行・T-321）で握られていないかを確かめる。
  *
- *   node nimbus/scripts/board.mjs          # 進行中の札・未着手・ID の重複
+ *   node nimbus/scripts/board.mjs          # 作業予約（🔒）・進行中の札・未着手・ID の重複
  *   node nimbus/scripts/board.mjs --mine session-d   # 自分の札だけ
  */
 import { readFileSync } from 'fs'
@@ -19,11 +20,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
  * **1 タスクは 1 行とは限らない。** 板の書きかたでは、続きは字下げして次の行に書く
  * （区切りは空行）。札（`@session-x`）が 2 行目以降に書かれることも多いので、
  * 続きの行まで読んでから札を数える（T-283）。
+ *
+ * 作業予約の行（`- 🔒 @session-x | T-123 | 日時 | ファイル…`）はタスクとしては数えず、
+ * `locks` として別に返す（T-321）。
  */
 export function collect(text) {
   const sections = new Map()
   /** タスク行のつもりで書かれているのに読めなかった行（T-283） */
   const unreadable = []
+  /** 作業予約（ファイルの札・T-321）。解放されるまで、入っているファイルは他のセッションが触らない */
+  const locks = []
   let current = ''
   /** いま読んでいるタスク。続きの行はここへ足す */
   let open = null
@@ -55,6 +61,17 @@ export function collect(text) {
       open.body += `\n${line}`
       continue
     }
+    const lock = /^- 🔒\s*(?<body>.*)$/.exec(line)
+    if (lock) {
+      const parts = lock.groups.body.split('|').map((part) => part.trim())
+      locks.push({
+        session: (parts[0] ?? '').replace(/^@/, ''),
+        id: parts[1] ?? '',
+        since: parts[2] ?? '',
+        files: (parts[3] ?? '').split(',').map((file) => file.trim()).filter(Boolean)
+      })
+      continue
+    }
     if (!/^- \[( |x)\] /.test(line)) {
       continue
     }
@@ -73,7 +90,7 @@ export function collect(text) {
     open = { section: current, id, done: done === 'x', title: title.slice(0, 60), body: rest }
   }
   finish()
-  return { sections, unreadable }
+  return { sections, unreadable, locks }
 }
 
 /** CLI として走らせたときだけ、板を読んで出す */
@@ -81,14 +98,21 @@ function main() {
   const text = readFileSync(join(ROOT, 'tasks.md'), 'utf8')
   const mineIndex = process.argv.indexOf('--mine')
   const mine = mineIndex >= 0 ? process.argv[mineIndex + 1] : undefined
-  const { sections, unreadable } = collect(text)
+  const { sections, unreadable, locks } = collect(text)
   const inProgress = sections.get('進行中') ?? []
   const inbox = sections.get('Inbox（未整理）') ?? []
   const next = sections.get('次にやる') ?? []
 
   console.log('# 板の状態\n')
 
-  console.log(`## 進行中（${inProgress.length}）`)
+  // 予約されたファイルは、行が消える（解放）まで他のセッションは編集しない（T-321）
+  console.log(`## 作業予約（${locks.length}）— 入っているファイルは解放まで触らない`)
+  for (const lock of locks) {
+    const files = lock.files.join(', ') || '（ファイル未記入）'
+    console.log(`- @${lock.session} ${lock.id} ${lock.since} — ${files}`)
+  }
+
+  console.log(`\n## 進行中（${inProgress.length}）`)
   for (const task of inProgress) {
     if (mine && !task.claims.includes(mine)) {
       continue

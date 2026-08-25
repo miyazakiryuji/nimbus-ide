@@ -74,3 +74,30 @@ test('最初の節目（F0〜F6）も ID として読む（T-283）', () => {
 		{ id: 'F1', done: true, claims: [], title: 'フォークが Nimbus として起動する' }
 	]);
 });
+
+test('作業予約（🔒 行）は locks として読み、タスクには数えない（T-321）', () => {
+	const board = [
+		'## 作業予約（いま触っているファイル）',
+		'',
+		'書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`',
+		'',
+		'- 🔒 @session-g | T-321 | 2026-08-25 20:32 | CLAUDE.md, nimbus/scripts/board.mjs',
+		'',
+		'## 進行中',
+		'',
+		'- [ ] T-321 **予約の運用を入れる** — @session-g 2026-08-25',
+		''
+	].join('\n');
+
+	const { sections, unreadable, locks } = collect(board);
+	// 予約は locks へ、タスクは今までどおり sections へ。書式の説明行と 🔒 行が
+	// 「読めなかったタスク」として報告されないこと（板が汚れて見えると誰も信用しなくなる）
+	assert.deepEqual(
+		{ locks, unreadable, inProgress: sections.get('進行中') },
+		{
+			locks: [{ session: 'session-g', id: 'T-321', since: '2026-08-25 20:32', files: ['CLAUDE.md', 'nimbus/scripts/board.mjs'] }],
+			unreadable: [],
+			inProgress: [{ id: 'T-321', done: false, claims: ['session-g'], title: '**予約の運用を入れる**' }]
+		}
+	);
+});
