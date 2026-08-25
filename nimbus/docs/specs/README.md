@@ -187,6 +187,20 @@ IDE 基礎機能（追補）:
 - [`verify-edits.md`](verify-edits.md) — 生成直後の型検証と自動ループ（T-101 / T-102）
 - [`widget-tests.md`](widget-tests.md) — Widget テスト / ゴールデンテストの生成
 
+## 索引の追補（2026-08-25 の棚卸し・T-322）
+
+2026-08-19 の棚卸し以降に足された 9 本。上の一覧と同じ「今どう動くべきか」の正本です。
+
+- [`cockpit-home.md`](cockpit-home.md) — コックピットのタブ（束）と Home（T-314・UI 配線は進行中）
+- [`cockpit-split.md`](cockpit-split.md) — セッションを画面分割で並べて見る（T-320・設計のみ、実装待ち）
+- [`commit-message.md`](commit-message.md) — コミットメッセージの生成と型（T-305 / T-309）
+- [`git-sync.md`](git-sync.md) — 取り込みと押し上げ（`pull --rebase` → `push`・T-306）
+- [`git-tools.md`](git-tools.md) — Git をエージェントの口にする（`nimbus_git`・T-307）
+- [`run-settings.md`](run-settings.md) — 走らせかた（モデルと思考量の切り替え・T-291）
+- [`session-health.md`](session-health.md) — セッションの健康診断（残骸の検出と後片付け・T-303）
+- [`setup-readiness.md`](setup-readiness.md) — 使い始めの準備（詰まった場所に直すボタン・T-285）
+- [`typography.md`](typography.md) — 文字（日本語で読む前提の積み・T-273）
+
 旧 Electron 実装向けの指示書は `../history/NIMBUS_SPEC.md`、確認記録は `../testing/` にあります。
 
 ## テンプレート
