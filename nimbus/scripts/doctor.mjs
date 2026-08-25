@@ -146,6 +146,39 @@ export function viewProviderIds(sources) {
 	]);
 }
 
+/**
+ * ソースから「実際に読んでいる nimbus.* 設定キー」を拾う（T-323）。
+ *
+ * strict: `getConfiguration('nimbus')` に直に続く読みと、`config.` 経由の読みだけ。
+ *         「読んでいるのに宣言が無い」（error）の判定に使う — ここを緩めると、
+ *         他の名前空間の読みを nimbus のものと誤認して偽の error を作る。
+ * loose:  strict に加えて、`getConfiguration('nimbus')` を変数に受けてからの読みも拾う。
+ *         「宣言されているが読まれていない」（warn）の判定に使う —
+ *         読んでいるのに読んでいないと言わないため。
+ *
+ * 読みの形は `.get('key')` / `.get<T>('key')` / `.inspect<T>('key')`。
+ * ジェネリクスは `Record<string, string>` のように入れ子になるので、`<[^(]*>` で開き括弧の
+ * 手前まで飛ばす（`<[^>]*>` だと最初の `>` で切れて入れ子を読めない）。
+ */
+export function settingReadKeys(sources) {
+	const READ = String.raw`\.(?:get|inspect)(?:<[^(]*>)?\(\s*'([^']+)'`;
+	const keysOf = (patterns) => new Set(
+		patterns.flatMap((re) => [...sources.matchAll(re)].map((m) => `nimbus.${m[1]}`))
+	);
+	const strictPatterns = [
+		new RegExp(String.raw`getConfiguration\(\s*'nimbus'\s*\)[\s\S]{0,80}?` + READ, 'g'),
+		new RegExp(String.raw`\bconfig` + READ, 'g')
+	];
+	const vars = [...new Set(
+		[...sources.matchAll(/(?:const|let|var)\s+([\w$]+)\s*=\s*[\w$.]*getConfiguration\(\s*'nimbus'\s*\)/g)]
+			.map((m) => m[1])
+	)].filter((v) => v !== 'config');
+	const varPatterns = vars.length === 0 ? [] : [
+		new RegExp(String.raw`\b(?:${vars.join('|')})` + READ, 'g')
+	];
+	return { strict: keysOf(strictPatterns), loose: keysOf([...strictPatterns, ...varPatterns]) };
+}
+
 function checkContributesDrift() {
 	const manifest = JSON.parse(readFileSync(join(EXT, 'package.json'), 'utf8'));
 	const contributes = manifest.contributes ?? {};
@@ -177,16 +210,13 @@ function checkContributesDrift() {
 
 	// 設定: 宣言 ⇄ 実際に読んでいるキー
 	const declaredSettings = Object.keys(contributes.configuration?.properties ?? {});
-	const usedKeys = new Set([
-		...[...sources.matchAll(/getConfiguration\(\s*'nimbus'\s*\)[\s\S]{0,80}?\.get<[^>]*>\(\s*'([^']+)'/g)].map((m) => `nimbus.${m[1]}`),
-		...[...sources.matchAll(/config\.get<[^>]*>\(\s*'([^']+)'/g)].map((m) => `nimbus.${m[1]}`)
-	]);
+	const reads = settingReadKeys(sources);
 	for (const key of declaredSettings) {
-		if (!usedKeys.has(key)) {
+		if (!reads.loose.has(key)) {
 			add('contributes', 'warn', '宣言されているが読まれていない設定（ドキュメント用途なら可）', key);
 		}
 	}
-	for (const key of usedKeys) {
+	for (const key of reads.strict) {
 		if (!declaredSettings.includes(key)) {
 			add('contributes', 'error', '読んでいるが package.json に宣言が無い設定', key);
 		}
