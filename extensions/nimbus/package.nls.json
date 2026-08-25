@@ -101,6 +101,7 @@
   "config.git.enabled": "git のツール（mcp__nimbus_git__*）をセッションに渡すか。status だけが承認なしで、stage / commit / sync は承認カードに回る",
   "command.createClaudeMd": "CLAUDE.md を作る",
   "config.claudeMd.templates": "自分の CLAUDE.md テンプレート（名前 → 本文）。本文の {{project}} と {{conventions}} は差し込まれる",
+  "command.openSessionBeside": "セッションを横に並べて見る",
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
   "command.sendDebugStop": "止まった場所をセッションへ渡す",

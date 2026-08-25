@@ -604,6 +604,12 @@
         "icon": "$(cloud)"
       },
       {
+        "command": "nimbus.openSessionBeside",
+        "title": "%command.openSessionBeside%",
+        "category": "Nimbus",
+        "icon": "$(split-horizontal)"
+      },
+      {
         "command": "nimbus.syncBranch",
         "title": "%command.syncBranch%",
         "category": "Nimbus",
@@ -1369,6 +1375,11 @@
           "command": "nimbus.syncBranch",
           "when": "view == nimbus.cockpit",
           "group": "nimbus@3"
+        },
+        {
+          "command": "nimbus.openSessionBeside",
+          "when": "view == nimbus.cockpit",
+          "group": "nimbus@4"
         },
         {
           "command": "nimbus.openBoardTab",

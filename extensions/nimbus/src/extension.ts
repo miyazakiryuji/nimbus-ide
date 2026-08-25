@@ -435,6 +435,14 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// 会話の中にカードで出す（T-266）。ここが本命の入口で、
 			// コックピットが無いときだけ今までどおりモーダルへ落ちる
 			cockpit.post({ type: 'approvals', pending, activeSessionId });
+			// 束縛面（T-320）には、その面のセッションのぶんだけを渡す
+			for (const sessionId of cockpit.boundSessionIds()) {
+				cockpit.postTo(sessionId, {
+					type: 'approvals',
+					pending: pending.filter((entry) => entry.sessionId === sessionId),
+					activeSessionId: sessionId
+				});
+			}
 			// 許可待ちはタブの色にも出す（T-269）
 			updateSessionTabs();
 			if (pending.length > 0) {
@@ -581,6 +589,22 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		onSend: (text, images) => void send(text, images),
 		onInterrupt: () => void interrupt(),
 		onNewSession: () => void newSession(),
+		// 束縛面（T-320）。その面が見ているセッションへ向ける
+		onSendTo: (sessionId, text, images) => void sendToSession(sessionId, text, images),
+		onInterruptTo: async (sessionId) => {
+			if (sessions.isActive(sessionId)) {
+				await sessions.interrupt(sessionId);
+			}
+		},
+		snapshotFor: (sessionId) => ({
+			events: sessionId === activeSessionId ? retained : (archived.get(sessionId) ?? []),
+			session: sessions.get(sessionId),
+			approvals: broker.pending().filter((entry) => entry.sessionId === sessionId),
+			state: (() => {
+				const tab = currentTabs().find((entry) => entry.sessionId === sessionId);
+				return tab ? { symbol: tab.symbol, label: tab.label, color: tab.color } : undefined;
+			})()
+		}),
 		// タブでセッションを切り替える（T-269）
 		onSwitchSession: (sessionId) => switchSession(sessionId),
 		// タブのピン留め（T-311）。並びとしるしだけ — 停止や後片付けからは守らない
@@ -644,6 +668,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		updateSessionTabs();
 		// 右半分に出している端末へ、動いたコマンドをそのまま流す（T-270）
 		sidePane.append(event);
+		// セッションに束縛した面（T-320）へは、前面かどうかに関わらずそのセッションのぶんを流す
+		cockpit.postTo(event.sessionId, { type: 'event', event });
 		if (event.sessionId === helpSessionId) {
 			helpEvents.push(event);
 			help.post({ type: 'event', event });
@@ -3244,6 +3270,40 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		return false;
 	}
 
+	/**
+	 * 束縛面（T-320）からの入力。前面（アクティブ）を動かさず、その面のセッションへ送る。
+	 * 前段（信頼・送る前の確認・実物のシグネチャ）は本流と同じものを通す。
+	 */
+	async function sendToSession(
+		sessionId: string,
+		rawText: string,
+		images?: { name: string; dataUrl: string }[]
+	): Promise<void> {
+		if (sessionId === activeSessionId) {
+			return send(rawText, images);
+		}
+		try {
+			if (!(await requireTrust())) {
+				return;
+			}
+			let text = await checkBeforeSending(rawText);
+			if (text === undefined) {
+				return;
+			}
+			if (!sessions.isAccepting(sessionId)) {
+				void vscode.window.showInformationMessage(
+					'Nimbus: このセッションは終わっています。続きは前面のタブから再開してください。'
+				);
+				return;
+			}
+			const signatures = await buildSignatureNote(text);
+			text = signatures ? `${text}\n\n${signatures}` : text;
+			sessions.sendMessage(sessionId, text, toAttachments(images));
+		} catch (error) {
+			log(`[send] 束縛面から送れませんでした: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
 	async function send(rawText: string, images?: { name: string; dataUrl: string }[]): Promise<void> {
 		try {
 			if (!(await requireTrust())) {
@@ -3882,6 +3942,29 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.generateCommitMessage', () =>
 			generateCommitMessage({ sessions, sanitize: (text) => sanitizer.sanitizeString(text), log })
 		),
+		// セッションを横に並べて見る（T-320）。面はそのセッションに束縛される
+		vscode.commands.registerCommand('nimbus.openSessionBeside', async () => {
+			const candidates = currentTabs().filter((tab) => !tab.resumable && !tab.sessionId.startsWith('draft-'));
+			if (candidates.length === 0) {
+				void vscode.window.showInformationMessage('Nimbus: 並べて見るセッションがありません。');
+				return;
+			}
+			const picked =
+				candidates.length === 1
+					? { tab: candidates[0] }
+					: await vscode.window.showQuickPick(
+							candidates.map((tab) => ({
+								label: `${tab.number}. ${tab.title}`,
+								description: tab.label,
+								tab
+							})),
+							{ title: 'Nimbus: どのセッションを横に並べますか' }
+						);
+			if (!picked) {
+				return;
+			}
+			cockpit.openBeside('nimbus.cockpitBound', `${picked.tab.title} — Nimbus`, picked.tab.sessionId);
+		}),
 		// このセッションの走らせかた（T-291）。帯のボタンからも、名前からも引ける
 		vscode.commands.registerCommand('nimbus.chooseModel', () => chooseModel()),
 		vscode.commands.registerCommand('nimbus.chooseEffort', () => chooseEffort()),

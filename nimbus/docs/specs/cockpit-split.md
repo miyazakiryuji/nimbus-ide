@@ -1,7 +1,9 @@
 # セッションを画面分割で並べて見る（設計）
 
-**タスク**: T-320（旧 T-315）/ **状態**: 設計。実装は T-314（タブ・Home）と T-318（復元）が
-落ち着いてから — 同じ配線（`CockpitViewHost` の post 経路）を触るため /
+**タスク**: T-320（旧 T-315）/
+**実装**: `extensions/nimbus/src/webview/WebviewViewHost.ts`（束縛面と宛先つき post）,
+`src/cockpit/CockpitViewProvider.ts`（束縛面の復元と入力の向き先）, `src/extension.ts`（配線と入口） /
+**テスト**: GUI ケース `58-session-beside.mjs`（`--with-claude`・別々の会話が並ぶ／入力がその面へ） /
 **土台**: [editor-tabs](editor-tabs.md)・[cockpit-fullscreen](cockpit-fullscreen.md)
 
 ## なぜ
@@ -51,9 +53,14 @@
   （黙って白紙にしない）
 - 面の数に上限は置かない（エディタグループの管理は VS Code に任せる）
 
-## 実装の順番（T-314 / T-318 の後）
+## 実装したこと（設計からの差分）
 
-1. `WebviewViewHost` に surface 束縛と宛先つき post（既存呼び出しは無変更で通る形）
-2. `snapshotFor(sessionId)`（`snapshot()` はそれの「アクティブ版」として残す）
-3. 入力の向き先（InboundMessage に束縛を添える）
-4. 入口（右クリック）と GUI ケース（2 本走らせ、並べた面が別々の会話を映すこと）
+1. `WebviewViewHost.openBeside(viewType, title, sessionId)` — 束縛面は `boundPanels`
+   （sessionId → panel）で持ち、鏡（view / panel）はそのまま。`postToSurface` で宛先つき送信
+2. 束縛は **webview に持たせず**、`onResolved(surface, boundSessionId)` の閉包で持つ
+   （設計では InboundMessage に添える案だったが、閉包のほうが webview を一切変えずに済む）
+3. 束縛面の webview には sessions / quota / runSettings を送らない — タブ列・帯・+ は
+   **出さないことで**「1 本を見続ける面」になる（webview のコードは無変更）
+4. 入口はコマンド「セッションを横に並べて見る」（`view/title` の `...` とコマンドパレット）。
+   下書き・前回のセッションは候補に出さない（並べて見る中身が無い）
+5. 承認カードは束縛面にも、その面のセッションのぶんだけ配る

@@ -21,6 +21,11 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 	protected view?: vscode.WebviewView;
 	/** エディタタブとして開いた面（T-258）。開いていなければ undefined */
 	private panel?: vscode.WebviewPanel;
+	/**
+	 * セッションに**束縛した**面（T-320）。鏡（view / panel = アクティブの写し）とは別で、
+	 * 1 本のセッションを見続ける。sessionId → panel
+	 */
+	private readonly boundPanels = new Map<string, vscode.WebviewPanel>();
 
 	constructor(protected readonly extensionUri: vscode.Uri) { }
 
@@ -70,6 +75,47 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 	}
 
 	/**
+	 * セッションに束縛した面を**横に**開く（T-320）。既にあれば前面へ出すだけ。
+	 * 並べて見比べるための面なので、いまのエディタは奪わない（Beside）。
+	 */
+	openBeside(viewType: string, title: string, sessionId: string): void {
+		const existing = this.boundPanels.get(sessionId);
+		if (existing) {
+			existing.reveal(vscode.ViewColumn.Beside, true);
+			return;
+		}
+		const panel = vscode.window.createWebviewPanel(
+			// 面ごとに別のタブとして扱わせる（同じ viewType だと 1 枚に畳まれる）
+			`${viewType}.${sessionId.slice(0, 8)}`,
+			title,
+			{ viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+			{
+				enableScripts: true,
+				retainContextWhenHidden: true,
+				localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')]
+			}
+		);
+		panel.webview.html = this.render(panel.webview);
+		this.boundPanels.set(sessionId, panel);
+		this.onResolved(panel, sessionId);
+		panel.onDidDispose(() => {
+			if (this.boundPanels.get(sessionId) === panel) {
+				this.boundPanels.delete(sessionId);
+			}
+		});
+	}
+
+	/** 束縛した面が見ているセッション（T-320）。イベントの配りぶんを決めるのに使う */
+	boundSessionIds(): string[] {
+		return [...this.boundPanels.keys()];
+	}
+
+	/** 束縛した面**だけ**へ送る（T-320）。居なければ何もしない */
+	protected postToSurface(sessionId: string, message: unknown): void {
+		void this.boundPanels.get(sessionId)?.webview.postMessage(message);
+	}
+
+	/**
 	 * 面が生きているか（サイドバーかタブのどちらかが作られている）。
 	 * 承認をこの面で受け取ってよいかの判断に使う（T-266）— 面が無いのにカードを出すと、
 	 * 誰も見られないところで待ち続けることになる。
@@ -92,7 +138,8 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 	protected abstract render(webview: vscode.Webview): string;
 
 	/** メッセージの購読など、面ごとの準備。サイドバーからもタブからも呼ばれる */
-	protected abstract onResolved(surface: WebviewSurface): void;
+	/** `boundSessionId` があれば、その面は 1 本のセッションに束縛されている（T-320） */
+	protected abstract onResolved(surface: WebviewSurface, boundSessionId?: string): void;
 
 	/** 閉じているときは捨ててよい（再表示時に状態を送り直す作りにしてある） */
 	protected postMessage(message: unknown): void {

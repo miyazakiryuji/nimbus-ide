@@ -118,6 +118,16 @@ export interface CockpitHandlers {
 	onSend(text: string, images?: { name: string; dataUrl: string }[]): void | Promise<void>;
 	onInterrupt(): void | Promise<void>;
 	onNewSession(): void | Promise<void>;
+	/** 束縛面（T-320）からの入力。その面が見ているセッションへ向ける */
+	onSendTo?(sessionId: string, text: string, images?: { name: string; dataUrl: string }[]): void | Promise<void>;
+	onInterruptTo?(sessionId: string): void | Promise<void>;
+	/** 束縛面の復元（T-320）。そのセッションの控えと状態だけを返す */
+	snapshotFor?(sessionId: string): {
+		events: NimbusEvent[];
+		session?: SessionSummary;
+		approvals?: readonly PendingApproval[];
+		state?: { symbol: string; label: string; color: string };
+	};
 	/** 会話の中で承認に答えたとき（T-266） */
 	onApprove?(id: string, decision: ApprovalDecision): void;
 	/** タブでセッションを切り替えたとき（T-269） */
@@ -218,10 +228,58 @@ export class CockpitViewProvider extends WebviewViewHost {
 		super(extensionUri);
 	}
 
-	protected onResolved(surface: WebviewSurface): void {
-		this.handlers.log('[cockpit] Webview を生成しました');
+	protected onResolved(surface: WebviewSurface, boundSessionId?: string): void {
+		this.handlers.log(
+			boundSessionId ? `[cockpit] 束縛面を生成しました（${boundSessionId.slice(0, 8)}）` : '[cockpit] Webview を生成しました'
+		);
 
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
+			// 束縛面（T-320）は 1 本のセッションだけを見る。復元も入力もその面の webview に閉じる
+			if (boundSessionId) {
+				switch (message.type) {
+					case 'ready': {
+						const snapshot = this.handlers.snapshotFor?.(boundSessionId);
+						if (snapshot) {
+							void surface.webview.postMessage({
+								type: 'history',
+								events: snapshot.events,
+								session: snapshot.session
+							});
+							if (snapshot.approvals && snapshot.approvals.length > 0) {
+								void surface.webview.postMessage({
+									type: 'approvals',
+									pending: snapshot.approvals,
+									activeSessionId: boundSessionId
+								});
+							}
+							if (snapshot.state) {
+								void surface.webview.postMessage({ type: 'sessionState', state: snapshot.state });
+							}
+						}
+						return;
+					}
+					case 'send':
+						await this.handlers.onSendTo?.(boundSessionId, message.text, message.images);
+						return;
+					case 'interrupt':
+						await this.handlers.onInterruptTo?.(boundSessionId);
+						return;
+					case 'approve':
+						this.handlers.onApprove?.(message.id, message.decision);
+						return;
+					case 'code':
+						await runCodeAction(message.action, message.text, message.language, (text) =>
+							this.handlers.log(text)
+						);
+						return;
+					case 'copyText':
+						await vscode.env.clipboard.writeText(message.text);
+						return;
+					default:
+						// タブ・Home・+ などの操作は束縛面には無い（出してもいない）。黙って無視する
+						return;
+				}
+			}
 			switch (message.type) {
 				case 'ready': {
 					const { events, session, approvals, tabs, quota, run, state } = this.handlers.snapshot();
@@ -315,20 +373,27 @@ export class CockpitViewProvider extends WebviewViewHost {
 		});
 	}
 
-	post(message: OutboundMessage): void {
+	/**
+	 * 束縛面（T-320）へだけ送る。応答の Markdown は鏡（`post`）と同じく塊にしてから渡す —
+	 * 面によって描きかたが違うと、どちらかが腐る。
+	 */
+	postTo(sessionId: string, message: OutboundMessage): void {
+		this.postToSurface(sessionId, this.prepared(message));
+	}
+
+	/** 面がどこであれ、送る前の下ごしらえは 1 か所（T-271 / T-320） */
+	private prepared(message: OutboundMessage): unknown {
 		if (message.type === 'event' && message.event.kind === 'assistant-text') {
-			// 応答は Markdown で返ってくる。描くための塊にしてから渡す（T-271）
 			const blocks = parseMarkdown(message.event.text);
-			// エージェントが置いた仮定は、本文に紛れると読み飛ばされる。抜き出して別に渡す（T-186）
 			const assumptions = extractAssumptions(message.event.text);
-			this.postMessage({
-				...message,
-				blocks,
-				...(assumptions.length > 0 ? { assumptions } : {})
-			});
-			return;
+			return { ...message, blocks, ...(assumptions.length > 0 ? { assumptions } : {}) };
 		}
-		this.postMessage(message);
+		return message;
+	}
+
+	post(message: OutboundMessage): void {
+		// 応答の Markdown は塊にしてから渡す（T-271）。仮定の抜き出し（T-186）も同じ下ごしらえ
+		this.postMessage(this.prepared(message));
 	}
 
 	/**

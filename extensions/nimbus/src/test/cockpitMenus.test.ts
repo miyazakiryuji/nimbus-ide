@@ -42,8 +42,10 @@ test('コックピットの面から、主な操作がすべて押せる（T-294
 		'nimbus.fullscreenCockpit',
 		'nimbus.showSessionSide',
 		'nimbus.openCockpitTab',
-		// 取り込みと押し上げ（T-306）。使う頻度が低めなので `...` の最後
-		'nimbus.syncBranch'
+		// 取り込みと押し上げ（T-306）。使う頻度が低めなので `...` の後ろ
+		'nimbus.syncBranch',
+		// セッションを横に並べる（T-320）
+		'nimbus.openSessionBeside'
 	]);
 });
 
