@@ -62,15 +62,12 @@ export default {
 			return; // 押すと実セッションが走る（課金）ので、ここまで
 		}
 
-		// 押す。相談文（両側を貼った文）がコックピットの会話に出るはず
-		await page.evaluate(() => {
-			const lens = [...document.querySelectorAll('.codelens-decoration a')].find((el) =>
-				(el.textContent ?? '').includes('Claude に相談')
-			);
-			if (lens) {
-				lens.click();
-			}
-		});
+		// 押す。相談文（両側を貼った文）がコックピットの会話に出るはず。
+		// **本物のクリックで押す** — monaco の CodeLens は合成の click() では発火しない（実測）
+		await page
+			.locator('.codelens-decoration a', { hasText: 'Claude に相談' })
+			.first()
+			.click();
 		const sent = await webviewText(page, ['コンフリクトが起きています'], { attempts: 30 });
 		ctx.expect(
 			Boolean(sent),
