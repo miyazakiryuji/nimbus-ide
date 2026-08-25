@@ -592,6 +592,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.assistConflictAt",
+        "title": "%command.assistConflictAt%",
+        "category": "Nimbus",
+        "icon": "$(cloud)"
+      },
+      {
         "command": "nimbus.syncBranch",
         "title": "%command.syncBranch%",
         "category": "Nimbus",
@@ -1303,6 +1309,10 @@
       ],
       "commandPalette": [
         {
+          "command": "nimbus.assistConflictAt",
+          "when": "false"
+        },
+        {
           "command": "nimbus.interrupt",
           "when": "nimbus.hasRunningSession"
         },
@@ -1408,6 +1418,18 @@
           "command": "nimbus.findSkill",
           "when": "view == nimbus.skills",
           "group": "navigation"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "nimbus.assistConflictAt",
+          "when": "scmProvider == git && scmResourceGroup == merge"
+        }
+      ],
+      "mergeEditor/result/title": [
+        {
+          "command": "nimbus.assistConflictAt",
+          "group": "navigation@9"
         }
       ],
       "scm/inputBox": [

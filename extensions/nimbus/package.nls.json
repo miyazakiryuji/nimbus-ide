@@ -97,6 +97,7 @@
   "config.commit.coAuthor": "生成したメッセージの末尾に Co-Authored-By: Claude を付けるか",
   "config.commit.model": "生成に使うモデル。軽いモデルで足りる（空にすると既定のモデル）",
   "command.syncBranch": "取り込んで押し上げる（pull --rebase → push）",
+  "command.assistConflictAt": "この競合を Claude に相談する",
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
   "command.sendDebugStop": "止まった場所をセッションへ渡す",

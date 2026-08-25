@@ -70,7 +70,8 @@ import { openMigrationPlan } from './schemaDiff';
 import { openPreflight } from './preflight';
 import { generateWidgetTest } from './flutterTests';
 import { proposeCommitSplit } from './commitSplit';
-import { assistConflicts } from './conflicts';
+import { assistConflictAt, assistConflicts } from './conflicts';
+import { ConflictLensProvider } from './conflictLens';
 import { showDiffSummary } from './diffSummary';
 import { showImpact } from './impact';
 import { editPermissionRules } from './permissionRules';
@@ -4021,6 +4022,33 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				void send(text);
 			})
 		),
+		// 競合しているその場から相談する（T-308）。CodeLens・SCM の行・マージエディタが呼ぶ。
+		// 来る引数の形が入口ごとに違うので、ここでほどく
+		vscode.commands.registerCommand(
+			'nimbus.assistConflictAt',
+			(target?: vscode.Uri | { resourceUri?: vscode.Uri }, startLine?: number) => {
+				const uri =
+					target instanceof vscode.Uri
+						? target
+						: target?.resourceUri instanceof vscode.Uri
+							? target.resourceUri
+							: vscode.window.activeTextEditor?.document.uri;
+				if (!uri) {
+					void vscode.window.showInformationMessage('Nimbus: 相談する競合ファイルが分かりませんでした。');
+					return;
+				}
+				return assistConflictAt(
+					(text) => {
+						void cockpit.reveal();
+						void send(text);
+					},
+					uri,
+					typeof startLine === 'number' ? startLine : undefined
+				);
+			}
+		),
+		// 競合マーカーの頭に「Claude に相談」を出す（T-308）
+		vscode.languages.registerCodeLensProvider({ scheme: 'file' }, new ConflictLensProvider()),
 		// エディタから直接頼む（T-171 / T-172）。ファイル名も行番号も打ち直さない
 		vscode.commands.registerCommand(
 			'nimbus.askAboutSelection',

@@ -27,6 +27,30 @@ async function conflictedFiles(cwd: string): Promise<string[]> {
 	return stdout.split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
+/**
+ * 場所が分かっているときの入口（T-308）。CodeLens・SCM の「マージの変更」・
+ * マージエディタから来るので、ファイル選びを飛ばして**その場から**相談文を送る。
+ *
+ * 約束は本流と同じ — **返ってきた案を勝手に書き戻さない**。送るだけ。
+ */
+export async function assistConflictAt(
+	send: (text: string) => void,
+	uri: vscode.Uri,
+	startLine?: number
+): Promise<void> {
+	const document = await vscode.workspace.openTextDocument(uri);
+	const blocks = parseConflicts(document.getText());
+	if (blocks.length === 0) {
+		void vscode.window.showInformationMessage(
+			`Nimbus: ${vscode.workspace.asRelativePath(uri, false)} に読み取れる競合がありません。`
+		);
+		return;
+	}
+	// 行で名指しされたらその 1 件だけ。見つからなければ（編集で行がずれた等）全部
+	const target = startLine === undefined ? undefined : blocks.find((block) => block.start === startLine);
+	send(conflictPrompt(vscode.workspace.asRelativePath(uri, false), target ? [target] : blocks));
+}
+
 export async function assistConflicts(send: (text: string) => void): Promise<void> {
 	// マルチルート対応（T-173）。競合はフォルダごとに違うので、対象を決めてから探す。
 	// フォルダが 1 つなら何も聞かない
