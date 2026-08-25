@@ -85,7 +85,8 @@ upstream 追従でコアの Nimbus ブロックが落ちる、の 3 つが原因
   後から「これは消してよいテストか」を判断できない
 - いま何が守られていないかは `node nimbus/scripts/regression-guard.mjs` で見る
 - コア（`src/vs/**`）の変更が落ちていないかは `node nimbus/scripts/doctor.mjs` の台帳照合（赤で落ちる）
-- 画面で見える振る舞いは、固めた `.app` のフル実行で確かめる（次の節）
+- 画面で見える振る舞いは、固めた `.app` で**該当機能のケース**を走らせて確かめる（次の節。
+  全ケースを回すのは利用者が「総合試験」と言ったときとリリース前だけ）
 
 ## 修正したらアプリとして固める（毎回）
 
@@ -96,8 +97,16 @@ upstream 追従でコアの Nimbus ブロックが落ちる、の 3 つが原因
 ```bash
 bash nimbus/scripts/package-app.sh --copy /tmp/nimbus-gui-app   # 順番待ちして固め、写しを作る
 bash nimbus/branding/smoke-packaged.sh                          # 身元・起動・webview のスモーク
-NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged
+NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged --only <ケース名>
 ```
+
+**GUI テストは、実装した機能のケースだけ走らせる**（T-325・利用者指示 2026-08-25）。
+毎回の修正で全ケースを回すと 1 修正が重すぎる。`--only` はケース名・ファイル名の部分一致
+（例: `--only 47-` / `--only テーマ`）。1 回に 1 語なので、複数のケースは共通の語で当てるか、
+コマンドを分けて走らせる。**関係が疑わしいケースは含める** — 絞りすぎて壊れに気づけないのは本末転倒。
+**全ケースのフル実行（総合試験）は、利用者が「総合試験を実施して」と言ったときと、
+リリース前にだけ回す** — `--only` を外した GUI 全件（`--untrusted` の別起動ぶんも）＋
+モジュールテスト＋ドクター。手順は nimbus-test スキルの「総合試験」の節。
 
 **`npm run gulp vscode-darwin-arm64` を直に叩かない**（T-276）。出力先は 1 つしかないので、
 別のセッションと重なると**相手が消した途中のファイルを踏んで落ちる**。
