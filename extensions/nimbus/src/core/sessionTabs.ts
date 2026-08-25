@@ -94,6 +94,8 @@ export interface SessionTab {
 	label: string;
 	color: string;
 	active: boolean;
+	/** 台帳から戻した「前回のセッション」（T-318）。押すと続きから開く */
+	resumable?: true;
 }
 
 /**
@@ -142,6 +144,11 @@ export function buildTabs(
 		 * 無ければ従来どおり並び順で振る
 		 */
 		numbers?: ReadonlyMap<string, number>;
+		/**
+		 * 台帳に残っている「前回のセッション」（T-318）。まだ起こしていないが、
+		 * タブに出しておかないと、開き直したとき**全損に見える**。押すと続きから開く
+		 */
+		resumables?: readonly { id: string; title?: string }[];
 	} = {}
 ): SessionTab[] {
 	const pending = options.pendingSessionIds ?? new Set<string>();
@@ -172,6 +179,22 @@ export function buildTabs(
 	// sort は安定なので、ピン留め同士・それ以外同士は始めた順のまま
 	started.sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
+	// 前回のセッション（T-318）。番号と名前の台帳は残っているので、閉じる前の顔で戻す
+	const stoppedLook = lookOf('stopped');
+	const resumableTabs: SessionTab[] = (options.resumables ?? []).map((record, index) => ({
+		sessionId: record.id,
+		title: options.names?.get(record.id)?.trim() || tabTitle(record.title, record.id),
+		pinned: pinnedIds.has(record.id),
+		full: `前回のセッション（押すと続きから開く）: ${record.title ?? record.id}`,
+		number: options.numbers?.get(record.id) ?? started.length + index + 1,
+		state: 'stopped',
+		symbol: stoppedLook.symbol,
+		label: '前回のセッション',
+		color: stoppedLook.color,
+		active: false,
+		resumable: true
+	}));
+
 	// 下書きは、始まった順のうしろに並べる。中身が無いので状態は「あなたの番」に倒す
 	const draftLook = lookOf('asking');
 	const draftTabs: SessionTab[] = (options.drafts ?? []).map((draft, index) => ({
@@ -179,12 +202,12 @@ export function buildTabs(
 		title: '新しいセッション',
 		pinned: false,
 		full: 'まだ何も送っていません',
-		number: options.numbers?.get(draft.id) ?? started.length + index + 1,
+		number: options.numbers?.get(draft.id) ?? started.length + resumableTabs.length + index + 1,
 		state: 'asking',
 		symbol: draftLook.symbol,
 		label: draftLook.label,
 		color: draftLook.color,
 		active: draft.id === options.activeDraftId
 	}));
-	return [...started, ...draftTabs];
+	return [...started, ...resumableTabs, ...draftTabs];
 }

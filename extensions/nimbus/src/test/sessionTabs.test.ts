@@ -156,3 +156,28 @@ test('利用者が付けた名前は、自動の見出しより優先する（T-
 		]
 	);
 });
+
+test('台帳に残った前回のセッションもタブに出す（T-318）', () => {
+	// 開き直したとき、走っていた形が見えないと**全損に見える**。
+	// 番号と名前の台帳は残っているので、閉じる前の顔（番号・名前）で戻す
+	const tabs = buildTabs([summary({ sessionId: 'live', createdAt: 1, status: 'running' })], {
+		activeSessionId: 'live',
+		resumables: [{ id: 'old-1', title: 'ログイン画面を直して。今日中に' }],
+		drafts: [{ id: 'draft-1', createdAt: 9 }],
+		names: new Map([['old-1', 'ログイン修正']]),
+		numbers: new Map([
+			['live', 1],
+			['old-1', 4]
+		]),
+		titles: new Map()
+	});
+	assert.deepStrictEqual(
+		tabs.map((tab) => [tab.sessionId, tab.number, tab.title, tab.label, tab.resumable ?? false]),
+		[
+			['live', 1, 'live', '作業中', false],
+			// 名前の台帳が効き、番号は名札のまま（4 のまま詰めない）
+			['old-1', 4, 'ログイン修正', '前回のセッション', true],
+			['draft-1', 3, '新しいセッション', 'あなたの番', false]
+		]
+	);
+});

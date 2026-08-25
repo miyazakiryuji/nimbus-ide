@@ -377,6 +377,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 「+」で用意したぶんはここで持ってタブに出す。送った時点で本物に置き換わる。
 	 */
 	const drafts: { id: string; createdAt: number }[] = [];
+	/**
+	 * 台帳に残っている「前回のセッション」（T-318）。開き直したときにタブへ戻す —
+	 * トーストは消えるが、タブは残る。押すと続きから開き、× で台帳ごと忘れる
+	 */
+	const resumableRecords = new Map<string, SessionRecord>();
 	let activeDraftId: string | undefined;
 	/**
 	 * ピン留め（T-311）と利用者が付けた名前（T-313）。workspaceState に持つ。
@@ -2422,6 +2427,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			return;
 		}
 		resetToBlank();
+		resumableRecords.delete(record.sessionId);
 		activeSessionId = record.sessionId;
 		await sessions.createSession({
 			cwd: record.cwd,
@@ -2779,8 +2785,15 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	function currentTabs(): SessionTab[] {
+		// 起こしたものは「前回」から外す（同じ id が 2 枚にならないように・T-318）
+		const resumables = [...resumableRecords.values()]
+			.filter((record) => !sessions.get(record.sessionId))
+			.map((record) => ({ id: record.sessionId, title: record.title }));
 		for (const session of tabbableSessions()) {
 			numberFor(session.sessionId);
+		}
+		for (const entry of resumables) {
+			numberFor(entry.id);
 		}
 		for (const draft of drafts) {
 			numberFor(draft.id);
@@ -2793,7 +2806,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			titles: sessionTitles,
 			names: sessionNames,
 			pinnedSessionIds: pinnedSessions,
-			numbers: sessionNumbers
+			numbers: sessionNumbers,
+			resumables
 		});
 	}
 
@@ -2865,6 +2879,15 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 終わっているものは黙って閉じる — 毎回聞くと × が「押すと聞かれるボタン」になる。
 	 */
 	async function closeSessionTab(sessionId: string): Promise<void> {
+		// 前回のセッション（T-318）の × は「消す」— タブからも台帳からも忘れる
+		if (resumableRecords.has(sessionId) && !sessions.get(sessionId)) {
+			resumableRecords.delete(sessionId);
+			sessionNumbers.delete(sessionId);
+			persistTabMeta();
+			void sessionStore.forget(sessionId);
+			updateSessionTabs();
+			return;
+		}
 		// 下書きはそのまま畳む（中身が無い）
 		const draftIndex = drafts.findIndex((draft) => draft.id === sessionId);
 		if (draftIndex >= 0) {
@@ -2963,6 +2986,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	function switchSession(sessionId: string): void {
+		// 前回のセッション（T-318）。押されたら続きから起こす
+		const dormant = resumableRecords.get(sessionId);
+		if (dormant && !sessions.get(sessionId)) {
+			resumableRecords.delete(sessionId);
+			void resumeRecord(dormant);
+			return;
+		}
 		// 下書きのタブ（T-303）。まだ中身が無いので、面を白紙にして選び直すだけ
 		if (drafts.some((draft) => draft.id === sessionId)) {
 			if (activeDraftId === sessionId) {
@@ -4588,7 +4618,18 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 
 	// 置き去りの記録を掃除してから、前回の続きを出す（T-252）。
 	// 自動確認（GUI テスト）のときは黙っている — 画面に出す知らせが操作の邪魔になる
-	void sessionStore.sweep().then(() => {
+	void sessionStore.sweep().then(async () => {
+		// 前回のセッションをタブへ戻す（T-318）。開き直して全損に見えるのを、ここで止める
+		const candidates = resumeCandidates(await sessionStore.refresh(), {
+			now: Date.now(),
+			cwd: workspaceCwd(currentScope(context.workspaceState))
+		});
+		for (const record of candidates.slice(0, 8)) {
+			resumableRecords.set(record.sessionId, record);
+		}
+		if (candidates.length > 0) {
+			updateSessionTabs();
+		}
 		if (!process.env['NIMBUS_SMOKE']) {
 			return offerResume();
 		}

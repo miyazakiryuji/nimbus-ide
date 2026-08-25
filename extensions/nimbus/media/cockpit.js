@@ -973,7 +973,8 @@
 	/** 狭い面の 1 行（≡ ＋ 前面セッション）。タブ列の代わりに出す */
 	function renderHomeBar() {
 		const tabs = homeGroups.flatMap((group) => group.sessions);
-		homeBar.hidden = tabs.length < 2;
+		// 前回のセッション（T-318）が居るなら、1 本でも出す — 見えないと全損に見える
+		homeBar.hidden = tabs.length < 2 && !tabs.some((tab) => tab.resumable);
 		if (homeBar.hidden) {
 			if (homeOpen) {
 				setHomeOpen(false);
@@ -988,6 +989,15 @@
 			name.className = 'home-session-name';
 			name.textContent = active.title;
 			homeBarSession.appendChild(name);
+		} else {
+			// 前面がまだ無い（開き直した直後・T-318）。前回のぶんが在ることを言葉で出す
+			const dormant = tabs.filter((tab) => tab.resumable);
+			if (dormant.length > 0) {
+				const name = document.createElement('span');
+				name.className = 'home-session-name';
+				name.textContent = `前回のセッションが ${dormant.length} 本 — ここから続きへ`;
+				homeBarSession.appendChild(name);
+			}
 		}
 	}
 
@@ -1150,7 +1160,7 @@
 	function renderSessionTabs(tabs) {
 		sessionTabs.textContent = '';
 		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
-		sessionTabs.hidden = !tabs || tabs.length < 2;
+		sessionTabs.hidden = !tabs || (tabs.length < 2 && !tabs.some((tab) => tab.resumable));
 		if (sessionTabs.hidden) {
 			return;
 		}
