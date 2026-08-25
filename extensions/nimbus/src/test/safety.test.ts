@@ -125,6 +125,12 @@ test('Nimbus 自作の読み取りツール（LSP など）にも遮断を効か
 	// 承認なしで通す経路なので、ここが抜けると .env が素通りする
 	assert.ok(isNimbusReadOnlyTool('mcp__nimbus_lsp__definition'));
 	assert.ok(!isNimbusReadOnlyTool('mcp__other__definition'));
+	// nimbus_git の**書く 3 つ**は素通しさせない（T-307）。押し上げのような外に出る操作を、
+	// 名前の接頭辞だけで通すと承認カードに回らない
+	assert.ok(isNimbusReadOnlyTool('mcp__nimbus_git__git_status'));
+	assert.ok(!isNimbusReadOnlyTool('mcp__nimbus_git__git_stage'));
+	assert.ok(!isNimbusReadOnlyTool('mcp__nimbus_git__git_commit'));
+	assert.ok(!isNimbusReadOnlyTool('mcp__nimbus_git__git_sync'));
 	assert.deepStrictEqual(findBlockedRead('mcp__nimbus_lsp__definition', { uri: 'file:///w/.env' }), {
 		path: 'file:///w/.env',
 		via: 'tool'

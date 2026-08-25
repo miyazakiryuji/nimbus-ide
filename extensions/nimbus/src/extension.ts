@@ -227,6 +227,7 @@ import {
 import { readManagedPolicy } from './managedPolicySource';
 import { LSP_SERVER_NAME, lspMcpServer } from './lspTools';
 import { DEBUG_SERVER_NAME, debugMcpServer } from './debugTools';
+import { GIT_SERVER_NAME, gitMcpServer } from './gitTools';
 import { buildSignatureNote } from './signatureAttachment';
 import { buildGroundingForPrompt, clearDependencyCache } from './grounding';
 import { askAboutSelection, NimbusCodeLensProvider } from './editorActions';
@@ -4612,6 +4613,10 @@ function buildOptions(
 	if (vscode.workspace.getConfiguration('nimbus').get<boolean>('debug.exposeState') !== false) {
 		options.mcpServers = { ...options.mcpServers, [DEBUG_SERVER_NAME]: debugMcpServer() };
 	}
+	// git を作法つきで渡す（T-307）。status 以外は承認カードに回る
+	if (vscode.workspace.getConfiguration('nimbus').get<boolean>('git.enabled') !== false) {
+		options.mcpServers = { ...options.mcpServers, [GIT_SERVER_NAME]: gitMcpServer() };
+	}
 	return options;
 }
 
@@ -4628,6 +4633,9 @@ function inProcessMcpServers(): { name: string; config: McpSdkServerConfigWithIn
 	}
 	if (configuration.get<boolean>('debug.exposeState') !== false) {
 		servers.push({ name: DEBUG_SERVER_NAME, config: debugMcpServer() });
+	}
+	if (configuration.get<boolean>('git.enabled') !== false) {
+		servers.push({ name: GIT_SERVER_NAME, config: gitMcpServer() });
 	}
 	return servers;
 }

@@ -98,6 +98,7 @@
   "config.commit.model": "生成に使うモデル。軽いモデルで足りる（空にすると既定のモデル）",
   "command.syncBranch": "取り込んで押し上げる（pull --rebase → push）",
   "command.assistConflictAt": "この競合を Claude に相談する",
+  "config.git.enabled": "git のツール（mcp__nimbus_git__*）をセッションに渡すか。status だけが承認なしで、stage / commit / sync は承認カードに回る",
   "command.showSessions": "走っているセッションを見る",
   "command.checkTasks": "タスクを点検する",
   "command.sendDebugStop": "止まった場所をセッションへ渡す",

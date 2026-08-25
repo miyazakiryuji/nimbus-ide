@@ -1629,6 +1629,11 @@
           "default": "haiku",
           "description": "%config.commit.model%"
         },
+        "nimbus.git.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.git.enabled%"
+        },
         "nimbus.lsp.enabled": {
           "type": "boolean",
           "default": true,

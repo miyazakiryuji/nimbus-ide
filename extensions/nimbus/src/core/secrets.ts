@@ -121,9 +121,20 @@ const READ_TOOLS = new Set(['Read', 'NotebookRead']);
  */
 export const NIMBUS_READONLY_TOOL_PREFIX = 'mcp__nimbus_';
 
+/**
+ * Nimbus 提供でも**書き込みがある**ツール（T-307 の `nimbus_git`）。
+ * 素通しは「読み取り専用の保証」なので、これらは対象外 — 普通の承認（カード）に回る。
+ * 押し上げのような外に出る操作を、名前の接頭辞だけで通してはいけない。
+ */
+const NIMBUS_WRITE_TOOLS = new Set([
+	'mcp__nimbus_git__git_stage',
+	'mcp__nimbus_git__git_commit',
+	'mcp__nimbus_git__git_sync'
+]);
+
 /** 承認なしで通してよい読み取り専用ツールか（副作用が無いことを Nimbus 側が保証できるもの） */
 export function isNimbusReadOnlyTool(toolName: string): boolean {
-	return toolName.startsWith(NIMBUS_READONLY_TOOL_PREFIX);
+	return toolName.startsWith(NIMBUS_READONLY_TOOL_PREFIX) && !NIMBUS_WRITE_TOOLS.has(toolName);
 }
 
 /**
