@@ -8,7 +8,7 @@
  *   node nimbus/scripts/board.mjs          # 作業予約（🔒）・進行中の札・未着手・ID の重複
  *   node nimbus/scripts/board.mjs --mine session-d   # 自分の札だけ
  */
-import { readFileSync } from 'fs'
+import { readFileSync, statSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
@@ -93,6 +93,41 @@ export function collect(text) {
   return { sections, unreadable, locks }
 }
 
+/**
+ * 予約が「落ちたセッションの置き土産」かを、心拍とファイルの静けさで判定する（T-328）。
+ *
+ * 🔒 の時刻は開始ではなく最終更新（コミットごとに書き直す約束）。それが 60 分止まり、
+ * 予約されたファイルの更新も 30 分止まっていたら、持ち主は落ちたとみなす。
+ * ファイルの時刻が 1 つも取れないとき（これから作る新規だけ、など）は心拍だけで判定する。
+ * 落ちていたときにどう引き継ぐかは CLAUDE.md「止まったタスクは、続きから再開できる形にする」。
+ */
+export function assess(lock, now, fileTimes) {
+  const beat = Date.parse(lock.since.replace(' ', 'T'))
+  const heartbeatMinutes = Number.isNaN(beat) ? null : Math.max(0, Math.floor((now - beat) / 60000))
+  const latest = fileTimes.length > 0 ? Math.max(...fileTimes) : null
+  const quietMinutes = latest === null ? null : Math.max(0, Math.floor((now - latest) / 60000))
+  const stalled = heartbeatMinutes !== null && heartbeatMinutes >= 60 && (quietMinutes === null || quietMinutes >= 30)
+  return { heartbeatMinutes, quietMinutes, stalled }
+}
+
+/** 予約されたファイルの最終更新（ミリ秒）。まだ無いファイル（新規の予定）は数えない */
+function fileTimes(files) {
+  const times = []
+  for (const file of files) {
+    try {
+      times.push(statSync(join(ROOT, file)).mtimeMs)
+    } catch {
+      // 予約には「これから作るファイル」も書く約束なので、無いこと自体は異常ではない
+    }
+  }
+  return times
+}
+
+/** 分を読める長さにする（90 分までは分、それより上は時間） */
+function age(minutes) {
+  return minutes <= 90 ? `${minutes} 分` : `${(minutes / 60).toFixed(1)} 時間`
+}
+
 /** CLI として走らせたときだけ、板を読んで出す */
 function main() {
   const text = readFileSync(join(ROOT, 'tasks.md'), 'utf8')
@@ -105,11 +140,17 @@ function main() {
 
   console.log('# 板の状態\n')
 
-  // 予約されたファイルは、行が消える（解放）まで他のセッションは編集しない（T-321）
+  // 予約されたファイルは、行が消える（解放）まで他のセッションは編集しない（T-321）。
+  // 心拍とファイルの静けさから「持ち主が落ちた」予約を見つけ、引き継ぎにつなげる（T-328）
   console.log(`## 作業予約（${locks.length}）— 入っているファイルは解放まで触らない`)
+  const now = Date.now()
   for (const lock of locks) {
     const files = lock.files.join(', ') || '（ファイル未記入）'
-    console.log(`- @${lock.session} ${lock.id} ${lock.since} — ${files}`)
+    const verdict = assess(lock, now, fileTimes(lock.files))
+    const beat = verdict.heartbeatMinutes === null ? '' : `（心拍 ${age(verdict.heartbeatMinutes)}前）`
+    const quiet = verdict.quietMinutes === null ? 'ファイルは見当たらない' : `ファイルも ${age(verdict.quietMinutes)}静か`
+    const warn = verdict.stalled ? ` ⚠ 持ち主は落ちていそう（${quiet}）— CLAUDE.md の手順で引き継げる` : ''
+    console.log(`- @${lock.session} ${lock.id} ${lock.since}${beat} — ${files}${warn}`)
   }
 
   console.log(`\n## 進行中（${inProgress.length}）`)

@@ -7,7 +7,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { collect } from '../../scripts/board.mjs';
+import { assess, collect } from '../../scripts/board.mjs';
 
 /** 進行中の 1 タスクぶんを取り出す */
 function inProgress(text) {
@@ -98,6 +98,31 @@ test('作業予約（🔒 行）は locks として読み、タスクには数�
 			locks: [{ session: 'session-g', id: 'T-321', since: '2026-08-25 20:32', files: ['CLAUDE.md', 'nimbus/scripts/board.mjs'] }],
 			unreadable: [],
 			inProgress: [{ id: 'T-321', done: false, claims: ['session-g'], title: '**予約の運用を入れる**' }]
+		}
+	);
+});
+
+test('落ちた予約を、心拍とファイルの静けさで見分ける（T-328）', () => {
+	const now = Date.parse('2026-08-26T12:00');
+	const lock = { session: 'session-g', id: 'T-328', since: '2026-08-26 11:30', files: ['a.ts'] };
+	const at = (text) => Date.parse(text);
+
+	// 心拍かファイルのどちらかが動いていれば「生きている」。両方止まって初めて「落ちた」。
+	// ファイルの時刻が取れないとき（全部これから作る新規）は心拍だけで判定する
+	assert.deepEqual(
+		{
+			fresh: assess(lock, now, [at('2026-08-26T11:55')]).stalled,
+			oldBeatButFilesMoving: assess({ ...lock, since: '2026-08-26 09:00' }, now, [at('2026-08-26T11:50')]).stalled,
+			stalled: assess({ ...lock, since: '2026-08-26 09:00' }, now, [at('2026-08-26T09:05')]),
+			noFiles: assess({ ...lock, since: '2026-08-26 09:00' }, now, []).stalled,
+			brokenTime: assess({ ...lock, since: 'いつか' }, now, []).stalled
+		},
+		{
+			fresh: false,
+			oldBeatButFilesMoving: false,
+			stalled: { heartbeatMinutes: 180, quietMinutes: 175, stalled: true },
+			noFiles: true,
+			brokenTime: false
 		}
 	);
 });
