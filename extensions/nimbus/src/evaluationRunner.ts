@@ -4,9 +4,8 @@
  * **本物のセッションを使うので費用がかかる。** 走らせる前に必ず回数と見込みを見せて、
  * 承認を取ってから始める。黙って 15 回まわすようなことはしない。
  */
-import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import type { NimbusEvent } from './events';
+import { oneShot } from './oneShot';
 import type { SessionManager } from './session/SessionManager';
 import {
 	cheapestPassing,
@@ -21,7 +20,7 @@ import {
 /** 1 回あたりの待ち上限。返らないセッションで全体を止めない */
 const RUN_TIMEOUT_MS = 180_000;
 
-/** 1 回走らせて、応答と実測を集める */
+/** 1 回走らせて、応答と実測を集める。往復そのものは `oneShot.ts`（T-305 と共用） */
 async function runOnce(
 	sessions: SessionManager,
 	cwd: string,
@@ -29,50 +28,14 @@ async function runOnce(
 	attempt: number,
 	model: string | undefined
 ): Promise<JudgedRun> {
-	const sessionId = randomUUID();
 	const started = Date.now();
-	let text = '';
-	let costUsd: number | undefined;
-
-	const done = new Promise<void>((resolve) => {
-		const timer = setTimeout(resolve, RUN_TIMEOUT_MS);
-		const onEvent = (event: NimbusEvent): void => {
-			if (event.sessionId !== sessionId) {
-				return;
-			}
-			if (event.kind === 'assistant-text') {
-				text += `${event.text}\n`;
-			} else if (event.kind === 'turn-result') {
-				costUsd = event.totalCostUsd;
-				clearTimeout(timer);
-				sessions.off('event', onEvent);
-				resolve();
-			} else if (event.kind === 'session-error') {
-				clearTimeout(timer);
-				sessions.off('event', onEvent);
-				resolve();
-			}
-		};
-		sessions.on('event', onEvent);
-	});
-
-	await sessions.createSession({
+	const { text, costUsd } = await oneShot(sessions, {
 		cwd,
-		firstMessage: testCase.prompt,
-		reuseSessionId: sessionId,
-		extraOptions: {
-			...(model ? { model } : {}),
-			// 評価中に書き換えさせない。比べたいのは応答であって、副作用ではない
-			permissionMode: 'plan'
-		}
+		prompt: testCase.prompt,
+		model,
+		timeoutMs: RUN_TIMEOUT_MS
 	});
-	await done;
-	try {
-		sessions.close(sessionId);
-	} catch {
-		// すでに閉じている
-	}
-	return judge(testCase, { attempt, text: text.trim(), durationMs: Date.now() - started, costUsd, model });
+	return judge(testCase, { attempt, text, durationMs: Date.now() - started, costUsd, model });
 }
 
 export interface EvaluationRequest {

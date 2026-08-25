@@ -98,8 +98,10 @@ import { describeSessionConflict, SessionFilesTracker } from './core/sessionFile
 import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
-import { buildTabs } from './core/sessionTabs';
+import { buildTabs, lookOf, type SessionTab } from './core/sessionTabs';
 import { quotaGauges, quotaLine, quotaTooltip, type QuotaGauge } from './core/usage';
+import { isOneShotSession } from './oneShot';
+import { generateCommitMessage } from './commitMessage';
 import {
 	effortLabel,
 	effortsFor,
@@ -111,7 +113,6 @@ import {
 import { SessionSidePane, type SideMode } from './sessionSide';
 import { listAgents as listHerdrAgents } from './herdr';
 import { describePane, toTabState as herdrTabState } from './core/herdr';
-import { lookOf } from './core/sessionTabs';
 import { stoppedSnapshot } from './debugTools';
 import {
 	admit,
@@ -356,6 +357,19 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 */
 	const drafts: { id: string; createdAt: number }[] = [];
 	let activeDraftId: string | undefined;
+	/**
+	 * ピン留め（T-311）と利用者が付けた名前（T-313）。workspaceState に持つ。
+	 * セッション ID は再起動で変わる（復帰は新しい ID を切る）ので長生きはしないが、
+	 * ウィンドウの再読み込みでは残る。消えたセッションのぶんは `updateSessionTabs` が掃除する。
+	 */
+	const pinnedSessions = new Set<string>(context.workspaceState.get<string[]>('nimbus.pinnedSessions', []));
+	const sessionNames = new Map<string, string>(
+		context.workspaceState.get<[string, string][]>('nimbus.sessionNames', [])
+	);
+	function persistTabMeta(): void {
+		void context.workspaceState.update('nimbus.pinnedSessions', [...pinnedSessions]);
+		void context.workspaceState.update('nimbus.sessionNames', [...sessionNames.entries()]);
+	}
 	/** 文脈の消費率（T-020）。ステータスバーに出すため保持する */
 	let contextPercent: number | undefined;
 	/** ホットリロードで自動投入した回数（T-072）。指示のたびに 0 に戻す */
@@ -527,6 +541,19 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		onNewSession: () => void newSession(),
 		// タブでセッションを切り替える（T-269）
 		onSwitchSession: (sessionId) => switchSession(sessionId),
+		// タブのピン留め（T-311）。並びとしるしだけ — 停止や後片付けからは守らない
+		onTogglePin: (sessionId) => {
+			if (drafts.some((draft) => draft.id === sessionId)) {
+				return; // 下書きは送った時点で ID が変わるので、ピンが迷子になる
+			}
+			if (!pinnedSessions.delete(sessionId)) {
+				pinnedSessions.add(sessionId);
+			}
+			persistTabMeta();
+			updateSessionTabs();
+		},
+		// タブの名前を変える（T-313）。空にすると自動の見出し（最初に頼んだこと）へ戻る
+		onRenameSession: (sessionId, name) => renameSession(sessionId, name),
 		// 会話の中で承認に答える（T-266）。読んでいる場所と決める場所を同じにする
 		onApprove: (id, decision) => {
 			if (!broker.decide(id, decision)) {
@@ -544,12 +571,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			run: lastRun,
 			// 前面のセッションの状態も戻す（T-298）
 			state: lastState,
-			// タブの列も戻す（T-269）
-			tabs: buildTabs(tabbableSessions(), {
-				activeSessionId,
-				pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
-				titles: sessionTitles
-			})
+			// タブの列も戻す（T-269）。updateSessionTabs と同じものを返す（T-314）
+			tabs: currentTabs()
 		}),
 		// 使い始めで足りないもの（T-285）。詰まる場所に出すために引かれる
 		readiness: () => currentReadiness(),
@@ -2589,10 +2612,31 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 会話の本数に数えられると「並列で何本走っているか」が狂う。
 	 */
 	function tabbableSessions(): SessionSummary[] {
-		return sessions.list().filter((session) => session.sessionId !== helpSessionId);
+		return sessions.list().filter(
+			// 使い捨て（コミットメッセージの生成など・T-305）は会話の面ではないので出さない
+			(session) => session.sessionId !== helpSessionId && !isOneShotSession(session.sessionId)
+		);
 	}
 
 	/** タブの列を作って送る（T-269）。中身が変わったときだけ送る */
+	/**
+	 * いまのタブ列（T-314）。**作る場所はここだけ**にする。
+	 * 以前は snapshot 側にも `buildTabs` の呼び出しがあり、そちらは下書きもピンも知らなかった。
+	 * 全画面で面を開き直すと snapshot から復元されるので、**サイドバーには見えている列が
+	 * 全画面では消える**（複数開いても 1 本に見える）という食い違いになっていた。
+	 */
+	function currentTabs(): SessionTab[] {
+		return buildTabs(tabbableSessions(), {
+			activeSessionId,
+			drafts,
+			activeDraftId,
+			pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
+			titles: sessionTitles,
+			names: sessionNames,
+			pinnedSessionIds: pinnedSessions
+		});
+	}
+
 	function updateSessionTabs(): void {
 		// 下書きが本物のセッションになったら、下書きとしては畳む
 		if (activeSessionId && activeDraftId) {
@@ -2602,13 +2646,25 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 			activeDraftId = undefined;
 		}
-		const tabs = buildTabs(tabbableSessions(), {
-			activeSessionId,
-			drafts,
-			activeDraftId,
-			pendingSessionIds: new Set(broker.pending().map((entry) => entry.sessionId)),
-			titles: sessionTitles
-		});
+		// 消えたセッションのピン・名前は掃除する（残すと workspaceState が育ち続ける）
+		const alive = new Set(sessions.list().map((session) => session.sessionId));
+		let pruned = false;
+		for (const id of [...pinnedSessions]) {
+			if (!alive.has(id)) {
+				pinnedSessions.delete(id);
+				pruned = true;
+			}
+		}
+		for (const id of [...sessionNames.keys()]) {
+			if (!alive.has(id)) {
+				sessionNames.delete(id);
+				pruned = true;
+			}
+		}
+		if (pruned) {
+			persistTabMeta();
+		}
+		const tabs = currentTabs();
 		const signature = JSON.stringify(tabs);
 		if (signature === lastTabsSignature) {
 			return;
@@ -2628,6 +2684,50 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * `retained` は「前面のセッションのぶん」という約束なので、控えから入れ替える。
 	 * 控えは全セッションぶん貯めてあるので、戻っても会話が空にならない。
 	 */
+	/** セッションの名前を変える（T-313）。空なら自動の見出しへ戻す */
+	function renameSession(sessionId: string, name: string): void {
+		if (drafts.some((draft) => draft.id === sessionId)) {
+			return; // 下書きは送った時点で ID が変わるので、名前が迷子になる
+		}
+		const trimmed = name.trim();
+		if (trimmed) {
+			sessionNames.set(sessionId, trimmed.slice(0, 60));
+		} else {
+			sessionNames.delete(sessionId);
+		}
+		persistTabMeta();
+		updateSessionTabs();
+	}
+
+	/** コマンドから名前を変える（T-313）。タブのダブルクリックと同じことを、場所で引けるように */
+	async function renameSessionByPick(): Promise<void> {
+		const tabs = currentTabs().filter((tab) => !tab.sessionId.startsWith('draft-'));
+		if (tabs.length === 0) {
+			void vscode.window.showInformationMessage('Nimbus: 名前を変えられるセッションがありません。');
+			return;
+		}
+		const chosen =
+			tabs.length === 1
+				? { tab: tabs[0] }
+				: await vscode.window.showQuickPick(
+					tabs.map((tab) => ({ label: `${tab.number}. ${tab.title}`, description: tab.label, tab })),
+					{ title: 'Nimbus: どのセッションの名前を変えますか' }
+				);
+		if (!chosen) {
+			return;
+		}
+		const name = await vscode.window.showInputBox({
+			title: `Nimbus: セッション ${chosen.tab.number} の名前`,
+			value: sessionNames.get(chosen.tab.sessionId) ?? '',
+			prompt: '空にすると、最初に頼んだことから作る見出しへ戻ります',
+			placeHolder: chosen.tab.full
+		});
+		if (name === undefined) {
+			return; // Esc。空文字の確定（＝自動へ戻す）とは区別する
+		}
+		renameSession(chosen.tab.sessionId, name);
+	}
+
 	function switchSession(sessionId: string): void {
 		// 下書きのタブ（T-303）。まだ中身が無いので、面を白紙にして選び直すだけ
 		if (drafts.some((draft) => draft.id === sessionId)) {
@@ -3512,6 +3612,10 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		// コミットメッセージを作って SCM の入力欄に入れる（T-305 / 型は T-309）
+		vscode.commands.registerCommand('nimbus.generateCommitMessage', () =>
+			generateCommitMessage({ sessions, sanitize: (text) => sanitizer.sanitizeString(text), log })
+		),
 		// このセッションの走らせかた（T-291）。帯のボタンからも、名前からも引ける
 		vscode.commands.registerCommand('nimbus.chooseModel', () => chooseModel()),
 		vscode.commands.registerCommand('nimbus.chooseEffort', () => chooseEffort()),
@@ -3751,6 +3855,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			webviewOptions: { retainContextWhenHidden: true }
 		}),
 		vscode.commands.registerCommand('nimbus.newSession', () => newSession()),
+		vscode.commands.registerCommand('nimbus.renameSession', () => renameSessionByPick()),
 		vscode.commands.registerCommand('nimbus.interrupt', () => interrupt()),
 		vscode.commands.registerCommand('nimbus.stopAll', () => stopAll()),
 		vscode.commands.registerCommand('nimbus.showLog', () => output.show(true)),

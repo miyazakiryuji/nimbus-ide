@@ -587,6 +587,12 @@
         "icon": "$(history)"
       },
       {
+        "command": "nimbus.generateCommitMessage",
+        "title": "%command.generateCommitMessage%",
+        "category": "Nimbus",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "nimbus.chooseModel",
         "title": "%command.chooseModel%",
         "category": "Nimbus",
@@ -1187,6 +1193,11 @@
         "category": "Nimbus"
       },
       {
+        "command": "nimbus.renameSession",
+        "title": "セッションの名前を変える",
+        "category": "Nimbus"
+      },
+      {
         "command": "nimbus.showDiagnostics",
         "title": "診断パネルを開く",
         "category": "Nimbus"
@@ -1383,6 +1394,12 @@
           "group": "navigation"
         }
       ],
+      "scm/inputBox": [
+        {
+          "command": "nimbus.generateCommitMessage",
+          "when": "scmProvider == git"
+        }
+      ],
       "editor/title": [
         {
           "command": "nimbus.newSession",
@@ -1541,6 +1558,38 @@
           "minimum": 1,
           "maximum": 10,
           "description": "%config.tasks.maxConcurrent%"
+        },
+        "nimbus.commit.style": {
+          "type": "string",
+          "enum": ["auto", "repo", "conventional", "template"],
+          "default": "auto",
+          "description": "%config.commit.style%"
+        },
+        "nimbus.commit.language": {
+          "type": "string",
+          "enum": ["auto", "ja", "en"],
+          "default": "auto",
+          "description": "%config.commit.language%"
+        },
+        "nimbus.commit.subjectMax": {
+          "type": "number",
+          "default": 72,
+          "description": "%config.commit.subjectMax%"
+        },
+        "nimbus.commit.body": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.commit.body%"
+        },
+        "nimbus.commit.coAuthor": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.commit.coAuthor%"
+        },
+        "nimbus.commit.model": {
+          "type": "string",
+          "default": "haiku",
+          "description": "%config.commit.model%"
         },
         "nimbus.lsp.enabled": {
           "type": "boolean",
