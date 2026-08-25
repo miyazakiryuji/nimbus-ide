@@ -82,3 +82,27 @@ test('コードブロックだけを取り出せる', () => {
 		{ kind: 'code', language: '', text: 'plain' }
 	]);
 });
+
+test('表を塊として読む（T-304）', () => {
+	// Claude はよく表で答えるのに種類が無く、`| 項目 | 値 |` が生のまま段落に並んでいた
+	assert.deepStrictEqual(
+		parseMarkdown(['| 項目 | 値 |', '| --- | :---: |', '| **枠** | 62% |', '| 週 | 41% |'].join('\n')),
+		[
+			{
+				kind: 'table',
+				header: [[{ kind: 'text', text: '項目' }], [{ kind: 'text', text: '値' }]],
+				rows: [
+					[[{ kind: 'strong', text: '枠' }], [{ kind: 'text', text: '62%' }]],
+					[[{ kind: 'text', text: '週' }], [{ kind: 'text', text: '41%' }]]
+				]
+			}
+		]
+	);
+});
+
+test('区切り行の無い縦棒は表にしない（T-304）', () => {
+	// `a | b` のような普通の文まで表に化けると、本文が壊れる
+	assert.deepStrictEqual(parseMarkdown('速い | 安い | うまい'), [
+		{ kind: 'paragraph', spans: [{ kind: 'text', text: '速い | 安い | うまい' }] }
+	]);
+});

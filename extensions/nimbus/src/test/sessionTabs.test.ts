@@ -88,3 +88,21 @@ test('状態は記号・言葉・テーマの色で言う（絵文字は使わ�
 		]
 	);
 });
+
+test('下書き（まだ送っていないセッション）もタブに出す（T-303）', () => {
+	// 「+」はセッションを**足す**操作。下書きが出ないと、押した手応えが無い
+	const tabs = buildTabs([summary({ sessionId: 'a', createdAt: 1, status: 'running' })], {
+		activeSessionId: undefined,
+		drafts: [{ id: 'draft-1', createdAt: 2 }],
+		activeDraftId: 'draft-1',
+		titles: new Map()
+	});
+	assert.deepStrictEqual(
+		tabs.map((tab) => [tab.sessionId, tab.number, tab.title, tab.state, tab.active]),
+		[
+			['a', 1, 'a', 'running', false],
+			// 下書きは始まった順のうしろ。中身が無いので「あなたの番」に倒す
+			['draft-1', 2, '新しいセッション', 'asking', true]
+		]
+	);
+});
