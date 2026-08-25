@@ -87,30 +87,14 @@ export default {
 		await page.keyboard.press('Escape');
 		await page.waitForTimeout(2000);
 
-		// **セッションが始まっていないこと。** ここが空砲だと、閉じたのに送られて
-		// 課金まで走っても緑になる（実際に起きた — pane-body は webview の外なので
-		// 何も読めておらず、必ず通っていた）。コックピットの webview の中を読む
-		let composer = '';
-		for (const frame of page.frames()) {
-			const body = await frame.evaluate(() => document.body?.innerText ?? '').catch(() => '');
-			if (body.includes('Claude に指示')) {
-				composer = body;
-				break;
-			}
-		}
-		ctx.expect(composer.length > 0, 'コックピットの webview が読めない');
-		ctx.expect(
-			composer.includes('セッション未開始'),
-			`確認を閉じたのにセッションが始まっている（課金の漏れ）:\n${composer.slice(0, 300)}`
-		);
-
-		// **後始末: 入力欄を空にする。** 取りやめで文が残るのは仕様（書き直すため）だが、
+		// **先に後始末: 入力欄を空にする。** 取りやめで文が残るのは仕様（書き直すため）だが、
 		// スイートでは後続ケースの迷い Enter が残った文を発射して**課金が漏れた**（実測）。
+		// assert の前に置く — 後ろに置くと、落ちたときに残骸ごと残る（それも実際に起きた）
 		for (const frame of page.frames()) {
 			const cleared = await frame
 				.evaluate(() => {
-					const area = document.querySelector('textarea');
-					if (area && (area.placeholder ?? '').includes('Claude に指示')) {
+					const area = document.querySelector('#composer textarea');
+					if (area) {
 						area.value = '';
 						area.dispatchEvent(new Event('input', { bubbles: true }));
 						return true;
@@ -122,5 +106,23 @@ export default {
 				break;
 			}
 		}
+
+		// **セッションが始まっていないこと。** ここが空砲だと、閉じたのに送られて
+		// 課金まで走っても緑になる（実際に起きた — pane-body は webview の外なので
+		// 何も読めておらず、必ず通っていた）。コックピットの webview（#composer の面）を読む。
+		// placeholder は innerText に出ないので、要素の有無で面を見つける
+		let composer = '';
+		for (const frame of page.frames()) {
+			const isCockpit = await frame.$('#composer').catch(() => null);
+			if (isCockpit) {
+				composer = await frame.evaluate(() => document.body?.innerText ?? '').catch(() => '');
+				break;
+			}
+		}
+		ctx.expect(composer.length > 0, 'コックピットの webview が読めない');
+		ctx.expect(
+			composer.includes('セッション未開始'),
+			`確認を閉じたのにセッションが始まっている（課金の漏れ）:\n${composer.slice(0, 300)}`
+		);
 	}
 };
