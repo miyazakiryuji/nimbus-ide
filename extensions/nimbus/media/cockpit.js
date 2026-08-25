@@ -24,6 +24,7 @@
 	const groupTabs = /** @type {HTMLElement} */ (document.getElementById('groupTabs'));
 	const homePanel = /** @type {HTMLElement} */ (document.getElementById('home'));
 	const quotaLine = /** @type {HTMLElement} */ (document.getElementById('quota'));
+	const pickPolicy = /** @type {HTMLButtonElement} */ (document.getElementById('pickPolicy'));
 	const pickModel = /** @type {HTMLButtonElement} */ (document.getElementById('pickModel'));
 	const pickEffort = /** @type {HTMLButtonElement} */ (document.getElementById('pickEffort'));
 	const sessionState = /** @type {HTMLElement} */ (document.getElementById('sessionState'));
@@ -1374,6 +1375,7 @@
 		}
 	}
 
+	pickPolicy.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.switchPolicy' }));
 	pickModel.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseModel' }));
 	pickEffort.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseEffort' }));
 
@@ -1401,6 +1403,13 @@
 			return;
 		}
 		if (message.type === 'runSettings') {
+			// 権限モード（T-327・人間工学 E3）。**セッションが無くても出す** —
+			// 取り返しのつかない操作の入口（送信）にこそ、いまどの権限かが見えていてほしい
+			if (message.policy) {
+				pickPolicy.textContent = `権限 ${message.policy.label}`;
+				pickPolicy.title = message.policy.detail;
+				pickPolicy.hidden = false;
+			}
 			// 走らせかた（T-291）。セッションが無ければボタンごと消す（押せない口を置かない）
 			pickModel.textContent = message.model ?? '';
 			pickModel.title = 'このセッションのモデルを変える（次の応答から効きます）';

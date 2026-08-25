@@ -95,6 +95,7 @@ export const ALLOWED_ACTIONS: readonly string[] = [
 	'workbench.trust.manage',
 	// 走らせかたの帯（T-291）。押せる場所を作るために、この 2 つも通す
 	'nimbus.chooseModel',
+	'nimbus.switchPolicy',
 	'nimbus.chooseEffort'
 ];
 

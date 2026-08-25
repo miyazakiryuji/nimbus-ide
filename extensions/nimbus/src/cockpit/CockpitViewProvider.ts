@@ -86,7 +86,14 @@ export type OutboundMessage =
 	 * 走らせかた（T-291）。モデルと思考量を、入力欄の下の帯に出す。
 	 * `model` が無いときはセッションが無い＝帯ごと消す。
 	 */
-	| { type: 'runSettings'; model?: string; effort?: string; canPickEffort?: boolean }
+	| {
+			type: 'runSettings';
+			model?: string;
+			effort?: string;
+			canPickEffort?: boolean;
+			/** 権限モード（T-327）。モデルと違い、セッションが無くても出す */
+			policy?: { label: string; detail: string };
+	  }
 	/**
 	 * 前面のセッションの状態（T-298）。**タブの列は 2 本以上のときしか出ない**ので、
 	 * 1 本のときに状態がどこにも出なくなる。列とは別に帯へ出す。
@@ -149,7 +156,7 @@ export interface CockpitHandlers {
 		/** 枠の残りの 1 行（T-282）。`tooltip` は指を置いたときに出す中身 */
 		quota?: { text: string; tooltip?: string; gauges?: readonly QuotaGauge[] };
 		/** 走らせかた（T-291）。モデルと思考量 */
-		run?: { model?: string; effort: string; canPickEffort: boolean };
+		run?: { model?: string; effort?: string; canPickEffort?: boolean; policy?: { label: string; detail: string } };
 		/** 前面のセッションの状態（T-298） */
 		state?: { symbol: string; label: string; color: string };
 	};
@@ -445,6 +452,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 		<div id="approvals" class="approvals" hidden></div>
 		<div id="runbar" class="chat-runbar">
 			<span id="sessionState" class="chat-state" hidden></span>
+			<button id="pickPolicy" class="chat-chip" type="button" hidden></button>
 			<button id="pickModel" class="chat-chip" type="button" hidden></button>
 			<button id="pickEffort" class="chat-chip" type="button" hidden></button>
 			<div id="quota" class="chat-quota" hidden></div>

@@ -643,7 +643,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// 枠の残りも戻す（T-282）
 			quota: lastQuota,
 			// 走らせかた（モデル・エフォート）も戻す（T-291）
-			run: lastRun,
+			// 権限はセッションが無くても出す（T-327）— 面を開き直しても消えないように snapshot に含める
+			run: { ...(lastRun ?? {}), policy: policyChip() },
 			// 前面のセッションの状態も戻す（T-298）
 			state: lastState,
 			// タブの列も戻す（T-269）。updateSessionTabs と同じものを返す（T-314）
@@ -1523,6 +1524,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		void vscode.window.showInformationMessage(
 			`Nimbus: 「${chosen.profile.name}」に切り替えました。次のセッションから効きます。`
 		);
+		// トーストは消えるが、チップは残る（T-327）。走行中とずれていれば、それもチップが言う
+		void refreshRunSettings();
 	}
 
 	const PROMPT_KEY = 'nimbus.promptTemplates';
@@ -2059,10 +2062,38 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * **サブエージェントへの割り当て（T-232）とは別物。** こちらは目の前の会話そのもの。
 	 * 候補はセッションごとに一度だけ SDK から引いて使い回す（モデルごとに使えるエフォートが違う）。
 	 */
+	/**
+	 * 送信の視野に出す権限モード（T-327・人間工学 E3）。
+	 *
+	 * 走り出したら **init.permissionMode（実際に効いている値）** を出す。
+	 * まだなら設定のプロファイル（＝次のセッションで使う値）。
+	 * 2 つがずれている（切り替えたが、走っているのは前のモード）ときは、それも言う —
+	 * 「切り替えたのに効いていない」が黙って起きるのが、いちばん高くつく。
+	 */
+	function policyChip(): { label: string; detail: string } {
+		const profile = currentProfile();
+		const running = lastInit?.permissionMode;
+		if (activeSessionId && running) {
+			const next = profile.permissionMode;
+			const differs = running !== next;
+			return {
+				label: running,
+				detail: differs
+					? `このセッションは「${running}」で走っています。設定は「${profile.name}」（${next}）なので、次のセッションから変わります。`
+					: `このセッションは「${running}」で走っています（プロファイル: ${profile.name}）。押すと切り替えられます。`
+			};
+		}
+		return {
+			label: profile.permissionMode,
+			detail: `次のセッションは「${profile.name}」（${describeProfile(profile)}）で走ります。押すと切り替えられます。`
+		};
+	}
+
 	async function refreshRunSettings(): Promise<void> {
 		if (!activeSessionId) {
 			lastRun = undefined;
-			cockpit.post({ type: 'runSettings' });
+			// モデルと違い、権限は**セッションが無くても出す**（送る前にこそ見たい値・T-327）
+			cockpit.post({ type: 'runSettings', policy: policyChip() });
 			return;
 		}
 		const sessionId = activeSessionId;
@@ -2078,7 +2109,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			// エフォートを持たないモデル（Haiku など）では、押せる口を出さない
 			canPickEffort: effortsFor(catalog, current).length > 0
 		};
-		cockpit.post({ type: 'runSettings', ...lastRun });
+		cockpit.post({ type: 'runSettings', ...lastRun, policy: policyChip() });
 	}
 
 	/** モデルを選び直す（T-291）。**次の応答から効く** */
@@ -4790,6 +4821,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 使い始めで足りないものは、**開いた時点で**見えていてほしい（T-285）。
 	// 送ろうとして初めて分かるのでは、そこまでの時間が丸ごと無駄になる
 	pushReadiness();
+	// 権限チップの初期値（T-327）。セッションが無くても出す
+	void refreshRunSettings();
 	// タブ（束）の定義を読み、消えたセッションの所属を刈る（T-314）
 	void groupStore
 		.load()
