@@ -19,6 +19,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runCommand } from './helpers.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..');
@@ -119,6 +120,39 @@ function resetWorkspace(ws) {
 		// 戻せないこと自体でテストは落とさない。ただし**黙らない** —
 		// 黙って戻らないと、後のケースが前のケースの残骸を拾って落ち、原因が分からなくなる
 		console.log(`  ！ 作業ツリーを戻せませんでした: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+/**
+ * ケースの間で**画面**も素の状態へ戻す（T-329）。T-240（作業ツリー）の画面側。
+ *
+ * 作業ツリーだけ戻しても、前のケースが開いたエディタ — とくに**コックピットのタブ** — が
+ * 残ると、後のケースが `#input` や `#sessionTabs` をフレーム横断で探したときに
+ * 2 枚目の面を掴む。T-320 からは面ごとに見るセッション（束）が違うので、
+ * 掴んだ先は「セッション未開始」の面だったりする。
+ * 総合試験 2026-08-26 で、単独では通る 5 件がこれでまとめて落ちていた。
+ *
+ * 閉じかたは「Revert and Close Editor」の繰り返し。⌘K ⌘W（全部閉じる）にしないのは、
+ * 書きかけの無題エディタが残っていたとき**ネイティブの保存ダイアログが出て
+ * 以後の操作を全部止める**ため（closeAllEditors ヘルパーと同じ理由）。
+ * 数えるのは `.tab`（webview のタブも含む）— `.view-lines` ではコックピットのタブを数えられない。
+ */
+async function resetWorkbench(page) {
+	try {
+		// 出しっぱなしのクイックピック・覆いを先に閉じる
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(200);
+		for (let i = 0; i < 6; i++) {
+			const tabs = await page.evaluate(() => document.querySelectorAll('.tabs-container .tab').length);
+			if (tabs === 0) {
+				return;
+			}
+			await runCommand(page, 'Revert and Close Editor');
+			await page.waitForTimeout(500);
+		}
+	} catch {
+		// 戻せないこと自体では落とさない（T-240 と同じ方針）。ただし次の行で気づける
+		console.log('  ！ 画面の後始末に失敗しました（前のケースのエディタが残っています）');
 	}
 }
 
@@ -230,8 +264,9 @@ async function main() {
 	const results = [];
 	for (const c of selected) {
 		const started = Date.now();
-		// 前のケースが残したものを持ち越さない（T-240）
+		// 前のケースが残したものを持ち越さない — 作業ツリー（T-240）と画面（T-329）
 		resetWorkspace(workspace);
+		await resetWorkbench(page);
 		try {
 			await c.run(page, ctx);
 			results.push({ name: c.name, ok: true, ms: Date.now() - started });
