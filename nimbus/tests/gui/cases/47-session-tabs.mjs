@@ -3,6 +3,9 @@
  *
  * タブは**2 本以上**あるときだけ出る（切り替える先が無い列は場所を取るだけ）ので、
  * 実セッションを 2 本起こす必要がある。課金が出るので `--with-claude` のときだけ走る。
+ *
+ * T-314 から、**狭いサイドバーでは列を並べず ≡（Home）に畳む**。
+ * 列そのものは Home の行として読む（番号が残ることの確認は同じ）。
  */
 import { webviewText } from '../helpers.mjs';
 
@@ -52,14 +55,20 @@ export default {
 		const tabs = await webviewText(page, ['NIMBUS_TAB_TWO'], { attempts: 40 });
 		ctx.expect(tabs !== undefined, '2 本目のセッションが動き出さない');
 
-		// タブの列が出ているか。
+		// 狭いサイドバーでは ≡ に畳まれる（T-314）ので、≡ を押して Home の行として読む。
 		// **`contentDocument` では読めない** — パッケージ版の webview は別オリジンの入れ子なので、
-		// 素の DOM から中身へは入れない（実測。ここで空文字が返り、出ているのに落ちていた）。
-		// Playwright のフレーム越しに読む
+		// 素の DOM から中身へは入れない（実測）。Playwright のフレーム越しに読む
+		for (const frame of page.frames()) {
+			const toggle = await frame.$('#homeToggle').catch(() => null);
+			if (toggle) {
+				await toggle.click();
+				break;
+			}
+		}
 		let strip = [];
 		for (let i = 0; i < 20 && strip.length < 2; i++) {
 			for (const frame of page.frames()) {
-				const found = await frame.$$('.session-tab').catch(() => []);
+				const found = await frame.$$('.home-session').catch(() => []);
 				if (found.length > strip.length) {
 					strip = await Promise.all(
 						found.map((el) => el.evaluate((node) => (node.textContent ?? '').trim()))
@@ -70,7 +79,7 @@ export default {
 				await page.waitForTimeout(500);
 			}
 		}
-		ctx.expect(strip.length >= 2, `セッションが 2 本あるのにタブの列が出ていない: ${JSON.stringify(strip)}`);
+		ctx.expect(strip.length >= 2, `セッションが 2 本あるのに Home に行が出ていない: ${JSON.stringify(strip)}`);
 		// **番号は幅が無くても残る**（T-301）。3 本並ぶと名前に使えるのは 30px ほどしかない
 		ctx.expect(
 			strip.some((text) => text.includes('1')) && strip.some((text) => text.includes('2')),

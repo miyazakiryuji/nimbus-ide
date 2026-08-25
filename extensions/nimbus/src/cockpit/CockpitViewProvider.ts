@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import type { NimbusEvent, SessionSummary } from '../events';
 import type { ApprovalDecision, PendingApproval } from '../permissions';
 import type { SessionTab } from '../core/sessionTabs';
+import type { HomeGroup } from '../core/sessionGroups';
 import { renderWebviewPage } from '../webview/page';
 import { extractAssumptions } from '../core/assumptions';
 import { parseMarkdown, type Block } from '../core/chatMarkdown';
@@ -40,6 +41,13 @@ export type InboundMessage =
 	/** タブの × でセッションを閉じる（T-316） */
 	| { type: 'closeSession'; sessionId: string }
 	/**
+	 * タブ（束・T-314）の操作。名前の入力や移動先の選択は**拡張側の InputBox / QuickPick**で行う
+	 * （webview に入力 UI を増やさない。実装も入力検証も 1 か所に寄せる）。
+	 */
+	| { type: 'group'; op: 'create' | 'rename' | 'remove' | 'assign'; groupId?: string; sessionId?: string }
+	/** Home（束一覧・T-314）の開閉。拡張は覚えるだけ — 面を開き直したときに戻すため */
+	| { type: 'homeOpened'; open: boolean }
+	/**
 	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
 	 * 画面のボタンが任意のコマンドを呼べる状態にはしない。
 	 */
@@ -66,6 +74,8 @@ export type OutboundMessage =
 	 * 色だけだと、色覚の違いとモノクロのスクリーンショットで潰れる。
 	 */
 	| { type: 'sessions'; tabs: readonly SessionTab[] }
+	/** Home（タブごとの束・T-314）。タブ列と同じ材料から組む */
+	| { type: 'home'; groups: readonly HomeGroup<SessionTab>[]; open?: boolean }
 	/**
 	 * 枠の残り（T-282）。入力欄の下に 1 行だけ出す。
 	 * `text` が無いときは「出すものが無い」— 行ごと消す（空欄を置かない）。
@@ -137,6 +147,10 @@ export interface CockpitHandlers {
 	slashCommands?(): readonly SlashCommand[];
 	/** 使い始めの「準備」（T-285）。足りないものを画面に出すために引く */
 	readiness?(): readonly ReadyCheck[];
+	/** Home に出す束（T-314）。無ければ Home を出さない */
+	homeGroups?(): readonly HomeGroup<SessionTab>[];
+	/** タブ（束）の操作（T-314）。入力と確認は拡張側で行う */
+	onGroup?(op: 'create' | 'rename' | 'remove' | 'assign', target: { groupId?: string; sessionId?: string }): void | Promise<void>;
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
 	log(message: string): void;
 }
@@ -193,6 +207,9 @@ async function pickImages(): Promise<{ name: string; dataUrl: string }[]> {
 export class CockpitViewProvider extends WebviewViewHost {
 	public static readonly viewType = 'nimbus.cockpit';
 
+	/** Home（束一覧）を開いているか（T-314）。面を開き直したときに戻すためだけに覚える */
+	private homeOpen = false;
+
 	constructor(
 		extensionUri: vscode.Uri,
 		private readonly handlers: CockpitHandlers,
@@ -234,6 +251,11 @@ export class CockpitViewProvider extends WebviewViewHost {
 					if (checks) {
 						this.post({ type: 'readiness', checks });
 					}
+					// Home（T-314）。開き直した面にも束と開閉の状態を戻す
+					const groups = this.handlers.homeGroups?.();
+					if (groups) {
+						this.post({ type: 'home', groups, open: this.homeOpen });
+					}
 					break;
 				}
 				case 'send':
@@ -256,6 +278,12 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'renameSession':
 					this.handlers.onRenameSession?.(message.sessionId, message.name);
+					break;
+				case 'group':
+					await this.handlers.onGroup?.(message.op, { groupId: message.groupId, sessionId: message.sessionId });
+					break;
+				case 'homeOpened':
+					this.homeOpen = message.open;
 					break;
 				case 'closeSession':
 					this.handlers.onCloseSession?.(message.sessionId);
@@ -340,7 +368,13 @@ export class CockpitViewProvider extends WebviewViewHost {
 			// VS Code のチャットと同じ作り（T-271）— 会話の列と、丸めた 1 枚の入力欄。
 			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
 			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
-			body: `	<nav id="sessionTabs" class="session-tabs" hidden></nav>
+			body: `	<div id="homeBar" class="home-bar" hidden>
+		<button id="homeToggle" class="icon-button" type="button" title="タブとセッションの一覧（Home）"></button>
+		<span id="homeBarSession" class="home-bar-session"></span>
+	</div>
+	<nav id="groupTabs" class="group-tabs" hidden></nav>
+	<nav id="sessionTabs" class="session-tabs" hidden></nav>
+	<section id="home" class="home" hidden aria-label="タブとセッションの一覧"></section>
 	<main id="log" class="chat-list" aria-live="polite"></main>
 	<div class="chat-input-area">
 		<div id="approvals" class="approvals" hidden></div>

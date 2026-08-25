@@ -177,6 +177,20 @@ import type { EvalCase } from './core/evaluation';
 import { SettingsViewProvider } from './settingsView';
 import { TimelineViewProvider } from './timelineView';
 import { buildReadiness, isReady, looksLikeAuthProblem, summaryLabel, type ReadyCheck } from './core/readiness';
+import { GroupStore } from './groupStore';
+import {
+	DEFAULT_GROUP_ID,
+	addGroup,
+	assignSession,
+	buildHome,
+	emptyGroups,
+	groupOf,
+	normalizeGroupName,
+	pruneMembers,
+	removeGroup,
+	renameGroup,
+	type GroupsFile
+} from './core/sessionGroups';
 import { remoteLabel } from './core/remoteGuidance';
 import { claudeLogin, locateClaude, openClaudeInstall } from './setupActions';
 import {
@@ -343,6 +357,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 落ちれば消えるし、別のウィンドウからは見えない。プロセスの外に置くことで
 	// 「続きから」（T-252）・横断の同時実行数（T-251）・作業場所の重なり（T-253）が成り立つ
 	const sessionStore = new SessionStore(vscode.Uri.joinPath(context.globalStorageUri, 'sessions').fsPath, { log });
+	// タブ（束・T-314）。定義と所属は groups.json に永続化し、ここでは写しを持つ
+	const groupStore = new GroupStore(context.globalStorageUri.fsPath, { log });
+	let groupsFile: GroupsFile = emptyGroups();
 	// 板の置き場（T-259）。板の状態もウィンドウの中にしか無かったので、
 	// 別のウィンドウで足したタスクが見えず、進捗（T-261）も残らなかった
 	const taskStore = new TaskStore(vscode.Uri.joinPath(context.globalStorageUri, 'tasks').fsPath, { log });
@@ -598,6 +615,9 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}),
 		// 使い始めで足りないもの（T-285）。詰まる場所に出すために引かれる
 		readiness: () => currentReadiness(),
+		// Home（タブごとの束・T-314）。タブ列と同じ材料から組む
+		homeGroups: () => buildHome(groupsFile, currentTabs()),
+		onGroup: (op, target) => runGroupOp(op, target),
 		// `/` で引ける定型（T-271）。既にある指示のテンプレートをそのまま候補に出す
 		slashCommands: () =>
 			loadTemplates().map((template) => ({
@@ -2702,6 +2722,62 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 全画面で面を開き直すと snapshot から復元されるので、**サイドバーには見えている列が
 	 * 全画面では消える**（複数開いても 1 本に見える）という食い違いになっていた。
 	 */
+	/**
+	 * タブ（束）の操作（T-314）。名前の入力・移動先の選択・削除の言い分けは**拡張側**で行う。
+	 * webview は {op} を投げるだけ — 入力検証（normalizeGroupName）を 1 か所に寄せるため。
+	 */
+	async function runGroupOp(
+		op: 'create' | 'rename' | 'remove' | 'assign',
+		target: { groupId?: string; sessionId?: string }
+	): Promise<void> {
+		if (op === 'create') {
+			const name = await vscode.window.showInputBox({
+				title: 'Nimbus: 新しいタブ',
+				prompt: 'タブの名前（30 文字まで）',
+				validateInput: (value) => (normalizeGroupName(value) ? undefined : '空白だけ・30 文字超は使えません')
+			});
+			if (name === undefined) {
+				return;
+			}
+			groupsFile = await groupStore.update((file) => addGroup(file, `g-${randomUUID().slice(0, 8)}`, name, Date.now()));
+		} else if (op === 'rename' && target.groupId) {
+			const current = groupsFile.groups.find((group) => group.id === target.groupId);
+			const name = await vscode.window.showInputBox({
+				title: 'Nimbus: タブの名前を変える',
+				value: current?.name ?? '',
+				validateInput: (value) => (normalizeGroupName(value) ? undefined : '空白だけ・30 文字超は使えません')
+			});
+			if (name === undefined) {
+				return;
+			}
+			groupsFile = await groupStore.update((file) => renameGroup(file, target.groupId ?? '', name));
+		} else if (op === 'remove' && target.groupId) {
+			// 中のセッションは既定タブへ戻るだけ（消えない）ので、確認は出さない。
+			// 「押すと聞かれるボタン」にしない（T-316 の × と同じ言い分け）
+			groupsFile = await groupStore.update((file) => removeGroup(file, target.groupId ?? ''));
+		} else if (op === 'assign' && target.sessionId) {
+			const sessionId = target.sessionId;
+			const currentGroup = groupOf(groupsFile, sessionId);
+			const picked = await vscode.window.showQuickPick(
+				[
+					{ label: '作業', description: currentGroup === DEFAULT_GROUP_ID ? 'いまここ' : '既定のタブ', id: DEFAULT_GROUP_ID },
+					...groupsFile.groups.map((group) => ({
+						label: group.name,
+						description: group.id === currentGroup ? 'いまここ' : '',
+						id: group.id
+					}))
+				],
+				{ title: 'Nimbus: どのタブへ移しますか' }
+			);
+			if (!picked || picked.id === currentGroup) {
+				return;
+			}
+			groupsFile = await groupStore.update((file) => assignSession(file, sessionId, picked.id));
+		}
+		// 変わった結果をその場で配り直す（押した手応え・T-244）
+		cockpit.post({ type: 'home', groups: buildHome(groupsFile, currentTabs()) });
+	}
+
 	function currentTabs(): SessionTab[] {
 		for (const session of tabbableSessions()) {
 			numberFor(session.sessionId);
@@ -2767,6 +2843,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		lastTabsSignature = signature;
 		cockpit.post({ type: 'sessions', tabs });
+		// タブ列が変われば Home（束）の中身も変わる（T-314）
+		cockpit.post({ type: 'home', groups: buildHome(groupsFile, tabs) });
 		// **1 本のときは列を出さない**（切り替える先が無い）ので、状態がどこにも出なくなる。
 		// 前面のセッションの状態は、列とは別に帯へ出す（T-298）
 		const active = tabs.find((tab) => tab.active) ?? tabs[0];
@@ -4530,6 +4608,18 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// 使い始めで足りないものは、**開いた時点で**見えていてほしい（T-285）。
 	// 送ろうとして初めて分かるのでは、そこまでの時間が丸ごと無駄になる
 	pushReadiness();
+	// タブ（束）の定義を読み、消えたセッションの所属を刈る（T-314）
+	void groupStore
+		.load()
+		.then((file) => {
+			const alive = new Set([
+				...sessions.list().map((session) => session.sessionId),
+				...drafts.map((draft) => draft.id)
+			]);
+			groupsFile = pruneMembers(file, alive);
+			return groupsFile === file ? file : groupStore.update(() => groupsFile);
+		})
+		.then(() => cockpit.post({ type: 'home', groups: buildHome(groupsFile, currentTabs()) }));
 	log('[nimbus] 拡張を有効化しました');
 
 	// 自動確認用。UI を人手で操作せずにコックピットまで到達できるようにしておく。

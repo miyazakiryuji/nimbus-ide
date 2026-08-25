@@ -18,6 +18,11 @@
 	const attachmentsBar = /** @type {HTMLElement} */ (document.getElementById('attachments'));
 	const approvalsArea = /** @type {HTMLElement} */ (document.getElementById('approvals'));
 	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
+	const homeBar = /** @type {HTMLElement} */ (document.getElementById('homeBar'));
+	const homeToggle = /** @type {HTMLButtonElement} */ (document.getElementById('homeToggle'));
+	const homeBarSession = /** @type {HTMLElement} */ (document.getElementById('homeBarSession'));
+	const groupTabs = /** @type {HTMLElement} */ (document.getElementById('groupTabs'));
+	const homePanel = /** @type {HTMLElement} */ (document.getElementById('home'));
 	const quotaLine = /** @type {HTMLElement} */ (document.getElementById('quota'));
 	const pickModel = /** @type {HTMLButtonElement} */ (document.getElementById('pickModel'));
 	const pickEffort = /** @type {HTMLButtonElement} */ (document.getElementById('pickEffort'));
@@ -40,6 +45,12 @@
 	let historyIndex = -1;
 	/** スラッシュコマンドの候補（拡張から届く） */
 	let commands = [];
+	/** タブ（束）ごとのセッション（T-314）。Home と 2 段タブ列の材料 */
+	let homeGroups = [];
+	/** Home（束一覧）を開いているか */
+	let homeOpen = false;
+	/** 広い面の上段で選んでいるタブ。null なら前面セッションのタブに従う */
+	let viewGroupId = null;
 	/** 使い始めの「準備」（T-285）。足りないものは、詰まる場所に出す */
 	let readiness = [];
 
@@ -80,7 +91,11 @@
 		spinner: 'M8 1.5A6.5 6.5 0 1 0 14.5 8H13A5 5 0 1 1 8 3z',
 		close: 'M4.3 3.3 8 7l3.7-3.7.7.7L8.7 7.7l3.7 3.7-.7.7L8 8.4l-3.7 3.7-.7-.7 3.7-3.7-3.7-3.7z',
 		user: 'M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 1.2c-2.7 0-5 1.4-5 3.1V14h10v-1.7c0-1.7-2.3-3.1-5-3.1z',
-		cloud: 'M12.2 13H4.6A3.6 3.6 0 0 1 4.2 6a4.4 4.4 0 0 1 8.3.9 3.1 3.1 0 0 1-.3 6.1z'
+		cloud: 'M12.2 13H4.6A3.6 3.6 0 0 1 4.2 6a4.4 4.4 0 0 1 8.3.9 3.1 3.1 0 0 1-.3 6.1z',
+		menu: 'M2 4h12v1.4H2zM2 7.3h12v1.4H2zM2 10.6h12V12H2z',
+		edit: 'M11.1 2.2a1.6 1.6 0 0 1 2.3 0l.4.4a1.6 1.6 0 0 1 0 2.3l-7.3 7.3-3.2.9.9-3.2zM10 4.5l1.5 1.5',
+		home: 'M8 2 2 7.4l.9 1L4 7.4V13h3.2V9.6h1.6V13H12V7.4l1.1 1 .9-1z',
+		move: 'M9.2 4.2 12.9 8l-3.7 3.8-1-1 2-2.1H3.5V7.3h6.7l-2-2.1z'
 	};
 
 	/** @param {string} name @param {string} [className] */
@@ -897,6 +912,8 @@
 		}
 	});
 
+	homeToggle.appendChild(icon('menu'));
+	homeToggle.addEventListener('click', () => setHomeOpen(!homeOpen));
 	sendButton.appendChild(icon('send'));
 	interruptButton.appendChild(icon('stop'));
 	attachButton.appendChild(icon('attach'));
@@ -907,6 +924,221 @@
 	attachButton.addEventListener('click', () => vscode.postMessage({ type: 'attach' }));
 
 	// ───────────────────────── 拡張との往復 ─────────────────────────
+
+	// ───────────────────────── タブ（束）と Home（T-314） ─────────────────────────
+
+	/** 前面（active）のセッションが入っている束。無ければ既定タブ */
+	function activeGroupId() {
+		for (const group of homeGroups) {
+			if (group.sessions.some((tab) => tab.active)) {
+				return group.id;
+			}
+		}
+		return 'default';
+	}
+
+	/** セッション 1 行の共通部品（丸・記号・番号・名前）。タブ列と同じ材料で描く */
+	function sessionRowParts(tab) {
+		const parts = document.createDocumentFragment();
+		const dot = icon('dot', 'session-tab-dot', 8);
+		dot.style.color = `var(--vscode-${tab.color})`;
+		parts.appendChild(dot);
+		if (tab.symbol) {
+			const mark = document.createElement('span');
+			mark.className = 'session-tab-mark';
+			mark.textContent = tab.symbol;
+			mark.style.color = `var(--vscode-${tab.color})`;
+			parts.appendChild(mark);
+		}
+		const number = document.createElement('span');
+		number.className = 'session-tab-number';
+		number.textContent = String(tab.number ?? '');
+		parts.appendChild(number);
+		return parts;
+	}
+
+	function setHomeOpen(next) {
+		homeOpen = next;
+		homePanel.hidden = !next;
+		// Home と会話は入れ替わりで出す（両方見えると、どちらに打つのか分からない）
+		log.hidden = next;
+		homeToggle.classList.toggle('open', next);
+		homeToggle.title = next ? '会話へ戻る' : 'タブとセッションの一覧（Home）';
+		if (next) {
+			renderHome();
+		}
+		vscode.postMessage({ type: 'homeOpened', open: next });
+	}
+
+	/** 狭い面の 1 行（≡ ＋ 前面セッション）。タブ列の代わりに出す */
+	function renderHomeBar() {
+		const tabs = homeGroups.flatMap((group) => group.sessions);
+		homeBar.hidden = tabs.length < 2;
+		if (homeBar.hidden) {
+			if (homeOpen) {
+				setHomeOpen(false);
+			}
+			return;
+		}
+		homeBarSession.textContent = '';
+		const active = tabs.find((tab) => tab.active);
+		if (active) {
+			homeBarSession.appendChild(sessionRowParts(active));
+			const name = document.createElement('span');
+			name.className = 'home-session-name';
+			name.textContent = active.title;
+			homeBarSession.appendChild(name);
+		}
+	}
+
+	/** 広い面の上段（タブ列）と、下段の絞り込み */
+	function renderGroupTabs() {
+		const shown = viewGroupId ?? activeGroupId();
+		groupTabs.hidden = homeGroups.length < 2;
+		groupTabs.textContent = '';
+		if (!groupTabs.hidden) {
+			for (const group of homeGroups) {
+				const chip = document.createElement('div');
+				chip.setAttribute('role', 'tab');
+				chip.tabIndex = 0;
+				chip.className = `group-tab${group.id === shown ? ' active' : ''}`;
+				chip.title = group.isDefault
+					? 'どのタブにも入れていないセッションはここに入ります'
+					: `${group.name}\nダブルクリックで名前を変更`;
+				chip.setAttribute('aria-selected', group.id === shown ? 'true' : 'false');
+				const name = document.createElement('span');
+				name.textContent = `${group.name} (${group.sessions.length})`;
+				chip.appendChild(name);
+				if (!group.isDefault) {
+					const close = document.createElement('span');
+					close.className = 'group-close';
+					close.setAttribute('role', 'button');
+					close.title = 'タブを閉じる（中のセッションは「作業」へ戻ります）';
+					close.appendChild(icon('close', undefined, 10));
+					close.addEventListener('click', (e) => {
+						e.stopPropagation();
+						vscode.postMessage({ type: 'group', op: 'remove', groupId: group.id });
+					});
+					chip.appendChild(close);
+					chip.addEventListener('dblclick', () =>
+						vscode.postMessage({ type: 'group', op: 'rename', groupId: group.id })
+					);
+				}
+				chip.addEventListener('click', () => {
+					viewGroupId = group.id;
+					renderGroupTabs();
+				});
+				chip.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						viewGroupId = group.id;
+						renderGroupTabs();
+					}
+				});
+				groupTabs.appendChild(chip);
+			}
+			const add = document.createElement('div');
+			add.setAttribute('role', 'button');
+			add.tabIndex = 0;
+			add.className = 'group-tab';
+			add.title = '新しいタブを作る';
+			add.textContent = '＋';
+			add.addEventListener('click', () => vscode.postMessage({ type: 'group', op: 'create' }));
+			groupTabs.appendChild(add);
+		}
+		// 下段は、選んでいるタブのセッションだけに絞る
+		const group = homeGroups.find((entry) => entry.id === shown);
+		renderSessionTabs(group ? group.sessions : homeGroups.flatMap((entry) => entry.sessions));
+	}
+
+	/** Home（束一覧）。狭い面で ≡ から開く */
+	function renderHome() {
+		homePanel.textContent = '';
+		for (const group of homeGroups) {
+			const box = document.createElement('div');
+			box.className = 'home-group';
+
+			const header = document.createElement('div');
+			header.className = 'home-group-header';
+			const title = document.createElement('span');
+			title.textContent = `${group.name} (${group.sessions.length})`;
+			header.appendChild(title);
+			if (!group.isDefault) {
+				header.appendChild(
+					iconButton('edit', 'タブの名前を変える', () =>
+						vscode.postMessage({ type: 'group', op: 'rename', groupId: group.id })
+					)
+				);
+				header.appendChild(
+					iconButton('close', 'タブを閉じる（中のセッションは「作業」へ戻ります）', () =>
+						vscode.postMessage({ type: 'group', op: 'remove', groupId: group.id })
+					)
+				);
+			}
+			box.appendChild(header);
+
+			if (group.sessions.length === 0) {
+				// 空でも出す — 作った直後に見えないと「作れたのか」が分からない（T-244）
+				const empty = document.createElement('div');
+				empty.className = 'home-empty';
+				empty.textContent = 'セッションはまだありません';
+				box.appendChild(empty);
+			}
+			for (const tab of group.sessions) {
+				// <button> にしない — 中に「移す」ボタンが住むので、入れ子のボタンは
+				// ブラウザに外へ追い出される（T-311 のタブと同じ理由）
+				const row = document.createElement('div');
+				row.setAttribute('role', 'button');
+				row.tabIndex = 0;
+				row.className = `home-session${tab.active ? ' active' : ''}`;
+				row.title = `${tab.number}. ${tab.full ?? tab.title} — ${tab.label}`;
+				row.appendChild(sessionRowParts(tab));
+				const name = document.createElement('span');
+				name.className = 'home-session-name';
+				name.textContent = tab.title;
+				row.appendChild(name);
+				const state = document.createElement('span');
+				state.className = 'home-session-state';
+				state.textContent = tab.label;
+				state.style.color = `var(--vscode-${tab.color})`;
+				row.appendChild(state);
+				if (!tab.sessionId.startsWith('draft-')) {
+					const move = iconButton('move', '別のタブへ移す', (e) => {
+						e.stopPropagation();
+						vscode.postMessage({ type: 'group', op: 'assign', sessionId: tab.sessionId });
+					});
+					row.appendChild(move);
+				}
+				const open = () => {
+					vscode.postMessage({ type: 'switchSession', sessionId: tab.sessionId });
+					setHomeOpen(false);
+				};
+				row.addEventListener('click', open);
+				row.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						open();
+					}
+				});
+				box.appendChild(row);
+			}
+			homePanel.appendChild(box);
+		}
+		const create = document.createElement('button');
+		create.type = 'button';
+		create.className = 'home-new-group';
+		create.textContent = '＋ 新しいタブ';
+		create.addEventListener('click', () => vscode.postMessage({ type: 'group', op: 'create' }));
+		homePanel.appendChild(create);
+	}
+
+	function renderGroups() {
+		renderHomeBar();
+		renderGroupTabs();
+		if (homeOpen) {
+			renderHome();
+		}
+	}
 
 	/**
 	 * セッションのタブ（T-269）。ファイルタブと同じ感覚で行き来できるようにする。
@@ -1175,7 +1407,25 @@
 			return;
 		}
 		if (message.type === 'sessions') {
-			renderSessionTabs(message.tabs ?? []);
+			// 束（T-314）が届いていれば 2 段（タブ列＋絞り込み）で描き直す。
+			// まだなら従来どおり全部を 1 列に
+			if (homeGroups.length > 0) {
+				renderGroups();
+			} else {
+				renderSessionTabs(message.tabs ?? []);
+			}
+			return;
+		}
+		if (message.type === 'home') {
+			homeGroups = message.groups ?? [];
+			// 消えたタブを眺め続けない（選んでいたタブが消えたら前面の束へ戻す）
+			if (viewGroupId && !homeGroups.some((group) => group.id === viewGroupId)) {
+				viewGroupId = null;
+			}
+			if (typeof message.open === 'boolean' && message.open !== homeOpen) {
+				setHomeOpen(message.open);
+			}
+			renderGroups();
 			return;
 		}
 		if (message.type === 'history') {

@@ -86,7 +86,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-h | T-323 | 2026-08-25 20:47 | nimbus/scripts/doctor.mjs, nimbus/tests/scripts/doctor.test.mjs
+- 🔒 @session-h | T-323 | 2026-08-25 20:47 | nimbus/scripts/doctor.mjs, nimbus/tests/scripts/doctor.test.mjs, extensions/nimbus/src/test/oneShot.test.ts（新規）
 
 ## 進行中
 
