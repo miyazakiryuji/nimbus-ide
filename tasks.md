@@ -84,7 +84,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       `nimbus.svg` / `nimbus-tasks.svg` / `nimbus-settings.svg` / `nimbus-debug.svg` を
       `extensions/nimbus/resources/` へ反映する。差し替え後は `extensions/nimbus/package.json`
       の参照がそのまま効くこと、単色 `currentColor` SVG として XML が通ること、Nimbus 起動時に
-      Activity Bar で潰れず見えることを確認する [P2] @session-fable 2026-08-26 着手
+      Activity Bar で潰れず見えることを確認する [P2] @session-fable 2026-08-26（済: 4 本差し替え・XML/currentColor/参照のテスト icons.test.mjs / 残: パッケージ版で Activity Bar の見た目確認）
 
 ## 作業予約（いま触っているファイル）
 

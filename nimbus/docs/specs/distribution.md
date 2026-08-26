@@ -59,6 +59,10 @@ bash nimbus/scripts/sync-upstream.sh release/1.133
 
 - `node nimbus/branding/apply-product-json.mjs` — 身元（`product.json`）を当て直す
 - `node nimbus/branding/make-icon.mjs` — アイコンを作り直す
+- Activity Bar の面アイコン（T-330）: 原本は `nimbus/branding/icon-concepts/<日付>/`、
+  配布コピーは `extensions/nimbus/resources/*.svg`。約束は 3 つ — ファイル名は
+  `package.json` の参照と一致・`viewBox="0 0 24 24"`・色は `currentColor` 単色
+  （テーマに追従させる。固定色を入れない）。守りは `nimbus/tests/scripts/icons.test.mjs`
 - `node nimbus/branding/apply-core-changes.mjs` — コアの Nimbus ブロックを再適用する
 
 身元の差し替えは**手編集しない**。スクリプトで再適用できる形に保つ。
