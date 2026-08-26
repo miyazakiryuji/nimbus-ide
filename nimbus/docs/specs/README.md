@@ -125,6 +125,7 @@ IDE 基礎機能:
 - [`monorepo-scope.md`](monorepo-scope.md) — モノレポのスコープ切り替え（T-078）
 - [`permission-rules.md`](permission-rules.md) — 承認ルールの編集
 - [`regression-guard.md`](regression-guard.md) — 直したものが戻らないようにする
+- [`degrade-check.md`](degrade-check.md) — 基準との突き合わせ（数が減っていないか）
 - [`remote-approval.md`](remote-approval.md) — 手元の端末から承認だけする
 - [`session-registry.md`](session-registry.md) — セッションの台帳（持ち主・横断の上限・続きから・場所の重なり）
 - [`session-repeats.md`](session-repeats.md) — 走っている最中に繰り返しに気づく（T-237）

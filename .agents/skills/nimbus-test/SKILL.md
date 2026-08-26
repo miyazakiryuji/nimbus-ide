@@ -87,6 +87,7 @@ bash nimbus/scripts/test.sh unit                                     # モジュ
 NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged              # GUI 全件
 NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged --untrusted  # 信頼なしの見え方
 node nimbus/scripts/doctor.mjs                                       # 不要ファイル・仕様ズレ
+node nimbus/scripts/degrade.mjs check --full                         # 締め: 基準より減っていないか（T-335）
 ```
 
 - 落ちたものがあれば、**次の段へ進む前に**そこで直す
@@ -94,6 +95,23 @@ node nimbus/scripts/doctor.mjs                                       # 不要フ
   利用者に確認してから）
 - 結果は件数まで板に残す（例: `パッケージ版 GUI 55/55`）。「通った」だけでは、後から
   何件の時点だったのかが分からない
+
+## デグレチェック（基準との突き合わせ・T-335）
+
+**ある程度実装したら走らせる。** CLAUDE.md の「Before を控えて After で同じだけ通る」の控え帳。
+
+```bash
+bash nimbus/scripts/test.sh degrade              # いつもの確認（unit＋目録＋ドクター）
+node nimbus/scripts/degrade.mjs check --full     # 総合試験の締め（GUI 全件の通過数まで）
+node nimbus/scripts/degrade.mjs record           # 基準を進める（意図した増減のとき）
+```
+
+見るのは**減り**だけ（増えるのは自由）: 落ちるテストの数 / テスト・GUI ケース・仕様書の総数 /
+入口（コマンド・ビュー・設定）/ `core/` の export / ドクター要対応。基準は
+`nimbus/tests/baseline.json`（コミットされる＝全セッション共有）。
+
+**意図して消したときは、変更と同じコミットで `record`。** 赤を握りつぶさない —
+基準の diff に削減が残るのが、板の「消す理由を 1 行残す」の数字版。
 
 ## 足すべきケースの見つけかた
 

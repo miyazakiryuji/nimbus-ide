@@ -7,6 +7,8 @@
  */
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { settingReadKeys, viewProviderIds } from '../../scripts/doctor.mjs';
 
 test('登録のしかたが違っても、プロバイダが付いていると読む（T-284）', () => {
@@ -68,4 +70,16 @@ test('別の名前空間を変数に受けた読みは、nimbus の読みに数�
 	].join('\n');
 	const reads = settingReadKeys(sources);
 	assert.deepEqual({ strict: [...reads.strict], loose: [...reads.loose] }, { strict: [], loose: [] });
+});
+
+test('--json はパイプ越しでも切れない（T-335 で実際に起きた）', () => {
+	// process.exit() は書き込み先がパイプだと stdout のフラッシュ前に死ぬ。
+	// 39265 文字が 7424 文字に切れて、JSON.parse が「Unterminated string」で落ちていた
+	const out = execFileSync(process.execPath, ['nimbus/scripts/doctor.mjs', '--json'], {
+		cwd: fileURLToPath(new URL('../../..', import.meta.url)),
+		encoding: 'utf8',
+		maxBuffer: 64 * 1024 * 1024
+	});
+	const parsed = JSON.parse(out); // 切れていればここで例外
+	assert.equal(typeof parsed.summary.error, 'number');
 });

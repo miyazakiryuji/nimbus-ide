@@ -97,6 +97,7 @@ CLAUDE.md の階層）、CLAUDE.md タブ（階層別・節単位で開く・繰
 | --- | --- |
 | `node nimbus/scripts/doctor.mjs` | 不要ファイル・宣言と実装のズレ・コア台帳の記載漏れ・文書のリンク切れ |
 | `node nimbus/scripts/regression-guard.mjs` | 守り（T 番号つき回帰テスト）の無い完了 |
+| `bash nimbus/scripts/test.sh degrade` | 基準（baseline.json）より減っていないか（デグレチェック） |
 | `node nimbus/scripts/board.mjs` | 板の状態（札の重なり・ID の重複・作業予約） |
 | `node nimbus/scripts/session-health.mjs` | セッション台帳の残骸 |
 | `bash nimbus/scripts/test.sh` | モジュールテスト＋GUI 操作テスト |

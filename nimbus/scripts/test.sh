@@ -56,6 +56,10 @@ case "$MODE" in
 	doctor)
 		run_step "ドクター（不要ファイル・仕様ズレ）" node nimbus/scripts/doctor.mjs
 		;;
+	degrade)
+		# 基準（nimbus/tests/baseline.json）との突き合わせ（T-335）。減りがあれば赤
+		run_step "デグレチェック" node nimbus/scripts/degrade.mjs check "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+		;;
 	gui)
 		compile_if_needed
 		run_step "GUI テスト" node nimbus/tests/gui/run.mjs "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
@@ -76,7 +80,7 @@ case "$MODE" in
 		echo "（GUI テストは含めていません。走らせるなら: bash nimbus/scripts/test.sh gui）"
 		;;
 	*)
-		echo "使い方: test.sh [unit|doctor|gui|all] [--with-claude]" >&2
+		echo "使い方: test.sh [unit|doctor|degrade|gui|all] [--with-claude]" >&2
 		exit 2
 		;;
 esac

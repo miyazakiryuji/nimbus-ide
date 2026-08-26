@@ -636,7 +636,8 @@ function main() {
 		const entry = CHECKS[name];
 		if (!entry) {
 			console.error(`不明な検査: ${name}（使えるのは ${Object.keys(CHECKS).join(', ')}）`);
-			process.exit(2);
+			process.exitCode = 2;
+			return;
 		}
 		try {
 			entry[1]();
@@ -667,7 +668,10 @@ function main() {
 		console.log(`\n要対応 ${errors.length} 件 / 参考 ${warns.length} 件`);
 	}
 
-	process.exit(errors.length > 0 ? 1 : 0);
+	// process.exit() にしない — 書き込み先がパイプだと stdout のフラッシュ前に死に、
+	// --json が**途中で切れる**（execFileSync から呼ぶと 39265 文字が 7424 文字になった・実測 T-335）。
+	// exitCode なら流し終えてから終わる
+	process.exitCode = errors.length > 0 ? 1 : 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

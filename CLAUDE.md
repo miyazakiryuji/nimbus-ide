@@ -111,6 +111,9 @@ upstream 追従でコアの Nimbus ブロックが落ちる、の 3 つが原因
 - **テストの中に T 番号を書く**（見出しコメントでよい）。どの修正を守っているのかが分からないと、
   後から「これは消してよいテストか」を判断できない
 - いま何が守られていないかは `node nimbus/scripts/regression-guard.mjs` で見る
+- **数が減っていないか**は `bash nimbus/scripts/test.sh degrade` で見る（基準は
+  `nimbus/tests/baseline.json`）。ある程度実装したら走らせる。**意図して消したときは、
+  変更と同じコミットで `node nimbus/scripts/degrade.mjs record`** — 基準の動きが diff に残る
 - コア（`src/vs/**`）の変更が落ちていないかは `node nimbus/scripts/doctor.mjs` の台帳照合（赤で落ちる）
 - 画面で見える振る舞いは、固めた `.app` で**該当機能のケース**を走らせて確かめる（次の節。
   全ケースを回すのは利用者が「総合試験」と言ったときとリリース前だけ）
