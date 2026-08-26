@@ -46,7 +46,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       ドクター要対応数 / 守りの無い完了数。`check --full` は GUI 全件の通過数まで見る
       （総合試験の最後に置く）。ドクターと同じ形（pure 関数 export ＋ CLI ガード）で
       `nimbus/tests/scripts/degrade.test.mjs` から検証する [P1] @session-e 2026-08-26
-- [ ] T-334 「ヘルプ（ゆあ）」の命名が直接的すぎる（利用者指摘）— 名前＋括弧注釈の二段構えは説明書の言い方。**できること**で付け直して「ゆあに聞く」（en: Ask Yua）に。コマンドも「ゆあに聞く」。引き換え: コマンドパレットで「ヘルプ」と打っても出なくなる（場所で引く経路＝設定の部屋の段は残る）[P2] @session-main 2026-08-26
+- [x] T-334 「ヘルプ（ゆあ）」の命名が直接的すぎる（利用者指摘）— 名前＋括弧注釈の二段構えをやめ、**できること**で「ゆあに聞く」（en: Ask Yua）に。ビュー・コマンド・ガイド本文・仕様 6 本・README・テスト名を揃えた。引き換え（パレットで「ヘルプ」と打っても出ない）は仕様に明記。パッケージ版でケース 11 通過 — 2026-08-26
 - [x] T-332 **Home（≡）の確認項目を数え上げて実行した** — 一枚に書き出し
       （[testing/home-checklist.md](nimbus/docs/testing/home-checklist.md)・観点 ①〜⑧ を ✅/🖐/— で仕分け）、
       自動化の受け皿として GUI ケース **59-home-checklist** を新設（開閉とツールチップの入れ替わり・
@@ -127,7 +127,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-main | T-334 | 2026-08-26 01:20 | extensions/nimbus/package.json, extensions/nimbus/package.nls.json, nimbus/i18n/package.nls.en.json, extensions/nimbus/src/help/yua.ts, nimbus/docs/specs/views-layout.md, nimbus/docs/specs/safety.md, nimbus/docs/specs/cockpit-fullscreen.md, nimbus/docs/specs/README.md, README.md, nimbus/tests/gui/cases/11-help-yua.mjs, extensions/nimbus/src/extension.ts, extensions/nimbus/src/cockpit/CockpitViewProvider.ts, nimbus/docs/specs/cockpit-chat.md, nimbus/docs/specs/skills-and-help.md, nimbus/docs/testing/f3-f6.md
 
 
 

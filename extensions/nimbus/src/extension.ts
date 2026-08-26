@@ -3578,7 +3578,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		await cockpit.reveal();
 	}
 
-	// ヘルプ（ゆあ）。コックピットとは別セッションで、ツールを一切渡さない
+	// 「ゆあに聞く」。コックピットとは別セッションで、ツールを一切渡さない
 	let helpSessionId: string | undefined;
 	const helpEvents: NimbusEvent[] = [];
 	const help = new CockpitViewProvider(

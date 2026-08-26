@@ -12,7 +12,7 @@
   "view.nimbus.usage": "Usage",
   "view.nimbus.mcp": "MCP Servers",
   "view.nimbus.settings": "Settings",
-  "view.nimbus.help": "Help (Yua)",
+  "view.nimbus.help": "Ask Yua",
   "command.newSession": "Start a New Session",
   "command.interrupt": "Interrupt the Running Session",
   "command.stopAll": "Stop All Sessions (Emergency Stop)",

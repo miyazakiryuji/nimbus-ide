@@ -9,7 +9,7 @@
 import { expandPane, includesAny, labels, openHiddenView, openNimbusSettingsSidebar, sidebarText } from '../helpers.mjs';
 
 export default {
-	name: 'ヘルプ（ゆあ）が開き、ゆあ用の入力欄になっている',
+	name: '「ゆあに聞く」が開き、ゆあ用の入力欄になっている',
 	async run(page, ctx) {
 		ctx.expect(await openNimbusSettingsSidebar(page), 'Nimbus 設定のサイドバーを開けない');
 

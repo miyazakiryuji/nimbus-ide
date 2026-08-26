@@ -172,7 +172,7 @@ export interface CockpitHandlers {
 	log(message: string): void;
 }
 
-/** 会話ビューの見た目まわり。コックピットとヘルプ（ゆあ）で同じ実装を使い回す */
+/** 会話ビューの見た目まわり。コックピットと「ゆあに聞く」で同じ実装を使い回す */
 export interface CockpitOptions {
 	/** 発言者のラベル */
 	assistantLabel: string;

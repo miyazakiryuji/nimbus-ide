@@ -15,7 +15,7 @@ Nimbus の**現行**仕様を機能ごとに 1 ファイルで置く場所です
 - [`context-view.md`](context-view.md) — いま Claude に渡っている前提の一覧
 - [`claude-md.md`](claude-md.md) — CLAUDE.md のタブ（階層別の一覧・節単位で開く・ひな形から足す）
 - [`parallel-tasks.md`](parallel-tasks.md) — 並列タスク（worktree × カンバン）
-- [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索とヘルプ（ゆあ）
+- [`skills-and-help.md`](skills-and-help.md) — スキルの一覧・検索と「ゆあに聞く」
 - [`protected-paths.md`](protected-paths.md) — 読ませたくないファイルを画面から指定する
 - [`safety.md`](safety.md) — 緊急停止・危険操作の検知・秘匿ファイルの遮断・送信前検査
 - [`review-comments.md`](review-comments.md) — レビューコメントの取り込み

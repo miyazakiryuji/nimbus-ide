@@ -12,7 +12,7 @@
   "view.nimbus.usage": "使用量",
   "view.nimbus.mcp": "MCP サーバー",
   "view.nimbus.settings": "設定",
-  "view.nimbus.help": "ヘルプ（ゆあ）",
+  "view.nimbus.help": "ゆあに聞く",
   "command.newSession": "新しいセッションを開始",
   "command.interrupt": "実行中のセッションを中断",
   "command.stopAll": "すべてのセッションを止める（緊急停止）",
