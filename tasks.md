@@ -57,6 +57,17 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       （process.exit がフラッシュ前に死ぬ・39265→7424 文字）。exitCode に替えて直し、
       doctor.test.mjs に守りを置いた [P1]
 - [x] T-334 「ヘルプ（ゆあ）」の命名が直接的すぎる（利用者指摘）— 名前＋括弧注釈の二段構えをやめ、**できること**で「ゆあに聞く」（en: Ask Yua）に。ビュー・コマンド・ガイド本文・仕様 6 本・README・テスト名を揃えた。引き換え（パレットで「ヘルプ」と打っても出ない）は仕様に明記。パッケージ版でケース 11 通過 — 2026-08-26
+- [x] T-336 **待ち時間コンパスを入れた** — 「いまのようす」（`nimbus.openRhythm`）の頭に、
+      いま見るべきものを 1 つの短い状態で出す: **人の番**（承認待ち / 何も走っていない）→
+      **デバッグを見る**（失敗 error）→ **区切る**（90 分）→ **別作業へ**（走行待ち）の優先順。
+      判定は `core/rhythm.ts` の `compass()`（suggest の「45 分黙る」に縛られない — 自分で開いた
+      ときにしか見えないので押しつけにならない）。失敗数を counts に配線。入口はコックピットと
+      全画面タイトルのコンパスアイコン（素材の 24px 単色版・T-330 の契約で icons.test.mjs が守る。
+      openRhythm はこれまでパレット限定 = 入口ルールの取りこぼしだった）。約束どおり通知・音・
+      アニメーション・専用サイドバーは無し。守り: rhythm.test.ts 3 件（計 11 件）・cockpitMenus・
+      GUI ケース 60（パッケージ版で入口 → 開く → 判定、1/1・スモーク例外 0）— 2026-08-26 /
+      仕様 [rhythm](nimbus/docs/specs/rhythm.md)
+
 - [x] T-332 **Home（≡）の確認項目を数え上げて実行した** — 一枚に書き出し
       （[testing/home-checklist.md](nimbus/docs/testing/home-checklist.md)・観点 ①〜⑧ を ✅/🖐/— で仕分け）、
       自動化の受け皿として GUI ケース **59-home-checklist** を新設（開閉とツールチップの入れ替わり・
@@ -121,12 +132,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       `nimbus/scripts/session-health.mjs`・スキル `.agents/skills/session-health/`。
       **手元の台帳で実際に残骸を 1 件検出**（14 時間前に落ちた awaiting-input）。
       `--forget` は「忘れてよい」以外に触らないことを、作った台帳で確認済み [P1]
-- [ ] T-336 **待ち時間コンパスを入れる** — 利用者希望 2026-08-26。エージェントを待っている間、
-      次に見るべきものを「人の番 / 別作業へ / 区切る / デバッグを見る」のような短い状態として出す。
-      既存の `nimbus.openRhythm` を起点にし、続けている時間・走行中タスク数・承認待ち・失敗数から判定する。
-      生成済み素材は `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.png`（元絵）と
-      `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.svg`（24px 単色版）。Home か「いまのようす」
-      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2] @session-fable 2026-08-26（済: compass 判定＋失敗数の配線＋タイトル入口＋テスト 11 件緑 / 残: 固めて GUI 60）
 
 ## 作業予約（いま触っているファイル）
 
@@ -136,8 +141,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 「止まったタスクは、続きから再開できる形にする」。それ以外で他人の行は編集も削除もしない）。
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
-
-- 🔒 @session-fable | T-336 | 2026-08-26 | extensions/nimbus/src/core/rhythm.ts, extensions/nimbus/src/rhythm.ts, extensions/nimbus/src/test/rhythm.test.ts, extensions/nimbus/src/test/cockpitMenus.test.ts, extensions/nimbus/resources/nimbus-compass.svg（新規）, nimbus/tests/gui/cases/60-waiting-compass.mjs（新規）, nimbus/docs/specs/rhythm.md, extensions/nimbus/package.json（メニューのみ・短時間）, extensions/nimbus/src/extension.ts（counts のみ・短時間）
 
 
 
