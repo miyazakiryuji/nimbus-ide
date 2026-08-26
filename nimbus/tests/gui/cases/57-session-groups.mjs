@@ -158,5 +158,10 @@ export default {
 		);
 
 		await ctx.shot('session-groups');
+		// **Home は閉じて終える。** ケースはアプリを共有しているので、開きっぱなしは
+		// 次のケースの前提を壊す（54 に書いた教訓を自分が破っていて、59（T-332）の
+		// 「開く前から Home が出ている」で顕在化した）
+		await frame.$eval('#homeToggle', (el) => el.click());
+		await page.waitForTimeout(400);
 	}
 };

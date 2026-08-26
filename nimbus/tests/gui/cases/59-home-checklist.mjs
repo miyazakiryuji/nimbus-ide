@@ -174,9 +174,24 @@ export default {
 			'Home の行を Enter で開いても会話へ戻らない'
 		);
 
-		// ① 面をまたぐ引き継ぎ: 開いた状態でエディタタブの面を開くと、そちらも開いて出る
+		// ① 面をまたぐ引き継ぎ: 開いた状態でエディタタブの面を開くと、そちらも開いて出る。
+		// **引き継がれるのは「新しく開いた面」**（既存の面は自分の状態を保つ — 画面分割 T-315 の設計）。
+		// フル実行では前のケースのタブが残っていて再表示になり、ここが偽って落ちた。
+		// 42 と同じ方法（タブの ✕ を実際に押す）で先に片付けてから開く
+		for (let i = 0; i < 6; i++) {
+			const closers = await page.$$('.tabs-container .tab .codicon-close, .tabs-container .tab .tab-close');
+			if (closers.length === 0) {
+				break;
+			}
+			await closers[0].click();
+			await page.waitForTimeout(500);
+		}
 		await (await side.$('#homeToggle')).click();
 		await page.waitForTimeout(600);
+		// **新しく開いた面だけ**を掴むため、コマンドの前後でフレーム集合を差分する。
+		// 「#homeToggle を持つ side 以外」だと、ヘルプ（ゆあ）の webview（同じ実装＝同じ DOM）や
+		// 前のケースが残した面を掴んでしまう — フル実行でだけそれを読んで偽って落ちた
+		const framesBefore = await cockpitFrames(page);
 		await page.keyboard.press('F1');
 		await page.waitForTimeout(600);
 		await page.keyboard.type('コックピットをタブで開く', { delay: 15 });
@@ -186,7 +201,7 @@ export default {
 		let tabFrame;
 		for (let i = 0; i < 10 && !tabFrame; i++) {
 			const frames = await cockpitFrames(page);
-			tabFrame = frames.find((frame) => frame !== side);
+			tabFrame = frames.find((frame) => !framesBefore.includes(frame));
 			if (!tabFrame) {
 				await page.waitForTimeout(500);
 			}
