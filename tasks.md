@@ -34,6 +34,29 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
+- [ ] T-335 **デグレチェック診断（基準との突き合わせ）** — 利用者依頼 2026-08-26。
+      CLAUDE.md は「Before を控えて After で同じだけ通ることを確認」と要求するが、その控えは
+      各セッションの頭の中にしか無い（Herdr 撤去では 1432→1423 を**手で**数えた）。
+      `regression-guard` は守りの**存在**を見る道具で、**数が減っていないか**は誰も見ていない。
+      `nimbus/scripts/degrade.mjs` を作る: `record` が基準を `nimbus/tests/baseline.json`
+      （コミットされる＝全セッション共有・意図した削減は diff に残る）へ書き、`check` が
+      今と突き合わせて減りを一覧し exit 1。測るのは機械が確実に言えるものだけ —
+      モジュールテストの総数と通過数 / GUI ケースの目録 / 入口の目録（コマンド・ビュー・設定）/
+      core の export 目録（「既存 export を変えない」の機械化）/ 仕様書の目録 /
+      ドクター要対応数 / 守りの無い完了数。`check --full` は GUI 全件の通過数まで見る
+      （総合試験の最後に置く）。ドクターと同じ形（pure 関数 export ＋ CLI ガード）で
+      `nimbus/tests/scripts/degrade.test.mjs` から検証する [P1] @session-e 2026-08-26
+- [ ] T-334 「ヘルプ（ゆあ）」の命名が直接的すぎる（利用者指摘）— 名前＋括弧注釈の二段構えは説明書の言い方。**できること**で付け直して「ゆあに聞く」（en: Ask Yua）に。コマンドも「ゆあに聞く」。引き換え: コマンドパレットで「ヘルプ」と打っても出なくなる（場所で引く経路＝設定の部屋の段は残る）[P2] @session-main 2026-08-26
+- [x] T-332 **Home（≡）の確認項目を数え上げて実行した** — 一枚に書き出し
+      （[testing/home-checklist.md](nimbus/docs/testing/home-checklist.md)・観点 ①〜⑧ を ✅/🖐/— で仕分け）、
+      自動化の受け皿として GUI ケース **59-home-checklist** を新設（開閉とツールチップの入れ替わり・
+      束 1 つならタブ列を出さない後方互換・空の束の文言・行の番号と状態・下書きに「移す」を出さない・
+      active は 1 つだけ・行を Enter で開く・開いた状態のエディタタブへの引き継ぎ・広い面の chip 選択、
+      後片付けまで）。パッケージ版で 54 / 57 / 59 とも 1/1 通過・スクリーンショット 2 枚で目視。
+      ⑦ Herdr は T-333 の撤去で対象外（観点だけ紙に残置）。残る 🖐（多数スクロール・520px 境界・
+      別ウィンドウ・テーマ別判読）は総合試験の枠 — 2026-08-26 /
+      仕様 [cockpit-home](nimbus/docs/specs/cockpit-home.md) からリンク
+
 - [x] T-333（旧 T-331・アイコン差し替えと ID が重複したので採番し直し）**Herdr 連携を取り除く**（利用者判断 2026-08-26）— 読むだけ・操作できない一覧行で、
       選んでも「Herdr が持っています」と言われて終わる（飾りに近い）。実装 226 行に対して
       テスト・仕様・権利確認で計 593 行の保守の尻尾があり、しかもソケット API は Nimbus が
@@ -98,25 +121,11 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-fable | T-332 | 2026-08-26 | nimbus/docs/testing/home-checklist.md（新規）, nimbus/tests/gui/cases/59-home-checklist.mjs（新規）, nimbus/docs/specs/cockpit-home.md
+- 🔒 @session-main | T-334 | 2026-08-26 01:20 | extensions/nimbus/package.json, extensions/nimbus/package.nls.json, nimbus/i18n/package.nls.en.json, extensions/nimbus/src/help/yua.ts, nimbus/docs/specs/views-layout.md, nimbus/docs/specs/safety.md, nimbus/docs/specs/cockpit-fullscreen.md, nimbus/docs/specs/README.md, README.md, nimbus/tests/gui/cases/11-help-yua.mjs, extensions/nimbus/src/extension.ts, extensions/nimbus/src/cockpit/CockpitViewProvider.ts, nimbus/docs/specs/cockpit-chat.md, nimbus/docs/specs/skills-and-help.md, nimbus/docs/testing/f3-f6.md
 
 
 
 
-- [ ] T-332 **コックピットの ≡（Home＝束とセッションの一覧・T-314）の確認項目を網羅的に書き出し、
-      書き終わったら実際に走らせる** — 複数セッションの切り替えが集まる場所で、**バグの温床**に
-      なっている。まず**項目を数え上げる**（`nimbus/docs/testing/` に 1 枚）。最低限そろえる観点:
-      ① 開閉 — ≡ で Home が出て会話が隠れる / もう一度で戻る / ツールチップが入れ替わる /
-      `homeOpened` の状態が面を開き直しても食い違わない（サイドバー・エディタタブ・全画面の 3 面）
-      ② 束 — 束が 0 / 1 / 複数、束が空、前面が別の束へ移ったとき、`activeGroupId()` が `default` へ
-      落ちるとき ③ 一覧の行 — 記号・色・番号・名前、0 本 / 1 本 / 多数（スクロール）/ 長い名前 / 同名
-      ④ 切り替え — Home から選んで**会話が消えない**こと（`retained` / `archived` の付け替えは
-      既知の落とし穴）・前面の印（`aria-current`）が 1 つだけ ⑤ 狭い面 — `renderHomeBar()` の
-      出し分け（サイドバー幅 / タブ / 全画面）⑥ 増減 — + で作った直後の並びと前面、終わった
-      セッションの残りかた、別ウィンドウで作ったぶんが出るか（台帳の突き合わせ）
-      ⑦ Herdr のぶん — 混ざって見えるが**選んでも切り替わらない**という約束 ⑧ キーボードとテーマ
-      （Tab / Enter / Esc、light / dark / ハイコントラストで記号と色が読めるか）。
-      **書き出したら実行する** — GUI ケースに落として `--only` で回し、最後は固めた `.app` でも通す [P1] @session-fable 2026-08-26 着手
 
 ## 進行中
 
