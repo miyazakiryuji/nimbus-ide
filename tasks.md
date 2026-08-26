@@ -126,7 +126,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       既存の `nimbus.openRhythm` を起点にし、続けている時間・走行中タスク数・承認待ち・失敗数から判定する。
       生成済み素材は `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.png`（元絵）と
       `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.svg`（24px 単色版）。Home か「いまのようす」
-      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2] @session-fable 2026-08-26 着手
+      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2] @session-fable 2026-08-26（済: compass 判定＋失敗数の配線＋タイトル入口＋テスト 11 件緑 / 残: 固めて GUI 60）
 
 ## 作業予約（いま触っているファイル）
 

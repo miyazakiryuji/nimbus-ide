@@ -876,6 +876,7 @@
       {
         "command": "nimbus.openRhythm",
         "title": "%command.openRhythm%",
+        "icon": "resources/nimbus-compass.svg",
         "category": "Nimbus",
         "icon": "$(pulse)"
       },
@@ -1362,6 +1363,11 @@
           "group": "navigation@3"
         },
         {
+          "command": "nimbus.openRhythm",
+          "when": "view == nimbus.cockpit",
+          "group": "navigation@4"
+        },
+        {
           "command": "nimbus.showSessionSide",
           "when": "view == nimbus.cockpit",
           "group": "nimbus@1"
@@ -1480,6 +1486,11 @@
           "command": "nimbus.fullscreenCockpit",
           "when": "activeWebviewPanelId == nimbus.cockpitTab",
           "group": "navigation@4"
+        },
+        {
+          "command": "nimbus.openRhythm",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [

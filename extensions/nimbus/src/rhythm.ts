@@ -12,7 +12,7 @@ const SUGGESTED_KEY = 'nimbus.rhythmSuggestedAt';
 
 export async function openRhythm(
 	context: vscode.ExtensionContext,
-	counts: () => { running: number; pending: number }
+	counts: () => { running: number; pending: number; failed: number }
 ): Promise<void> {
 	const now = Date.now();
 	const startedAt = context.workspaceState.get<number>(START_KEY) ?? now;
@@ -20,13 +20,14 @@ export async function openRhythm(
 		await context.workspaceState.update(START_KEY, now);
 	}
 
-	const { running, pending } = counts();
+	const { running, pending, failed } = counts();
 	const input = {
 		startedAt,
 		now,
 		lastSuggestedAt: context.workspaceState.get<number>(SUGGESTED_KEY),
 		running,
-		pending
+		pending,
+		failed
 	};
 
 	const markdown = renderRhythm(input);

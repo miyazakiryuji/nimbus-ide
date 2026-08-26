@@ -40,6 +40,8 @@ test('コックピットの面から、主な操作がすべて押せる（T-294
 		'nimbus.newSession',
 		'nimbus.showSessions',
 		'nimbus.fullscreenCockpit',
+		// 待ち時間コンパス（T-336）。開いた先の頭に判定が出る
+		'nimbus.openRhythm',
 		'nimbus.showSessionSide',
 		'nimbus.openCockpitTab',
 		// 取り込みと押し上げ（T-306）。使う頻度が低めなので `...` の後ろ
@@ -55,7 +57,7 @@ test('全画面（エディタタブ）でも同じ操作が押せる（T-290 / 
 	// ここに置かないと、全画面にした瞬間に**入口がゼロになる**
 	assert.deepStrictEqual(
 		titleCommands(menus['editor/title'], 'activeWebviewPanelId == nimbus.cockpitTab'),
-		['nimbus.newSession', 'nimbus.showSessions', 'nimbus.showSessionSide', 'nimbus.fullscreenCockpit']
+		['nimbus.newSession', 'nimbus.showSessions', 'nimbus.showSessionSide', 'nimbus.fullscreenCockpit', 'nimbus.openRhythm']
 	);
 });
 

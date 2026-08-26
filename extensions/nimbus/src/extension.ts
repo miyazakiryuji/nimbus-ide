@@ -4155,7 +4155,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.checkApiResponse', () => checkApiResponse()),
 		vscode.commands.registerCommand('nimbus.generateMockResponse', () => generateMockResponse()),
 		vscode.commands.registerCommand('nimbus.openRhythm', () =>
-			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals }))
+			openRhythm(context, () => ({ running: sessions.list().filter((s) => s.status === 'running').length, pending: pendingApprovals, failed: sessions.list().filter((s) => s.status === 'error').length }))
 		),
 		vscode.commands.registerCommand('nimbus.promoteInstruction', (node?: { item?: { text?: string } }) =>
 			promoteInstruction(claudeMdView, node?.item?.text ?? '')

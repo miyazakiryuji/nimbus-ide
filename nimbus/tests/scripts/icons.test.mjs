@@ -12,7 +12,7 @@ import { join, dirname } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const RES = join(ROOT, 'extensions', 'nimbus', 'resources')
-const ICONS = ['nimbus.svg', 'nimbus-tasks.svg', 'nimbus-settings.svg', 'nimbus-debug.svg']
+const ICONS = ['nimbus.svg', 'nimbus-tasks.svg', 'nimbus-settings.svg', 'nimbus-debug.svg', 'nimbus-compass.svg']
 const APP_ICNS = join(ROOT, 'resources', 'darwin', 'code.icns')
 
 test('package.json の view アイコン参照が実在する（T-330）', () => {
@@ -24,7 +24,7 @@ test('package.json の view アイコン参照が実在する（T-330）', () =>
 	assert.deepStrictEqual(missing, [])
 })
 
-test('Activity Bar の SVG は 24x24・currentColor 単色（T-330）', () => {
+test('Activity Bar とタイトルの SVG は 24x24・currentColor 単色（T-330 / T-336）', () => {
 	const report = ICONS.map((name) => {
 		const text = readFileSync(join(RES, name), 'utf8')
 		const hardColors = (text.match(/(?:fill|stroke)="(?!currentColor|none)[^"]+"/g) ?? [])
