@@ -79,6 +79,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       `nimbus/scripts/session-health.mjs`・スキル `.agents/skills/session-health/`。
       **手元の台帳で実際に残骸を 1 件検出**（14 時間前に落ちた awaiting-input）。
       `--forget` は「忘れてよい」以外に触らないことを、作った台帳で確認済み [P1]
+- [ ] T-330 **Nimbus のアイコン候補を本体へ差し替える** — 2026-08-26 に作った候補
+      `nimbus/branding/icon-concepts/2026-08-26/` から Activity Bar 用の
+      `nimbus.svg` / `nimbus-tasks.svg` / `nimbus-settings.svg` / `nimbus-debug.svg` を
+      `extensions/nimbus/resources/` へ反映する。差し替え後は `extensions/nimbus/package.json`
+      の参照がそのまま効くこと、単色 `currentColor` SVG として XML が通ること、Nimbus 起動時に
+      Activity Bar で潰れず見えることを確認する [P2] @session-fable 2026-08-26 着手
 
 ## 作業予約（いま触っているファイル）
 
@@ -88,6 +94,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 「止まったタスクは、続きから再開できる形にする」。それ以外で他人の行は編集も削除もしない）。
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
+
+- 🔒 @session-fable | T-330 | 2026-08-26 | extensions/nimbus/resources/nimbus.svg, extensions/nimbus/resources/nimbus-tasks.svg, extensions/nimbus/resources/nimbus-settings.svg, extensions/nimbus/resources/nimbus-debug.svg, nimbus/tests/scripts/icons.test.mjs
 
 
 
