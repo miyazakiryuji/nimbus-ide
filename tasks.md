@@ -107,7 +107,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       原本は `icon-concepts/2026-08-26/nimbus-app.svg`。`make-icon.mjs` を「手続き描画」から
       「SVG 原本を Playwright の Chromium で描く」形に作り替え、out/ の PNG・icns を作り直して
       `resources/darwin/code.icns` へ反映する。固めた .app の icns が新しい絵になっていることまで確認
-      @session-fable 2026-08-26
+      @session-fable 2026-08-26（済: make-icon.mjs 作り替え・icns 再生成と反映・守りのテスト / 残: 固めた .app で確認）
 
 
 

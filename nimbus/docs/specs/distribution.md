@@ -58,7 +58,10 @@ bash nimbus/scripts/sync-upstream.sh release/1.133
 ### 追従後にやり直すこと
 
 - `node nimbus/branding/apply-product-json.mjs` — 身元（`product.json`）を当て直す
-- `node nimbus/branding/make-icon.mjs` — アイコンを作り直す
+- `node nimbus/branding/make-icon.mjs` — アプリアイコンを作り直す（T-331）。意匠の正本は
+  `nimbus/branding/icon-concepts/<日付>/nimbus-app.svg` で、スクリプトが手元の Chrome で描いて
+  `out/` の PNG・icns を作り、`resources/darwin/code.icns` へ反映する（darwin ビルドが
+  Nimbus.app に埋める）。守りは `nimbus/tests/scripts/icons.test.mjs`（icns の健全性）
 - Activity Bar の面アイコン（T-330）: 原本は `nimbus/branding/icon-concepts/<日付>/`、
   配布コピーは `extensions/nimbus/resources/*.svg`。約束は 3 つ — ファイル名は
   `package.json` の参照と一致・`viewBox="0 0 24 24"`・色は `currentColor` 単色

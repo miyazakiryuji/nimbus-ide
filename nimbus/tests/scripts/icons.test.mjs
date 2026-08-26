@@ -13,6 +13,7 @@ import { join, dirname } from 'node:path'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const RES = join(ROOT, 'extensions', 'nimbus', 'resources')
 const ICONS = ['nimbus.svg', 'nimbus-tasks.svg', 'nimbus-settings.svg', 'nimbus-debug.svg']
+const APP_ICNS = join(ROOT, 'resources', 'darwin', 'code.icns')
 
 test('package.json の view アイコン参照が実在する（T-330）', () => {
 	const pkg = JSON.parse(readFileSync(join(ROOT, 'extensions', 'nimbus', 'package.json'), 'utf8'))
@@ -38,5 +39,29 @@ test('Activity Bar の SVG は 24x24・currentColor 単色（T-330）', () => {
 	assert.deepStrictEqual(
 		report,
 		ICONS.map((name) => ({ name, viewBox: true, svgRoot: true, balanced: true, hardColors: [] }))
+	)
+})
+
+test('アプリ本体の icns が壊れていない（T-331）', () => {
+	// make-icon.mjs（SVG 原本 → Chrome 描画 → iconutil）の反映先。壊れやすいのは
+	// 「途中で千切れた icns」と「大きい版の欠け」なので、その 2 つだけを固定する
+	const buf = readFileSync(APP_ICNS)
+	const types = []
+	for (let off = 8; off + 8 <= buf.length;) {
+		const len = buf.readUInt32BE(off + 4)
+		if (len < 8) {
+			break
+		}
+		types.push(buf.toString('ascii', off, off + 4))
+		off += len
+	}
+	assert.deepStrictEqual(
+		{
+			magic: buf.toString('ascii', 0, 4),
+			declaredLength: buf.readUInt32BE(4),
+			has1024: types.includes('ic10'),
+			has512: types.includes('ic09')
+		},
+		{ magic: 'icns', declaredLength: buf.length, has1024: true, has512: true }
 	)
 })
