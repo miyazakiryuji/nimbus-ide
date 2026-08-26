@@ -34,7 +34,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 思いついたことをここへ。整った文章でなくてよい。「〜したい」「〜が気になる」で十分。
 優先度や置き場所は後で決める。
-- [ ] T-335 **デグレチェック診断（基準との突き合わせ）** — 利用者依頼 2026-08-26。
+- [x] T-335 **デグレチェック診断（基準との突き合わせ）** — 利用者依頼 2026-08-26。
       CLAUDE.md は「Before を控えて After で同じだけ通ることを確認」と要求するが、その控えは
       各セッションの頭の中にしか無い（Herdr 撤去では 1432→1423 を**手で**数えた）。
       `regression-guard` は守りの**存在**を見る道具で、**数が減っていないか**は誰も見ていない。
@@ -45,7 +45,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       core の export 目録（「既存 export を変えない」の機械化）/ 仕様書の目録 /
       ドクター要対応数 / 守りの無い完了数。`check --full` は GUI 全件の通過数まで見る
       （総合試験の最後に置く）。ドクターと同じ形（pure 関数 export ＋ CLI ガード）で
-      `nimbus/tests/scripts/degrade.test.mjs` から検証する [P1] @session-e 2026-08-26
+      `nimbus/tests/scripts/degrade.test.mjs`（12 件）から検証 — 2026-08-26 /
+      仕様 [degrade-check](nimbus/docs/specs/degrade-check.md) / `test.sh degrade` からも走る /
+      実機で record → 緑 → 基準偽装で赤 exit 1 → record で復帰、まで確認。
+      **作っている最中に実バグを 1 つ発見**: doctor --json がパイプ越しで切れる
+      （process.exit がフラッシュ前に死ぬ・39265→7424 文字）。exitCode に替えて直し、
+      doctor.test.mjs に守りを置いた [P1]
 - [x] T-334 「ヘルプ（ゆあ）」の命名が直接的すぎる（利用者指摘）— 名前＋括弧注釈の二段構えをやめ、**できること**で「ゆあに聞く」（en: Ask Yua）に。ビュー・コマンド・ガイド本文・仕様 6 本・README・テスト名を揃えた。引き換え（パレットで「ヘルプ」と打っても出ない）は仕様に明記。パッケージ版でケース 11 通過 — 2026-08-26
 - [x] T-332 **Home（≡）の確認項目を数え上げて実行した** — 一枚に書き出し
       （[testing/home-checklist.md](nimbus/docs/testing/home-checklist.md)・観点 ①〜⑧ を ✅/🖐/— で仕分け）、
@@ -116,7 +121,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       既存の `nimbus.openRhythm` を起点にし、続けている時間・走行中タスク数・承認待ち・失敗数から判定する。
       生成済み素材は `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.png`（元絵）と
       `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.svg`（24px 単色版）。Home か「いまのようす」
-      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2]
+      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2] @session-fable 2026-08-26 着手
 
 ## 作業予約（いま触っているファイル）
 
@@ -126,6 +131,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 「止まったタスクは、続きから再開できる形にする」。それ以外で他人の行は編集も削除もしない）。
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
+
+- 🔒 @session-fable | T-336 | 2026-08-26 | extensions/nimbus/src/core/rhythm.ts, extensions/nimbus/src/rhythm.ts, extensions/nimbus/src/test/rhythm.test.ts, extensions/nimbus/src/test/cockpitMenus.test.ts, extensions/nimbus/resources/nimbus-compass.svg（新規）, nimbus/tests/gui/cases/60-waiting-compass.mjs（新規）, nimbus/docs/specs/rhythm.md, extensions/nimbus/package.json（メニューのみ・短時間）, extensions/nimbus/src/extension.ts（counts のみ・短時間）
 
 
 
