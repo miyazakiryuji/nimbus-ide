@@ -111,6 +111,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       `nimbus/scripts/session-health.mjs`・スキル `.agents/skills/session-health/`。
       **手元の台帳で実際に残骸を 1 件検出**（14 時間前に落ちた awaiting-input）。
       `--forget` は「忘れてよい」以外に触らないことを、作った台帳で確認済み [P1]
+- [ ] T-336 **待ち時間コンパスを入れる** — 利用者希望 2026-08-26。エージェントを待っている間、
+      次に見るべきものを「人の番 / 別作業へ / 区切る / デバッグを見る」のような短い状態として出す。
+      既存の `nimbus.openRhythm` を起点にし、続けている時間・走行中タスク数・承認待ち・失敗数から判定する。
+      生成済み素材は `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.png`（元絵）と
+      `nimbus/branding/icon-concepts/2026-08-26/waiting-compass.svg`（24px 単色版）。Home か「いまのようす」
+      から見える軽い導線にし、割り込み通知・音・常時動くアニメーション・専用サイドバーは足さない [P2]
 
 ## 作業予約（いま触っているファイル）
 
