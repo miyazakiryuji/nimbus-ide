@@ -117,7 +117,6 @@ IDE 基礎機能:
 - [`decisions.md`](decisions.md) — 決めたことを残す（ADR）（T-060）
 - [`editor-tabs.md`](editor-tabs.md) — コックピットとタスク板をエディタタブで開く
 - [`headless-and-mcp-tools.md`](headless-and-mcp-tools.md) — ヘッドレス実行と MCP ツールの単体実行
-- [`herdr.md`](herdr.md) — Herdr のセッションを読む
 - [`import-rules.md`](import-rules.md) — 他のツールの設定を取り込む（T-068）
 - [`localization.md`](localization.md) — 多言語化（T-091）
 - [`managed-policy-and-plugins.md`](managed-policy-and-plugins.md) — 組織ポリシーとプラグイン API

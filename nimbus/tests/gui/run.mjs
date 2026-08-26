@@ -215,11 +215,8 @@ async function main() {
 	console.log(`  ${executablePath}`);
 	console.log(`  ワークスペース: ${workspace}`);
 
-	// Herdr のソケットは、テスト用の場所に固定する（T-279）。
-	// 利用者が本当に Herdr を動かしていても、テストがそれを読みに行かないようにするため。
 	// ケース側はこの場所に偽のソケットを立てて、読み手を確かめられる
-	const herdrSocket = join(userDataDir, 'herdr.sock');
-	const env = { ...process.env, NIMBUS_SMOKE: '1', HERDR_SOCKET_PATH: herdrSocket };
+	const env = { ...process.env, NIMBUS_SMOKE: '1' };
 	delete env.NODE_OPTIONS; // 子プロセスに引き継ぐと無言で止まる（実測）
 	if (devMain) {
 		// ソースから起動するときは開発モードの環境変数が要る（scripts/code.sh と同じ）。
@@ -244,8 +241,6 @@ async function main() {
 	const ctx = {
 		workspace,
 		userDataDir,
-		/** Herdr の偽ソケットを立てる場所（T-279） */
-		herdrSocket,
 		withClaude: flag('with-claude'),
 		// 開発ビルドとパッケージ版で振る舞いが変わるものがある（表示言語など）
 		packaged: flag('packaged'),

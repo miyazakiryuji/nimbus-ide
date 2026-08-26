@@ -100,7 +100,7 @@ import { describeSessionConflict, SessionFilesTracker } from './core/sessionFile
 import { SessionStore } from './sessionStore';
 import { TaskStore } from './taskStore';
 import { checkTaskHealth, describeIdle, summarizeProgress } from './core/taskSync';
-import { buildTabs, lookOf, type SessionTab } from './core/sessionTabs';
+import { buildTabs, type SessionTab } from './core/sessionTabs';
 import { quotaGauges, quotaLine, quotaTooltip, type QuotaGauge } from './core/usage';
 import { isOneShotSession } from './oneShot';
 import { abortRebase, describeSyncOutcome, performSync, publishBranch } from './gitSync';
@@ -114,8 +114,6 @@ import {
 	type EffortLevel
 } from './core/runSettings';
 import { SessionSidePane, type SideMode } from './sessionSide';
-import { listAgents as listHerdrAgents } from './herdr';
-import { describePane, toTabState as herdrTabState } from './core/herdr';
 import { stoppedSnapshot } from './debugTools';
 import {
 	admit,
@@ -2422,10 +2420,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 */
 	async function showSessions(): Promise<void> {
 		const records = await sessionStore.refresh();
-		// Herdr が動いていれば、そちらで走っているものも同じ一覧に混ぜる（T-279）。
-		// **読むだけ**で操作はしない — Nimbus 側にも持ち主がいるので、両方から触ると壊れる
-		const herdr = await listHerdrAgents();
-		if (records.length === 0 && herdr.length === 0) {
+		if (records.length === 0) {
 			void vscode.window.showInformationMessage('Nimbus: 台帳に載っているセッションはありません。');
 			return;
 		}
@@ -2475,26 +2470,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 			items.push(...group.members.map(toItem));
 		}
-		// Herdr のぶんは、状態の記号だけ Nimbus と揃えて並べる（読み手の頭を切り替えさせない）
-		const herdrItems = herdr.map((pane) => ({
-			label: `$(server) ${lookOf(herdrTabState(pane.status)).symbol} ${pane.title}`,
-			description: `Herdr · ${lookOf(herdrTabState(pane.status)).label}`,
-			detail: pane.cwd ?? '',
-			record: undefined,
-			herdr: pane
-		}));
-		const chosen = await vscode.window.showQuickPick([...items.map((item) => ({ ...item, herdr: undefined })), ...herdrItems], {
+		const chosen = await vscode.window.showQuickPick(items, {
 			title: describeRunning(runningSessions(records, now).length, concurrentLimit()),
 			placeHolder: '持ち主のいないセッションを選ぶと、続きから開きます'
 		});
 		if (!chosen) {
-			return;
-		}
-		if (chosen.herdr) {
-			// Nimbus の持ちものではないので、開かない。何であるかだけ伝える
-			void vscode.window.showInformationMessage(
-				`Nimbus: ${describePane(chosen.herdr)} — Herdr が持っているセッションです（Nimbus からは読むだけ）。`
-			);
 			return;
 		}
 		if (!chosen.record) {
