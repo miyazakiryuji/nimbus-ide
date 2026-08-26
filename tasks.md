@@ -79,12 +79,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       `nimbus/scripts/session-health.mjs`・スキル `.agents/skills/session-health/`。
       **手元の台帳で実際に残骸を 1 件検出**（14 時間前に落ちた awaiting-input）。
       `--forget` は「忘れてよい」以外に触らないことを、作った台帳で確認済み [P1]
-- [ ] T-330 **Nimbus のアイコン候補を本体へ差し替える** — 2026-08-26 に作った候補
-      `nimbus/branding/icon-concepts/2026-08-26/` から Activity Bar 用の
-      `nimbus.svg` / `nimbus-tasks.svg` / `nimbus-settings.svg` / `nimbus-debug.svg` を
-      `extensions/nimbus/resources/` へ反映する。差し替え後は `extensions/nimbus/package.json`
-      の参照がそのまま効くこと、単色 `currentColor` SVG として XML が通ること、Nimbus 起動時に
-      Activity Bar で潰れず見えることを確認する [P2] @session-fable 2026-08-26（済: 4 本差し替え・XML/currentColor/参照のテスト icons.test.mjs / 残: パッケージ版で Activity Bar の見た目確認）
 
 ## 作業予約（いま触っているファイル）
 
@@ -94,8 +88,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 「止まったタスクは、続きから再開できる形にする」。それ以外で他人の行は編集も削除もしない）。
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
-
-- 🔒 @session-fable | T-330 | 2026-08-26 | extensions/nimbus/resources/nimbus.svg, extensions/nimbus/resources/nimbus-tasks.svg, extensions/nimbus/resources/nimbus-settings.svg, extensions/nimbus/resources/nimbus-debug.svg, nimbus/tests/scripts/icons.test.mjs
 
 
 
@@ -325,6 +317,13 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-330 **Nimbus のアイコン候補を本体へ差し替えた** — `icon-concepts/2026-08-26/` の 4 本
+      （nimbus / tasks / settings / debug）を `extensions/nimbus/resources/` へ。参照は名前一致で
+      `package.json` 不変更。守り `nimbus/tests/scripts/icons.test.mjs`（参照の実在・24x24・
+      currentColor 単色）。パッケージ版で確認: スモーク例外 0・入口ケース 52 が新アイコンを押して
+      1/1・Activity Bar の拡大目視で 4 本とも潰れなし（アクティブで明るくなる = テーマ追従）
+      — 2026-08-26 / 仕様 [distribution](nimbus/docs/specs/distribution.md) の意匠の章
 
 - [x] T-321 **着手前にファイルを板で予約する運用を入れる** — 利用者指示（2026-08-25）。どのセッションも
       編集の前に、触るファイルを板の「作業予約」へ 1 行（`- 🔒 …`）で書き出し、終わったら消して解放する。
