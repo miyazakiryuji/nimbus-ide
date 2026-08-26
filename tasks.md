@@ -98,19 +98,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-fable | T-331 | 2026-08-26 | nimbus/branding/make-icon.mjs, nimbus/branding/out/*, resources/darwin/code.icns, nimbus/tests/scripts/icons.test.mjs, nimbus/docs/specs/distribution.md
-
 
 
 
 
 ## 進行中
 
-- [ ] T-331 **アプリ本体のアイコンも候補セットへ差し替える**（T-330 の続き・利用者依頼 2026-08-26）—
-      原本は `icon-concepts/2026-08-26/nimbus-app.svg`。`make-icon.mjs` を「手続き描画」から
-      「SVG 原本を Playwright の Chromium で描く」形に作り替え、out/ の PNG・icns を作り直して
-      `resources/darwin/code.icns` へ反映する。固めた .app の icns が新しい絵になっていることまで確認
-      @session-fable 2026-08-26（済: make-icon.mjs 作り替え・icns 再生成と反映・守りのテスト / 残: 固めた .app で確認）
 
 
 
@@ -332,6 +325,13 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 ## 完了
 
 新しい順。日付と、あれば確認記録へのリンクを添える。溜まってきたら `nimbus/docs/history/` へ退避する。
+
+- [x] T-331 **アプリ本体のアイコンを候補セットの意匠へ差し替えた**（T-330 の続き・利用者依頼）—
+      `make-icon.mjs` を手続き描画から「SVG 原本（`icon-concepts/2026-08-26/nimbus-app.svg`）を
+      手元の Chrome で描いて iconutil で icns にする」形に作り替え、`resources/darwin/code.icns` へ反映。
+      確認: 固めた .app の `Nimbus.icns` が生成物とバイト一致・スモーク例外 0・icns からの描き出しが
+      新意匠（柔らかい光背＋生成りの雲＋3 つのシグナル）。守りは `icons.test.mjs` の icns 健全性（3/3 緑）
+      — 2026-08-26 / 仕様 [distribution](nimbus/docs/specs/distribution.md)
 
 - [x] T-328 **止まったタスクを続きから再開できるようにする** — 利用者指示（2026-08-26）。札と予約は
       「落ちたセッションが握ったまま」になると通行止めで終わる。① 🔒 の時刻を心拍にする
