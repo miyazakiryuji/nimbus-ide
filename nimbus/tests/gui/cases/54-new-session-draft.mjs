@@ -70,20 +70,22 @@ export default {
 		await page.waitForTimeout(800);
 		ctx.expect(await pressNewSession(page), '2 回目の「新しいセッション」を押せない');
 
-		// 狭いサイドバーでは列を並べず ≡ に畳む（T-314）。まず ≡ の行が現れる
-		let barShown = false;
-		for (let i = 0; i < 16 && !barShown; i++) {
+		// タブ列は狭い面でも出す（T-338）。**DOM に在るかではなく、見えているか**を確かめる —
+		// 以前は CSS で隠れていても textContent が読めたせいで、列が消えたまま緑が続いた
+		let stripShown = false;
+		for (let i = 0; i < 16 && !stripShown; i++) {
 			await page.waitForTimeout(500);
 			for (const frame of page.frames()) {
-				barShown = await frame
-					.$eval('#homeBar', (el) => !el.hidden)
+				stripShown = await frame
+					.$eval('#sessionTabs', (el) => !el.hidden && el.offsetParent !== null && el.offsetHeight > 0)
 					.catch(() => false);
-				if (barShown) {
+				if (stripShown) {
 					break;
 				}
 			}
 		}
-		ctx.expect(barShown, '「+」を 2 回押したのに ≡（Home）の行が出ない');
+		ctx.expect(stripShown, '「+」を 2 回押したのに、タブ列が**見えて**いない');
+
 
 		// ≡ を押すと Home に下書きが 2 行。前面は後から押したほう
 		ctx.expect(await pressHomeToggle(page), '≡ を押せない');
@@ -127,5 +129,23 @@ export default {
 		// **Home は閉じて終える。** ケースはアプリを共有しているので、開きっぱなしは
 		// 次のケースの ≡ を「閉じる」動作に変えてしまう（フル実行でだけ落ちる罠になった）
 		await pressHomeToggle(page);
+		await page.waitForTimeout(600);
+
+		// 列を**直接**押しても切り替わること（利用者の主要動線・T-338）。
+		// いま前面は 1 枚目なので、2 枚目を押して本当に移るかを見る。
+		// ※順序に意味がある: これを Home の検証の前に置くと、前面を動かして後段を壊す（実際に壊した）
+		let flipped = false;
+		for (const frame of page.frames()) {
+			const rows = await frame.$$('.session-tab').catch(() => []);
+			if (rows.length >= 2) {
+				await rows[1].click();
+				await page.waitForTimeout(1200);
+				flipped = await frame
+					.$$eval('.session-tab', (els) => els[1]?.classList.contains('active') ?? false)
+					.catch(() => false);
+				break;
+			}
+		}
+		ctx.expect(flipped, 'タブ列の 2 枚目を押しても前面が移らない（列が飾りに戻っている）');
 	}
 };

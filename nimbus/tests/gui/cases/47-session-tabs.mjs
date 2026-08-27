@@ -57,6 +57,37 @@ export default {
 
 		// 狭いサイドバーでは ≡ に畳まれる（T-314）ので、≡ を押して Home の行として読む。
 		// **`contentDocument` では読めない** — パッケージ版の webview は別オリジンの入れ子なので、
+		// まず**タブ列そのもの**が見えて、押して切り替わること（T-338）。
+		// 以前は CSS で隠れていても textContent が読めたせいで、列が消えたまま緑が続いた。
+		// 存在ではなく可視性（offsetParent / offsetHeight）で確かめる
+		let stripVisible = false;
+		for (let i = 0; i < 16 && !stripVisible; i++) {
+			for (const frame of page.frames()) {
+				stripVisible = await frame
+					.$eval('#sessionTabs', (el) => !el.hidden && el.offsetParent !== null && el.offsetHeight > 0)
+					.catch(() => false);
+				if (stripVisible) {
+					break;
+				}
+			}
+			if (!stripVisible) {
+				await page.waitForTimeout(500);
+			}
+		}
+		ctx.expect(stripVisible, 'セッションが 2 本あるのにタブ列が**見えて**いない（CSS の畳みが復活している）');
+		for (const frame of page.frames()) {
+			const rows = await frame.$$('.session-tab').catch(() => []);
+			if (rows.length >= 2) {
+				await rows[0].click();
+				await page.waitForTimeout(1500);
+				const flipped = await frame
+					.$eval('.session-tab', (el) => el.classList.contains('active'))
+					.catch(() => false);
+				ctx.expect(flipped, 'タブ列の 1 枚目を押しても前面が移らない');
+				break;
+			}
+		}
+
 		// 素の DOM から中身へは入れない（実測）。Playwright のフレーム越しに読む
 		for (const frame of page.frames()) {
 			const toggle = await frame.$('#homeToggle').catch(() => null);

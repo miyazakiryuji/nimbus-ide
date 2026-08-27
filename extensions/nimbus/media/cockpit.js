@@ -971,35 +971,28 @@
 		vscode.postMessage({ type: 'homeOpened', open: next });
 	}
 
-	/** 狭い面の 1 行（≡ ＋ 前面セッション）。タブ列の代わりに出す */
+	/**
+	 * 帯は「前回のセッションの案内」（T-318）専用にする（T-338）。
+	 *
+	 * 以前はここが狭い面の切り替え口（≡ ＋ 前面の名前）で、**タブ列は CSS で隠していた**。
+	 * いつも見えていたタブが消え、1 日に何十回の切り替えが想起頼みの ≡ の奥に落ちて、
+	 * 「タブを切り替えられない」と報告された。切り替えはタブ列（全幅で出す）に返し、
+	 * ≡ は列の先頭に住む。ここに残るのは、前面がまだ無いのに前回のぶんが在るときの言葉だけ
+	 */
 	function renderHomeBar() {
 		const tabs = homeGroups.flatMap((group) => group.sessions);
-		// 前回のセッション（T-318）が居るなら、1 本でも出す — 見えないと全損に見える
-		homeBar.hidden = tabs.length < 2 && !tabs.some((tab) => tab.resumable);
+		const active = tabs.find((tab) => tab.active);
+		const dormant = tabs.filter((tab) => tab.resumable);
+		homeBar.hidden = Boolean(active) || dormant.length === 0;
 		if (homeBar.hidden) {
-			if (homeOpen) {
-				setHomeOpen(false);
-			}
 			return;
 		}
 		homeBarSession.textContent = '';
-		const active = tabs.find((tab) => tab.active);
-		if (active) {
-			homeBarSession.appendChild(sessionRowParts(active));
-			const name = document.createElement('span');
-			name.className = 'home-session-name';
-			name.textContent = active.title;
-			homeBarSession.appendChild(name);
-		} else {
-			// 前面がまだ無い（開き直した直後・T-318）。前回のぶんが在ることを言葉で出す
-			const dormant = tabs.filter((tab) => tab.resumable);
-			if (dormant.length > 0) {
-				const name = document.createElement('span');
-				name.className = 'home-session-name';
-				name.textContent = `前回のセッションが ${dormant.length} 本 — ここから続きへ`;
-				homeBarSession.appendChild(name);
-			}
-		}
+		// 前面がまだ無い（開き直した直後・T-318）。前回のぶんが在ることを言葉で出す
+		const name = document.createElement('span');
+		name.className = 'home-session-name';
+		name.textContent = `前回のセッションが ${dormant.length} 本 — ここから続きへ`;
+		homeBarSession.appendChild(name);
 	}
 
 	/** 広い面の上段（タブ列）と、下段の絞り込み */
@@ -1160,6 +1153,9 @@
 	 */
 	function renderSessionTabs(tabs) {
 		sessionTabs.textContent = '';
+		// ≡（Home）は列の先頭に住む（T-338）。textContent = '' で外れるので、毎回置き直す。
+		// 同じ要素を移しているだけなので、click のリスナーはそのまま生きている
+		sessionTabs.appendChild(homeToggle);
 		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
 		sessionTabs.hidden = !tabs || (tabs.length < 2 && !tabs.some((tab) => tab.resumable));
 		if (sessionTabs.hidden) {
