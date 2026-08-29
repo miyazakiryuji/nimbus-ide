@@ -200,6 +200,11 @@ body {
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding: 4px 0 8px;
+	/*
+	 * 会話は読み物。**足したものが既定で選べる**ようにここで敷く（T-339）。
+	 * .turn ごとに付けて回ると、新しく足した面が選べないまま出荷される
+	 */
+	user-select: text;
 }
 
 .turn {
@@ -207,6 +212,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	user-select: text;
+	/* 左右 16px の余白も文字の一部として掴める。矢印のままだと選べる面に見えない（T-339） */
+	cursor: text;
 }
 
 /* 依頼の行だけ地を敷いて、応答と見分ける */
@@ -446,6 +453,8 @@ body {
 }
 
 .collapsible-title {
+	/* 行そのものは開閉のボタン（cursor: pointer）だが、**写したいのはこの文字**（T-339） */
+	cursor: text;
 	font-family: var(--nimbus-mono-font);
 	font-size: var(--nimbus-body2);
 	white-space: nowrap;
