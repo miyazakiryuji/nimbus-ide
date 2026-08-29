@@ -151,6 +151,18 @@ export const TITLE_BAR_SETTINGS = [
 const DEFAULT_EMPTY_WINDOW_DIMENSIONS = new Dimension(DEFAULT_EMPTY_WINDOW_SIZE.width, DEFAULT_EMPTY_WINDOW_SIZE.height);
 const DEFAULT_WORKSPACE_WINDOW_DIMENSIONS = new Dimension(DEFAULT_WORKSPACE_WINDOW_SIZE.width, DEFAULT_WORKSPACE_WINDOW_SIZE.height);
 
+// --- Start Nimbus ---
+/**
+ * サイドバーの既定幅。upstream は 300px。
+ *
+ * Nimbus の主面は**コックピット**で、セッションの縦レールと会話が同じ面を分け合う（T-341）。
+ * 300px だとセッション一覧（200px）を引いた残りが 100px しかなく、会話が読めない。
+ * 画面に対する上限も 1/4 → 40% に上げる — 1440px 幅の画面で 1/4 は 360px にしかならず、
+ * 既定値を上げても効かない（実測）。
+ */
+const NIMBUS_DEFAULT_SIDEBAR_WIDTH = 560;
+// --- End Nimbus ---
+
 export abstract class Layout extends Disposable implements IWorkbenchLayoutService {
 
 	declare readonly _serviceBrand: undefined;
@@ -2852,7 +2864,9 @@ const LayoutStateKeys = {
 	}),
 
 	// Part Sizing
-	SIDEBAR_SIZE: new InitializationStateKey<number>('sideBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),
+	// --- Start Nimbus ---
+	SIDEBAR_SIZE: new InitializationStateKey<number>('sideBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, NIMBUS_DEFAULT_SIDEBAR_WIDTH),
+	// --- End Nimbus ---
 	AUXILIARYBAR_SIZE: new InitializationStateKey<number>('auxiliaryBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),
 	PANEL_SIZE: new InitializationStateKey<number>('panel.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),
 
@@ -2999,7 +3013,9 @@ class LayoutStateModel extends Disposable {
 		const auxiliaryBarForceMaximized = this.configurationService.getValue(WorkbenchLayoutSettings.AUXILIARYBAR_FORCE_MAXIMIZED);
 		const workbenchState = this.contextService.getWorkbenchState();
 		const mainContainerDimension = configuration.mainContainerDimension;
-		LayoutStateKeys.SIDEBAR_SIZE.defaultValue = Math.min(300, mainContainerDimension.width / 4);
+		// --- Start Nimbus ---
+		LayoutStateKeys.SIDEBAR_SIZE.defaultValue = Math.min(NIMBUS_DEFAULT_SIDEBAR_WIDTH, mainContainerDimension.width * 0.4);
+		// --- End Nimbus ---
 		LayoutStateKeys.SIDEBAR_HIDDEN.defaultValue = workbenchState === WorkbenchState.EMPTY || auxiliaryBarForceMaximized === true;
 		LayoutStateKeys.AUXILIARYBAR_SIZE.defaultValue = auxiliaryBarForceMaximized ? Math.max(300, mainContainerDimension.width / 2) : Math.min(300, mainContainerDimension.width / 4);
 		LayoutStateKeys.AUXILIARYBAR_HIDDEN.defaultValue = (() => {
@@ -3098,7 +3114,12 @@ class LayoutStateModel extends Disposable {
 
 		// Restrict auxiliary bar size in case of small window dimensions
 		if (this.isNew[StorageScope.WORKSPACE] && configuration.mainContainerDimension.width <= DEFAULT_WORKSPACE_WINDOW_DIMENSIONS.width) {
-			this.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE, Math.min(300, configuration.mainContainerDimension.width / 4));
+			// --- Start Nimbus ---
+			// **この道が既定値を上書きする。** 判定は「1440px 以下」なので、ノート PC の
+			// ほとんど（13〜14 インチ）が通る。ここを直さないと上の既定値は一度も効かない（実測）。
+			// 補助バーは upstream のまま — 広げたいのはコックピットだけ（T-341）
+			this.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE, Math.min(NIMBUS_DEFAULT_SIDEBAR_WIDTH, configuration.mainContainerDimension.width * 0.4));
+			// --- End Nimbus ---
 			this.setInitializationValue(LayoutStateKeys.AUXILIARYBAR_SIZE, Math.min(300, configuration.mainContainerDimension.width / 4));
 		}
 	}

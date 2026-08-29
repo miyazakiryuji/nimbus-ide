@@ -27,12 +27,58 @@ const MAIN = 'src/main.ts'
 const PANE_COMPOSITE_BAR = 'src/vs/workbench/browser/parts/paneCompositeBar.ts'
 const EDITOR_WATERMARK = 'src/vs/workbench/browser/parts/editor/editorGroupWatermark.ts'
 const WORKBENCH_CONTRIB = 'src/vs/workbench/browser/workbench.contribution.ts'
+const LAYOUT = 'src/vs/workbench/browser/layout.ts'
 
 // 置き換える製品名は product.json から取る（改名しても追随する）
 const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
 const replacements = [
+  // サイドバーの既定幅を広げる（T-341）。Nimbus の主面はコックピットで、
+  // セッションの縦レールと会話が同じ面を分け合うため、300px では会話が読めない。
+  [
+    LAYOUT,
+    `const DEFAULT_WORKSPACE_WINDOW_DIMENSIONS = new Dimension(DEFAULT_WORKSPACE_WINDOW_SIZE.width, DEFAULT_WORKSPACE_WINDOW_SIZE.height);`,
+    `const DEFAULT_WORKSPACE_WINDOW_DIMENSIONS = new Dimension(DEFAULT_WORKSPACE_WINDOW_SIZE.width, DEFAULT_WORKSPACE_WINDOW_SIZE.height);
+
+// --- Start Nimbus ---
+/**
+ * サイドバーの既定幅。upstream は 300px。
+ *
+ * Nimbus の主面は**コックピット**で、セッションの縦レールと会話が同じ面を分け合う（T-341）。
+ * 300px だとセッション一覧（200px）を引いた残りが 100px しかなく、会話が読めない。
+ * 画面に対する上限も 1/4 → 40% に上げる — 1440px 幅の画面で 1/4 は 360px にしかならず、
+ * 既定値を上げても効かない（実測）。
+ */
+const NIMBUS_DEFAULT_SIDEBAR_WIDTH = 560;
+// --- End Nimbus ---`
+  ],
+  [
+    LAYOUT,
+    `\tSIDEBAR_SIZE: new InitializationStateKey<number>('sideBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),`,
+    `\t// --- Start Nimbus ---
+\tSIDEBAR_SIZE: new InitializationStateKey<number>('sideBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, NIMBUS_DEFAULT_SIDEBAR_WIDTH),
+\t// --- End Nimbus ---`
+  ],
+  [
+    LAYOUT,
+    `\t\tLayoutStateKeys.SIDEBAR_SIZE.defaultValue = Math.min(300, mainContainerDimension.width / 4);`,
+    `\t\t// --- Start Nimbus ---
+\t\tLayoutStateKeys.SIDEBAR_SIZE.defaultValue = Math.min(NIMBUS_DEFAULT_SIDEBAR_WIDTH, mainContainerDimension.width * 0.4);
+\t\t// --- End Nimbus ---`
+  ],
+  // **上の既定値だけでは効かない。** 「小さい窓では詰める」道が 1440px 以下で上書きするので、
+  // ノート PC のほとんどがそちらを通る（実測）。補助バーは upstream のまま。
+  [
+    LAYOUT,
+    `\t\t\tthis.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE, Math.min(300, configuration.mainContainerDimension.width / 4));`,
+    `\t\t\t// --- Start Nimbus ---
+\t\t\t// **この道が既定値を上書きする。** 判定は「1440px 以下」なので、ノート PC の
+\t\t\t// ほとんど（13〜14 インチ）が通る。ここを直さないと上の既定値は一度も効かない（実測）。
+\t\t\t// 補助バーは upstream のまま — 広げたいのはコックピットだけ（T-341）
+\t\t\tthis.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE, Math.min(NIMBUS_DEFAULT_SIDEBAR_WIDTH, configuration.mainContainerDimension.width * 0.4));
+\t\t\t// --- End Nimbus ---`
+  ],
   // 内蔵チャットを出さないので、右の補助バーは既定では開かない（T-238）。
   [
     WORKBENCH_CONTRIB,

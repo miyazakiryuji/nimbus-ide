@@ -437,6 +437,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 			stylesheet: this.mediaUri(webview, 'cockpit.css'),
 			script: this.mediaUri(webview, 'cockpit.js'),
 			bodyAttributes: `data-assistant="${this.options.assistantLabel}"`,
+			// セッションの列は**左の縦レール**（T-341）。横一列だと 1 枚あたり 2 文字までしか
+			// 出ず、名前が飾りになっていた（実測の画面で「4 基…」「5 新…」）。
+			// そのために `.cockpit-columns` で左右に分ける — `body` 直下の兄弟のままでは縦に置けない。
 			// VS Code のチャットと同じ作り（T-271）— 会話の列と、丸めた 1 枚の入力欄。
 			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
 			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
@@ -445,7 +448,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 		<span id="homeBarSession" class="home-bar-session"></span>
 	</div>
 	<nav id="groupTabs" class="group-tabs" hidden></nav>
+	<div class="cockpit-columns">
 	<nav id="sessionTabs" class="session-tabs" hidden></nav>
+	<div class="cockpit-main">
 	<section id="home" class="home" hidden aria-label="タブとセッションの一覧"></section>
 	<main id="log" class="chat-list" aria-live="polite"></main>
 	<div class="chat-input-area">
@@ -472,6 +477,8 @@ export class CockpitViewProvider extends WebviewViewHost {
 				</div>
 			</div>
 		</div>
+	</div>
+	</div>
 	</div>`
 		});
 	}

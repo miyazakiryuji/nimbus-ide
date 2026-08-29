@@ -46,6 +46,7 @@ upstream（`microsoft/vscode`）のファイルに入れた変更を**すべて*
 | 25 | `src/vs/workbench/browser/parts/editor/editorGroupWatermark.ts` | 空のエディタの案内から `workbench.action.debug.start`（Start Debugging）を外す | #24 でアイコンを消しても、**一番よく見る画面**に 「Start Debugging F5」が出ていては隠したことにならない。F5 自体は今までどおり効く（T-246） | `nimbus/branding/apply-core-changes.mjs` |
 | 26 | `src/vs/workbench/browser/parts/paneCompositeBar.ts` | #24 の除外集合に `workbench.panel.chat` を追加 | VS Code 内蔵のチャットを出さない。Nimbus のチャットはコックピットなので、**似て非なるものが右に常駐していると、どちらに書けばよいのか分からない**。`chat.disableAIFeatures` はエージェントホストの有効・無効を決めるだけで、この UI は別に登録されている（T-238） | `nimbus/branding/apply-core-changes.mjs` |
 | 27 | `src/vs/workbench/browser/workbench.contribution.ts` | `workbench.secondarySideBar.defaultVisibility` の既定を `visibleInWorkspace` → `hidden` | upstream の既定は右の補助バーに内蔵チャットを置く前提。#26 でチャットを外すと、**中身が無いまま帯だけ残る**（実測）。開きたい人は ⌥⌘B で開ける（T-238） | 同上 |
+| 28 | `src/vs/workbench/browser/layout.ts` | サイドバーの既定幅を `300` → `560`、画面幅からの上限を `width/4` → `width*0.4` に。**3 か所**（静的な既定値・画面幅から決める既定値・「小さい窓では詰める」道） | Nimbus の主面はコックピットで、**セッションの一覧（縦・200px 以上）と会話が同じ面を分け合う**（T-341）。300px では会話に 100px しか残らない。上限も上げないと効かない — 1440px 幅の画面で `width/4` は 360px にしかならない。とくに 3 つ目（`width <= 1440` で詰める道）は**ノート PC のほとんどが通る**ので、ここを直さないと上の 2 つは一度も効かない（実測で 300px のままだった）。**既に幅を覚えている環境には効かない**（`StorageScope.PROFILE` に保存済み）— 新しいプロファイルと「ビューの位置をリセット」で効く | `nimbus/branding/apply-core-changes.mjs` |
 
 > **依存 `@github/copilot-sdk` と `@vscode/copilot-api` は消せない。** コアの agent host
 > （`src/vs/platform/agentHost/`）が import している（それぞれ 35 箇所・14 箇所）。

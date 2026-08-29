@@ -50,14 +50,61 @@
 	box-sizing: border-box;
 }
 
-/* セッションのタブ（T-269）。ファイルタブと同じ感覚で行き来する */
+/*
+ * 会話とセッションの列を左右に分ける器（T-341）。
+ * `body` は縦積みなので、列を左に置くにはここで向きを変えるしかない。
+ */
+.cockpit-columns {
+	flex: 1 1 auto;
+	/* flex の子は既定で縮まないので、これが無いと会話が面の外へ伸びる */
+	min-height: 0;
+	display: flex;
+	flex-direction: row;
+}
+
+.cockpit-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+/*
+ * セッションのタブ（T-269）。**左に縦へ積む**（T-341・利用者依頼）。
+ *
+ * 横一列だと、幅を全員で分け合うので 1 枚あたり 2 文字までしか出ず、名前が飾りになる
+ * （実測の画面で「4 基…」「5 新…」— 4 本開くと 1 枚 75px、名前に残るのは 30px）。
+ * 縦なら 1 行まるごとが名前の場所になり、本数が増えても 1 枚の幅は痩せない。
+ */
 .session-tabs {
 	display: flex;
-	overflow-x: auto;
+	flex-direction: column;
+	overflow-y: auto;
+	overflow-x: hidden;
 	gap: 1px;
 	flex: 0 0 auto;
+	/*
+	 * 面の広さに応じて分け前を変える。狭い面で固定幅にすると会話が潰れ、
+	 * 広い面で固定幅にすると名前がまた切れる。
+	 * 下限 200px は**一覧として読める幅**（利用者指示 2026-08-29「cmux 並みに」）—
+	 * 名前に 180px 前後が残り、日本語で 15 字ほど入る
+	 */
+	width: clamp(200px, 40%, 300px);
 	background: var(--vscode-editorGroupHeader-tabsBackground);
-	border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, transparent);
+	border-right: 1px solid var(--vscode-editorGroupHeader-tabsBorder, transparent);
+}
+
+/*
+ * 1 本しか無いときは、列そのものは出さずに **≡（Home）の入口だけ残す**（T-338 の決めごと）。
+ * `hidden` を立てても `display: flex` が UA の `[hidden]` に勝つので、この面は消えない —
+ * そこは変えず、**幅だけ返す**（T-341）。116px の空のレールが会話から 1/3 を奪うのを避ける
+ */
+.session-tabs[hidden] {
+	width: auto;
+}
+
+.session-tabs[hidden] > .icon-button {
+	justify-content: center;
 }
 
 .session-tab {
@@ -65,17 +112,16 @@
 	align-items: center;
 	gap: 6px;
 	/*
-	 * **縮めて全部見せる**（T-291）。`max-width` だけだとタブは中身の幅で居座り、
-	 * サイドバー（300px）に 1.6 枚しか入らない。実測で 3 本開くと列が 567px に伸び、
-	 * 前面のタブが右へ隠れて「どのセッションに居るか」が分からなくなっていた。
-	 * `min-width: 0` を置いて初めて `.session-tab-name` の省略記号が効く。
+	 * 縦に積むので、**伸ばさず自分の高さで座る**（T-341）。
+	 * `flex: 1 1 auto` のままだと、1 本ごとが列の高さを分け合って間延びする。
+	 * `min-width: 0` を置いて初めて `.session-tab-name` の省略記号が効く（T-291）。
 	 */
-	flex: 1 1 auto;
+	flex: 0 0 auto;
 	min-width: 0;
-	max-width: 180px;
 	/* div になった（T-313）。名前変更のダブルクリックで文字が選ばれて光らないように */
 	user-select: none;
-	padding: 4px 10px;
+	/* 縦なので左右は詰める — 1px でも名前の場所に回す（T-341） */
+	padding: 4px 8px;
 	border: none;
 	border-radius: 0;
 	background: var(--vscode-tab-inactiveBackground);
@@ -87,17 +133,38 @@
 .session-tab.active {
 	background: var(--vscode-tab-activeBackground);
 	color: var(--vscode-tab-activeForeground);
-	/* 前面のタブは、色ではなく線で示す（色覚に依らない） */
-	box-shadow: inset 0 -1px 0 0 var(--vscode-tab-activeBorder, currentColor);
+	/*
+	 * 前面のタブは、色ではなく線で示す（色覚に依らない）。
+	 * 縦に積んだので線も**左の縦線**へ回す（T-341）— 下線のままだと、
+	 * 次のタブとの境目にしか見えない
+	 */
+	box-shadow: inset 2px 0 0 0 var(--vscode-tab-activeBorder, currentColor);
 }
 
-/* 列の右端の「+」（T-290）。タブと同じ高さに座らせ、地の色は持たせない */
-.session-tab-add {
+/*
+ * 列の頭の ≡（T-338）と末尾の「+」（T-290）。縦になったので、どちらもタブと同じ
+ * **1 行ぶんの場所**を持つ（T-341）。`.icon-button` は後ろで 22px 角を固定しているので、
+ * 詰み手ではなく詰み幅（子孫を 1 つ足す）で上書きする
+ */
+.session-tabs > .icon-button {
 	flex: 0 0 auto;
-	margin-left: 2px;
-	padding: 4px 8px;
-	background: transparent;
+	width: auto;
+	height: 24px;
+	/* 下のタブと同じ左端から始める。中央寄せだと行の頭が揃わず、列が波打って見える */
+	justify-content: flex-start;
+	padding: 0 8px;
 	color: var(--vscode-tab-inactiveForeground);
+}
+
+.session-tabs > .icon-button:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+	color: var(--vscode-tab-activeForeground);
+}
+
+/* 「+」は最後のタブの下。地の色は持たせない */
+.session-tab-add {
+	margin: 2px 0 0;
+	background: transparent;
 }
 
 .session-tab-add:hover {
