@@ -47,7 +47,9 @@ export default {
 
 		const shape = await frame.evaluate(() => {
 			const rail = document.querySelector('.session-tabs').getBoundingClientRect();
-			const log = document.querySelector('.chat-list').getBoundingClientRect();
+			// **分けている実体は `.cockpit-main`。** `.chat-list` は Home を開くと隠れて
+			// 寸法が 0 になり、前のケースが Home を残していると誤って落ちる（実測）
+			const log = document.querySelector('.cockpit-main').getBoundingClientRect();
 			const tabs = [...document.querySelectorAll('.session-tab')].map((tab) => {
 				const name = tab.querySelector('.session-tab-name');
 				const box = tab.getBoundingClientRect();

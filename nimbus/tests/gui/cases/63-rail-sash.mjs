@@ -31,7 +31,9 @@ async function measure(frame) {
 		const box = sash.getBoundingClientRect();
 		return {
 			rail: Math.round(document.querySelector('.session-tabs').getBoundingClientRect().width),
-			chat: Math.round(document.querySelector('.chat-list').getBoundingClientRect().width),
+			// **分けている実体は `.cockpit-main`。** `.chat-list` は Home を開くと隠れて
+			// 寸法が 0 になり、前のケースが Home を残していると誤って落ちる（実測）
+			chat: Math.round(document.querySelector('.cockpit-main').getBoundingClientRect().width),
 			visible: !sash.hidden && box.width > 0,
 			cursor: getComputedStyle(sash).cursor,
 			x: box.x + box.width / 2,

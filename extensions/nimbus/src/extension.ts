@@ -2045,6 +2045,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		resetToBlank();
 		const sessionId = randomUUID();
+		// 選んで再開したのは**別のセッション**。見ていた下書きは畳まない（T-343）
+		activeDraftId = undefined;
 		activeSessionId = sessionId;
 		await sessions.createSession({ cwd, resumeClaudeSessionId: chosen.sessionId, reuseSessionId: sessionId });
 		void cockpit.reveal();
@@ -2505,6 +2507,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		resetToBlank();
 		resumableRecords.delete(record.sessionId);
+		// 続きから起こすのは**別のセッション**。見ていた下書きは畳まない（T-343）
+		activeDraftId = undefined;
 		activeSessionId = record.sessionId;
 		await sessions.createSession({
 			cwd: record.cwd,
@@ -2889,7 +2893,15 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	function updateSessionTabs(): void {
-		// 下書きが本物のセッションになったら、下書きとしては畳む
+		/*
+		 * 下書きが本物のセッションになったら、下書きとしては畳む。
+		 *
+		 * **両方が立っている＝下書きから起こした、という前提で動いている。**
+		 * だから「別のセッションを前面にした」経路では、その前に `activeDraftId` を
+		 * 外しておかなければならない（T-343 で実際に誤爆した — 下書きを見ている状態で
+		 * 動いているセッションを押すと、押していない下書きが消えた）。
+		 * 外す責任は前面を変える側（`switchSession` / `resumeRecord` / 再開の選択）にある。
+		 */
 		if (activeSessionId && activeDraftId) {
 			const index = drafts.findIndex((draft) => draft.id === activeDraftId);
 			if (index >= 0) {
@@ -3084,6 +3096,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (!summary || sessionId === activeSessionId) {
 			return;
 		}
+		/*
+		 * **下書きから手を離す**（T-343）。ここで外さないと、`updateSessionTabs()` の
+		 * 「下書きが本物になったら畳む」分岐が誤爆して、押してもいない下書きが消える
+		 * — あの分岐は `activeSessionId && activeDraftId` の同時成立から推測しているため。
+		 * 下書き自体は消さない。前面から降りるだけ
+		 */
+		activeDraftId = undefined;
 		activeSessionId = sessionId;
 		retained.length = 0;
 		retained.push(...(archived.get(sessionId) ?? []));
