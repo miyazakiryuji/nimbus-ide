@@ -374,16 +374,9 @@
 		const box = document.createElement('div');
 		box.className = 'collapsible';
 
-		/*
-		 * div + role="button"。**button のままだと、この行の文字を範囲選択できない**（T-339）。
-		 * mousedown がボタンの押下として扱われ、選択が始まらないため — user-select では直らない。
-		 * 写したい筆頭（ツール名とコマンド）がここなので、控えは選べる形に寄せる。
-		 */
-		const summary = document.createElement('div');
+		const summary = document.createElement('button');
+		summary.type = 'button';
 		summary.className = 'collapsible-summary';
-		summary.setAttribute('role', 'button');
-		summary.tabIndex = 0;
-		summary.setAttribute('aria-expanded', 'false');
 		summary.title = '中身を開く／閉じる';
 		summary.appendChild(icon('chevron', 'chevron', 12));
 		const stateIcon = icon(state ?? 'spinner', `state-icon${state ? '' : ' running'}`);
@@ -395,12 +388,11 @@
 		const note = document.createElement('span');
 		note.className = 'collapsible-note';
 		summary.appendChild(note);
-		const toggle = () => {
-			const open = box.classList.toggle('open');
-			summary.setAttribute('aria-expanded', open ? 'true' : 'false');
-		};
-		// 文字を選ぼうと引いたぶんは開閉に数えない。押したつもりでないのに畳まれると、
-		// 選んだそばから中身が消える
+		/*
+		 * 文字を選ぼうと引いたぶんは、開閉に数えない（T-339）。
+		 * ツール名とコマンドは**写したい筆頭**なのに、引くと必ず click が続けて走って畳みが動き、
+		 * 選んだそばから中身が出たり消えたりしていた（実測: 直し前は 100% 開いた）。
+		 */
 		let pressedAt = null;
 		summary.addEventListener('mousedown', (e) => { pressedAt = { x: e.clientX, y: e.clientY }; });
 		summary.addEventListener('click', (e) => {
@@ -409,14 +401,7 @@
 			if (dragged) {
 				return;
 			}
-			toggle();
-		});
-		// button をやめたぶん、キーボードでの押下は自分で拾う
-		summary.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				toggle();
-			}
+			box.classList.toggle('open');
 		});
 		box.appendChild(summary);
 
