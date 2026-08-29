@@ -18,6 +18,7 @@
 	const attachmentsBar = /** @type {HTMLElement} */ (document.getElementById('attachments'));
 	const approvalsArea = /** @type {HTMLElement} */ (document.getElementById('approvals'));
 	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
+	const railSash = /** @type {HTMLElement} */ (document.getElementById('railSash'));
 	const homeBar = /** @type {HTMLElement} */ (document.getElementById('homeBar'));
 	const homeToggle = /** @type {HTMLButtonElement} */ (document.getElementById('homeToggle'));
 	const homeBarSession = /** @type {HTMLElement} */ (document.getElementById('homeBarSession'));
@@ -1188,6 +1189,113 @@
 	 * 並びは拡張側で始めた順に固定してあるので、ここでは並べ替えない
 	 * （押そうとした瞬間に動くと押し間違える）。
 	 */
+	// ───────────────── セッションの列と会話の境目（T-342） ─────────────────
+
+	/** 列に残す最小。これを下回ると一覧として読めない（名前が 2 文字に戻る） */
+	const RAIL_MIN = 150;
+	/** 会話に残す最小。境目をどこまで引いても、読む場所は残す */
+	const CHAT_MIN = 200;
+
+	/** いま許される列の幅の範囲。面の広さで変わるので、その都度測る */
+	function railBounds() {
+		const columns = railSash.parentElement;
+		const total = columns ? columns.clientWidth : 0;
+		return { min: RAIL_MIN, max: Math.max(RAIL_MIN, total - CHAT_MIN - railSash.offsetWidth) };
+	}
+
+	/**
+	 * 列の幅を当てる。`undefined` は「決めていない」＝ CSS の `clamp()` に返す。
+	 * **必ず範囲へ収める** — 覚えた幅のまま面が狭くなると、会話が消える
+	 */
+	function applyRailWidth(width) {
+		if (typeof width !== 'number' || !Number.isFinite(width)) {
+			sessionTabs.style.width = '';
+			return;
+		}
+		const { min, max } = railBounds();
+		sessionTabs.style.width = `${Math.round(Math.min(max, Math.max(min, width)))}px`;
+	}
+
+	/**
+	 * 覚えるのは**面ごと**（`vscode.setState`）。サイドバーと全画面では適切な幅が違うので、
+	 * 拡張側の 1 つの設定に寄せると、どちらかが必ず外れる
+	 */
+	function rememberRailWidth(width) {
+		const state = vscode.getState() ?? {};
+		if (typeof width === 'number') {
+			vscode.setState({ ...state, railWidth: width });
+		} else {
+			delete state.railWidth;
+			vscode.setState(state);
+		}
+	}
+
+	function savedRailWidth() {
+		const width = vscode.getState()?.railWidth;
+		return typeof width === 'number' ? width : undefined;
+	}
+
+	let sashFrom = null;
+
+	railSash.addEventListener('pointerdown', (event) => {
+		if (event.button !== 0) {
+			return;
+		}
+		sashFrom = { x: event.clientX, width: sessionTabs.getBoundingClientRect().width };
+		// 掴んだあとは面の外へ出ても追いかける（境目から外れた瞬間に止まると掴み直しになる）
+		railSash.setPointerCapture(event.pointerId);
+		railSash.classList.add('dragging');
+		document.body.classList.add('rail-dragging');
+		// 引いている最中に文字が選ばれないように
+		event.preventDefault();
+	});
+
+	railSash.addEventListener('pointermove', (event) => {
+		if (!sashFrom) {
+			return;
+		}
+		applyRailWidth(sashFrom.width + (event.clientX - sashFrom.x));
+	});
+
+	function endSashDrag(event) {
+		if (!sashFrom) {
+			return;
+		}
+		sashFrom = null;
+		railSash.classList.remove('dragging');
+		document.body.classList.remove('rail-dragging');
+		if (event && railSash.hasPointerCapture?.(event.pointerId)) {
+			railSash.releasePointerCapture(event.pointerId);
+		}
+		rememberRailWidth(sessionTabs.getBoundingClientRect().width);
+	}
+	railSash.addEventListener('pointerup', endSashDrag);
+	railSash.addEventListener('pointercancel', endSashDrag);
+
+	// エディタのタブと同じで、ダブルクリックは「既定へ戻す」
+	railSash.addEventListener('dblclick', () => {
+		applyRailWidth(undefined);
+		rememberRailWidth(undefined);
+	});
+
+	// マウスを使わない人にも動かせる場所を残す（掴み代はマウス専用の入口になりやすい）
+	railSash.addEventListener('keydown', (event) => {
+		if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+			return;
+		}
+		event.preventDefault();
+		const step = event.shiftKey ? 48 : 16;
+		applyRailWidth(sessionTabs.getBoundingClientRect().width + (event.key === 'ArrowLeft' ? -step : step));
+		rememberRailWidth(sessionTabs.getBoundingClientRect().width);
+	});
+
+	// 面が狭くなったら、覚えた幅のまま押し込まず、その場で入る幅へ収め直す
+	window.addEventListener('resize', () => {
+		if (!sessionTabs.hidden) {
+			applyRailWidth(savedRailWidth());
+		}
+	});
+
 	function renderSessionTabs(tabs) {
 		sessionTabs.textContent = '';
 		// ≡（Home）は列の先頭に住む（T-338）。textContent = '' で外れるので、毎回置き直す。
@@ -1195,9 +1303,14 @@
 		sessionTabs.appendChild(homeToggle);
 		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
 		sessionTabs.hidden = !tabs || (tabs.length < 2 && !tabs.some((tab) => tab.resumable));
+		// 境目は列があるときだけ。畳んでいるときに掴めると、掴んだ先に何も無い（T-342）
+		railSash.hidden = sessionTabs.hidden;
 		if (sessionTabs.hidden) {
+			// 畳むときは決めた幅を外す — インラインの幅は `[hidden]` の `width: auto` に勝ってしまう
+			sessionTabs.style.width = '';
 			return;
 		}
+		applyRailWidth(savedRailWidth());
 		for (const tab of tabs) {
 			// <button> ではなく <div role="tab">（T-311 / T-313）。
 			// **ボタンの中にボタンや入力欄は置けない**（HTML の決まりで、入れ子の操作は

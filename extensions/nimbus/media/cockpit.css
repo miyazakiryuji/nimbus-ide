@@ -107,6 +107,48 @@
 	justify-content: center;
 }
 
+/*
+ * セッションの列と会話の境目（T-342・利用者依頼）。VS Code の sash と同じ作法にする —
+ * 既定の分け前が誰にとっても正しいことはないので、**掴んで決められる**ようにする。
+ *
+ * 見た目は 4px、当たり判定は左右へ 2px ずつ広げる（4px は指で当てにくい）。
+ * 指を置いてすぐ光ると通り道で点滅するので、VS Code と同じく少し待ってから出す。
+ */
+.rail-sash {
+	position: relative;
+	z-index: 1;
+	flex: 0 0 4px;
+	cursor: col-resize;
+	background: transparent;
+	transition: background 0.1s ease-out 0.25s;
+}
+
+.rail-sash::before {
+	content: '';
+	position: absolute;
+	inset: 0 -2px;
+}
+
+.rail-sash:hover,
+.rail-sash:focus-visible,
+.rail-sash.dragging {
+	background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
+.rail-sash.dragging {
+	/* 掴んでいる間は待たない */
+	transition-delay: 0s;
+}
+
+.rail-sash[hidden] {
+	display: none;
+}
+
+/* 掴んでいる間は、面のどこへ行っても矢印を変えない（境目から外れても続いている） */
+body.rail-dragging {
+	cursor: col-resize;
+}
+
 .session-tab {
 	display: flex;
 	align-items: center;

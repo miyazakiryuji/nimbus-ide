@@ -440,6 +440,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 			// セッションの列は**左の縦レール**（T-341）。横一列だと 1 枚あたり 2 文字までしか
 			// 出ず、名前が飾りになっていた（実測の画面で「4 基…」「5 新…」）。
 			// そのために `.cockpit-columns` で左右に分ける — `body` 直下の兄弟のままでは縦に置けない。
+			// 境目は掴んで動かせる（T-342）。既定の分け前が誰にとっても正しいことはない。
 			// VS Code のチャットと同じ作り（T-271）— 会話の列と、丸めた 1 枚の入力欄。
 			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
 			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
@@ -450,6 +451,7 @@ export class CockpitViewProvider extends WebviewViewHost {
 	<nav id="groupTabs" class="group-tabs" hidden></nav>
 	<div class="cockpit-columns">
 	<nav id="sessionTabs" class="session-tabs" hidden></nav>
+	<div id="railSash" class="rail-sash" role="separator" aria-orientation="vertical" tabindex="0" title="ドラッグで幅を変える（ダブルクリックで既定へ / ←→ でも動かせます）" hidden></div>
 	<div class="cockpit-main">
 	<section id="home" class="home" hidden aria-label="タブとセッションの一覧"></section>
 	<main id="log" class="chat-list" aria-live="polite"></main>
