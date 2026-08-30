@@ -94,6 +94,12 @@ function commandPrefix(command: string): string | undefined {
 
 /** 文字列表現からルールへ。読めない文字列は undefined（設定を手で書き間違えても落とさない） */
 export function parseRule(text: string): ApprovalRule | undefined {
+	// 手書きの設定から来る（T-347）。`nimbus.permissions.alwaysAllow` は利用者が直に書ける配列で、
+	// 数値・null・オブジェクトが混ざりうる。`text.trim()` が投げると**ルール一覧が 1 度も開かず**、
+	// 溜まった自動許可を点検する手段ごと消える。読めない 1 本は「書式が読めません」として並べる
+	if (typeof text !== 'string') {
+		return undefined;
+	}
 	const match = /^([^(]+)(?:\((.*)\))?$/.exec(text.trim());
 	if (!match) {
 		return undefined;

@@ -9,7 +9,7 @@
  * 守っている修正（T-274）: T-248
  */
 import * as assert from 'assert';
-import { mkdtempSync } from 'fs';
+import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { test } from 'node:test';
@@ -137,4 +137,37 @@ test('掃除は、自分がいま持っている記録には手を出さない',
 	const left = (await current.list({ fresh: true })).map((r) => r.sessionId);
 	current.dispose();
 	assert.deepStrictEqual([removed, left], [1, ['current']]);
+});
+
+/**
+ * T-347（敵対的試験 adv-01）— 台帳はプロセスの外にあり、別ウィンドウ・別バージョン・
+ * 手編集が書きうる。**型が崩れた 1 本で、まともな記録まで見えなくなってはいけない。**
+ *
+ * 以前の関門は `parsed?.sessionId && parsed.owner` の**真偽**だけだったので、
+ * `sessionId: 123` が素通りし、一覧を組む側の `record.sessionId.slice(0, 8)` が
+ * TypeError を投げて、セッション一覧そのものが開かなくなっていた。
+ */
+test('型が崩れた記録は読み飛ばし、まともな記録だけを返す（T-347）', async () => {
+	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
+	const now = 1_000_000;
+	const writer = storeIn(dir, 'win-a', () => now);
+	writer.upsert('good', { cwd: '/w/app', status: 'running', title: '無事な記録' });
+	await writer.flush();
+
+	const owner = { windowId: 'win-x', pid: 2, heartbeatAt: now };
+	const poison: Record<string, string> = {
+		'p1.json': JSON.stringify({ sessionId: 123, owner, cwd: '/w', status: 'running' }),
+		'p2.json': JSON.stringify({ sessionId: 'p2', owner, cwd: '/w', totalCostUsd: 'ちょっと' }),
+		'p3.json': JSON.stringify({ sessionId: 'p3', owner, cwd: { path: '/w' } }),
+		'p4.json': JSON.stringify({ sessionId: 'p4', owner: [] }),
+		'p5.json': '{"sessionId":"p5","owner":{',
+		'p6.json': ''
+	};
+	for (const [name, body] of Object.entries(poison)) {
+		writeFileSync(join(dir, name), body);
+	}
+
+	const listed = (await writer.list({ fresh: true })).map((record) => record.sessionId);
+	writer.dispose();
+	assert.deepStrictEqual(listed, ['good']);
 });

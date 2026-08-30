@@ -157,7 +157,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-i | T-345 | 2026-08-31 00:58 | nimbus/tests/gui/cases/adv-*.mjs, nimbus/tests/gui/cases/47-session-tabs.mjs, nimbus/tests/gui/cases/54-new-session-draft.mjs, nimbus/tests/gui/cases/57-session-groups.mjs, nimbus/docs/testing/adversarial.md
+- 🔒 @session-i | T-345/T-347〜T-350 | 2026-08-31 01:20 | extensions/nimbus/src/core/sessionRegistry.ts, extensions/nimbus/src/core/approvalRules.ts, extensions/nimbus/src/sessionStore.ts, extensions/nimbus/src/claudeExecutable.ts, extensions/nimbus/media/board.css, extensions/nimbus/media/cockpit.js, extensions/nimbus/src/test/sessionStore.test.ts, extensions/nimbus/src/test/permissionRules.test.ts
 
 
 
@@ -188,9 +188,52 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       **ドクター 要対応 0** ⑤`≡` 廃止（d02cd68fc1f）で置き去りになっていた GUI ケース 47/54/57 を
       新しい入口（`nimbus.openHome` と `#homeBack`）へ直した
       / 残: `--untrusted`・敵対束・デグレチェック・探索的な追い込み / 次: 敵対束を回す [P1]
-      **未決 1 件**: adv-12 の crosstalk（触っていない面の Home が別の面の操作で動く）は
-      `cockpit-home.md` が「provider が覚える」と書いたままで、面ごとに持つかが決まっていない。
-      判定にせず観察だけにしてある。利用者の判断待ち。 [P1]
+      **未決 1 件**: adv-12 の crosstalk は T-356 として別に起こした（仕様が決まっていない）。
+      ⚠️ **番号の衝突**: `@session-h` が「≡ の廃止」にも T-345 を使った（完了の節）。
+      先に取っていたのはこちら（2026-08-30 19:30）だが、双方ともコミットと
+      コード内コメントに番号が入っているので**改番せずに残す**。以後は板の最大値を見て取ること。 [P1]
+- [ ] T-351 **板の「全 N」と、見えているカードの枚数が食い違う** — 敵対的試験 adv-05 で発覚
+      （2026-08-31）。`state` が無検証（`taskStore.ts:40-43`）なので、知らない状態（`banana`）や
+      `null` の札は**どの列にも入らず姿を消す**のに、要約は `tasks.length` を数える
+      （`media/board.js:38, 92-101`）。実測「全 3」でカード 1 枚。探しても見つからない仕事が
+      数字にだけ残るのは、並列で走らせたとき一番損をする。**どう倒すかは決めていない** —
+      読み出しで弾く / 知らない状態を 1 つの列へ寄せる / 要約を「描いた列の合計」から作り直す。
+      いちばん安いのは 3 つめ。回帰は adv-05 がそのまま使える。 [P1]
+- [ ] T-352 **読めない `.claude/settings.json` を、空とみなして上書きする** — 敵対的試験 adv-08
+      （2026-08-31）。`readSettings` が readFile の失敗と JSON.parse の失敗を**同じ catch** で
+      `{}` にする（`hooksBuilder.ts:36-45`）ので、mode 222 の設定に対してフックを足すと
+      既存の `permissions` / `env` を丸ごと書き潰したうえで「フックを保存しました」と言う。
+      実測で `env.NIMBUS_GUI` が消えた。**決めごとが要る**: 「壊れた JSON は空から始める」は
+      コメントで意図的に決めてあるが、**読めない（EACCES）を同じ扱いにしてよいか**は
+      決まっていない。少なくとも「書かずに理由を言う」に倒したい。 [P1]
+- [ ] T-353 **コミット 0 件のフォルダで、git の生の英語をそのまま貼る** — 敵対的試験 adv-09
+      （2026-08-31）。`git init` 直後（unborn HEAD）は `git diff HEAD` が rc=128 で
+      `fatal: ambiguous argument 'HEAD'` を返すのに、種類で分けずエラー通知へ流している
+      （`diffSummary.ts:25-35`）。実測の通知は
+      「差分を読めませんでした: Command failed: git diff HEAD fatal: ambiguous argument 'HEAD'…」。
+      **変更が 1 つも無い平常の状態が、赤いエラーとして出る。** 対照群の
+      `コミットの分けかたを提案する`（`git status` 経路）は正しく振る舞う。 [P2]
+- [ ] T-354 **サイドバーを狭めると、会話と入力欄が消える** — 敵対的試験 adv-14（2026-08-31）。
+      仕様 `cockpit-home.md:57` は「列 150px・会話 200px は必ず残す」と書いているのに、
+      サイドバーの最小幅は 170px で **150+200+4=354px を大きく下回る**。列は `flex: 0 0 auto` で
+      縮まず、会話側は `min-width: 0` で 0 まで潰れる。実測: サイドバー 185px で
+      **会話 0px・入力欄 4x57・送信ボタンの中心が面の外**。T-341 で「狭い面では列を畳む」
+      旧実装が消えてから無防備。**倒しかたは決めていない**（列を畳む / 列も縮める）。 [P1]
+- [ ] T-355 **全画面の「戻す」が非対称で、押しても何も起きない一手が生まれる** — 敵対的試験
+      adv-15 / adv-16（2026-08-31）。`toggleFullscreenCockpit`（`extension.ts:2685-2714`）は
+      旗（`:549` の `cockpitFullscreen`）1 個だけを見る。① 戻す側は
+      `workbench.action.toggleSidebarVisibility` を**1 本呼ぶだけ**で画面の実状態を見ないので、
+      全画面のあいだに別の入口からサイドバーを開くと「戻す」が**閉じる**（実測 559px → 0px）。
+      ② 旗を読んでから書くまでに `openInEditor` と 3 つの await が挟まるので、1 tick の 2 連打は
+      両方が「入る」枝を走り、サイドバーが畳まれたまま戻らない（実測 clientWidth=0）。
+      **入る側と戻る側を対称にする**（実状態を見て決める）のが筋。 [P1]
+- [ ] T-356 **Home の開閉は面ごとか、provider ごとか（決めごと）** — 敵対的試験 adv-12 の観察
+      （2026-08-31）。`homeOpen` は provider に 1 個（`CockpitViewProvider.ts:228`）で、
+      `ready` がその値を view と panel の**両方**へ配る（`WebviewViewHost.ts:145-148`）。
+      実測で「触っていないサイドバーの面が、タブ側の操作だけで 会話 → 一覧 に変わった」。
+      仕様 `cockpit-home.md` は「provider が覚え、面を開き直したときに戻す」と書いたままで、
+      面ごとに持つとは決めていない。**試験では判定にせず観察に留めてある**（adv-12 の
+      `console.log`）。決めたら仕様の追記と同じコミットで `ctx.expect` へ格上げする。 [P2]
 - [ ] T-340 **GUI ケース 54 が束で走ると落ちる（単独では通る）** — 2026-08-29 に発覚。
       `--only セッション`（8 件）で走らせると 54 だけ「タブ列の 2 枚目を押しても前面が移らない」で落ち、
       `--only 54-` の単独では通る（ただし **`--with-claude` を付けると単独でも落ちる** — 起動時の
@@ -423,6 +466,37 @@ Screencast Mode）は除外済み。**新しい配色は足さず、Nimbus Dark 
 
 ## 完了
 
+- [x] T-350 **実在しない Claude Code のパスを「準備は揃っています」と言っていた** — 敵対的試験
+      adv-07 で発覚（2026-08-31）。設定にパスがあると `configured.trim()` を**そのまま返して**
+      いた（`claudeExecutable.ts:68-71`）ので、打ち間違えた絶対パスが準備チェックを通り抜け、
+      ステータスバーの警告も消え、送信前チェックも素通りして SDK の英語エラーまで進んでいた。
+      他の 2 経路（同梱・PATH 探索）は元から `existsSync` と実行権を見ている。
+      **絶対パスのときだけ**実在と実行権を確かめるようにした — `claude` のようなコマンド名は
+      PATH 解決に任せる。回帰は adv-07。 — @session-i 2026-08-31
+- [x] T-349 **入力欄へ画像を 1 枚落とすと、添付が 2 枚溜まっていた** — 敵対的試験 adv-10 で発覚
+      （2026-08-31）。**この束でいちばん重い**: 敵対的な使いかたではなく、画像を入力欄へ
+      ドラッグするという普通の操作で毎回踏み、そのまま送れば**二重に課金する**。
+      同じ `drop` ハンドラを `#input` と `document.body` の両方に登録しておきながら
+      `stopPropagation()` を呼んでいなかった（`media/cockpit.js:891-902`）ので、入力欄に落ちた
+      イベントが body まで上がって `addFile` が 2 回走っていた。実測「#input へ 1 枚 → 2 枚」。
+      `e.stopPropagation()` を足した。回帰は adv-10。 — @session-i 2026-08-31
+- [x] T-348 **切れ目の無い長いタスク名で、板が横に破れていた** — 敵対的試験 adv-04 で発覚
+      （2026-08-31）。同じ札の中でブランチ名は `word-break: break-all`、進捗は
+      `nowrap + ellipsis` で守られていたのに、**名前だけ素通し**だった（`media/board.css:71`）。
+      貼り付けた base64 や URL で板が突き抜け、実測 **17,060px** のはみ出し。
+      `.card .title` に `overflow-wrap: anywhere` を足した。回帰は adv-04。 — @session-i 2026-08-31
+- [x] T-347 **型が崩れた記録・設定 1 本で、一覧が丸ごと開かなくなっていた** — 敵対的試験
+      adv-01 / adv-02 で発覚（2026-08-31）。どちらも「読めないものは読み飛ばす／読めない行として
+      並べる」と**自分で宣言している**のに、見ていたのが真偽だけで型を見ていなかった。
+      ① セッション台帳: 関門が `parsed?.sessionId && parsed.owner` だけ（`sessionStore.ts:88-91`）
+      なので `sessionId: 123` が素通りし、一覧を組む側の `record.sessionId.slice(0, 8)` が
+      TypeError を投げて**セッション一覧そのものが開かない**。無事な記録まで巻き添え。
+      → `core/sessionRegistry.ts` に `isSessionRecord()` を足して型で弾く。
+      ② 承認ルール: `parseRule` の `text.trim()` が数値・null・オブジェクトで落ち、
+      **ルール一覧が 1 度も開かない**＝溜まった自動許可を点検する手段ごと消える。
+      → `core/approvalRules.ts` の入口で型を見て、読めない行は「書式が読めません」として並べる。
+      回帰はモジュールテスト 2 本（`sessionStore.test.ts` / `permissionRules.test.ts`）と
+      adv-01 / adv-02。 — @session-i 2026-08-31
 - [x] T-345 **≡（ハンバーガー）を廃止し、一覧を開いているときだけ「← 会話へ戻る」を出した**
       （利用者依頼 2026-08-30・戻り先は利用者が選択）— @session-h。列そのものが常に見えるように
       なった（T-341）ので、閉じているときの ≡ は「何が起きるか」を言わないまま場所だけ取っていた。

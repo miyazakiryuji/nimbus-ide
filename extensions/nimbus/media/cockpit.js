@@ -890,6 +890,13 @@
 		}
 	});
 
+	/*
+	 * 面のどこへ落としても添付できるように、`#input` と `document.body` の**両方**で受ける。
+	 * ただし入力欄に落ちたイベントは body まで上がるので、**止めないと同じハンドラが 2 度走り、
+	 * 1 枚落としただけで 2 枚溜まる**（T-349・敵対的試験 adv-10）。
+	 * 敵対的な使いかたではなく、画像を入力欄へドラッグするという普通の操作で毎回踏み、
+	 * そのまま送れば二重に課金する。
+	 */
 	for (const target of [input, document.body]) {
 		target.addEventListener('dragover', (e) => e.preventDefault());
 		target.addEventListener('drop', (e) => {
@@ -898,6 +905,7 @@
 				return;
 			}
 			e.preventDefault();
+			e.stopPropagation();
 			for (const file of files) {
 				addFile(file);
 			}

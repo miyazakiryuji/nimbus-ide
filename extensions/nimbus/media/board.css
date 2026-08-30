@@ -68,7 +68,15 @@ body {
 .card.review { border-left-color: var(--vscode-charts-green, #89d185); }
 .card.done { opacity: 0.6; border-left-color: var(--vscode-descriptionForeground); }
 
-.card .title { font-weight: 600; }
+/*
+ * 名前は**折り返す**（T-348・敵対的試験 adv-04）。ブランチ名は `break-all`、進捗は
+ * `nowrap + ellipsis` で守られていたのに、名前だけ素通しだった。貼り付けた base64 や URL の
+ * ような切れ目の無い 1 語で板が横に突き抜け、ボタンが画面の外へ出ていた（実測 17,060px）。
+ */
+.card .title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
 
 .card .branch {
 	font-family: var(--nimbus-mono-font);

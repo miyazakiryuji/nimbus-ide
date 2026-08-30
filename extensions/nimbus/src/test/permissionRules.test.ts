@@ -85,3 +85,20 @@ test('片付けると、読めないものと飲み込まれたものが落ち�
 		['Read', 'Bash(npm test)']
 	);
 });
+
+/**
+ * T-347（敵対的試験 adv-02）— `nimbus.permissions.alwaysAllow` は利用者が直に書ける配列。
+ * 数値・null・オブジェクトが混ざると `parseRule` の `text.trim()` が TypeError を投げ、
+ * **ルール一覧が 1 度も開かない**＝溜まった自動許可を点検する手段ごと消えていた。
+ *
+ * 期待は「落とす」ではなく「**読めない行として並べる**」— `viewRules` は既に
+ * `valid: false` の枝を持っており、画面側もその detail（「書式が読めません」）を出す。
+ */
+test('型が崩れた行が混ざっても一覧は組め、読めない行として並ぶ（T-347）', () => {
+	const dirty = ['Bash(npm test)', 123, null, { tool: 'Read' }, 'Read'] as unknown as string[];
+	const views = viewRules(dirty);
+	assert.deepStrictEqual(
+		views.map((view) => view.valid),
+		[true, false, false, false, true]
+	);
+});

@@ -14,7 +14,7 @@
  * PATH だけに頼らず既知のディレクトリも見る。
  */
 import { accessSync, constants, existsSync } from 'fs';
-import { delimiter, join } from 'path';
+import { delimiter, isAbsolute, join } from 'path';
 import { homedir } from 'os';
 import * as vscode from 'vscode';
 import { missingExecutableGuidance } from './core/remoteGuidance';
@@ -68,7 +68,18 @@ function fromSearchPaths(): string | undefined {
 export function resolveClaudeExecutable(): string | undefined {
 	const configured = vscode.workspace.getConfiguration('nimbus').get<string>('claudeCodeExecutable');
 	if (configured && configured.trim().length > 0) {
-		return configured.trim();
+		const path = configured.trim();
+		/*
+		 * **絶対パスのときだけ、実在と実行権を確かめる**（T-350・敵対的試験 adv-07）。
+		 * 以前はそのまま返していたので、打ち間違えた設定が「準備は揃っています」を通り抜け、
+		 * 送信前チェックも素通りして SDK の英語エラーまで進んでいた。
+		 * `claude` のような**コマンド名**は PATH 解決に任せる（そこまで奪わない）ので、
+		 * 見るのは絶対パスのときだけ。他の 2 経路（同梱・PATH 探索）は元から確かめている
+		 */
+		if (isAbsolute(path) && !(existsSync(path) && isExecutable(path))) {
+			return undefined;
+		}
+		return path;
 	}
 	return bundledBinary() ?? fromSearchPaths();
 }

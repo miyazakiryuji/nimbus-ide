@@ -59,6 +59,43 @@ export interface SessionRecord {
 	owner: SessionOwner;
 }
 
+/**
+ * 台帳から読んだものが、**画面に出せる形**をしているか（T-347）。
+ *
+ * 台帳はプロセスの外にある — 別ウィンドウ・別バージョン・手編集が書きうる。
+ * `SessionStore.list` は「壊れた記録は数に入れず読み飛ばす」と宣言しているのに、
+ * 見ていたのは `sessionId` と `owner` が**真か**だけだった。そのため
+ * `sessionId: 123` のような型違いが素通りし、一覧を組む側の
+ * `record.sessionId.slice(0, 8)` が TypeError を投げて、**セッション一覧そのものが
+ * 開かなくなる**（無事な記録まで巻き添えで見えなくなる）。敵対的試験 adv-01 で顕在化した。
+ *
+ * 必ず要るのは 2 つだけ（`sessionId` と `owner`）。他は**在るなら型が合っていること**を見る —
+ * 欠けているだけの記録を、ここで新たに隠さないため。
+ */
+export function isSessionRecord(value: unknown): value is SessionRecord {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return false;
+	}
+	const record = value as Record<string, unknown>;
+	if (typeof record.sessionId !== 'string' || record.sessionId.length === 0) {
+		return false;
+	}
+	if (typeof record.owner !== 'object' || record.owner === null || Array.isArray(record.owner)) {
+		return false;
+	}
+	for (const key of ['claudeSessionId', 'status', 'cwd', 'model', 'title']) {
+		if (record[key] !== undefined && typeof record[key] !== 'string') {
+			return false;
+		}
+	}
+	for (const key of ['createdAt', 'updatedAt', 'totalCostUsd']) {
+		if (record[key] !== undefined && typeof record[key] !== 'number') {
+			return false;
+		}
+	}
+	return true;
+}
+
 /** 同時実行の枠を使っている状態か。入力待ちは人間の番なので数えない */
 export function isRunningStatus(status: SessionStatus): boolean {
 	return status === 'starting' || status === 'running';

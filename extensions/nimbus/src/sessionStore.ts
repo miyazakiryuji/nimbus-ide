@@ -23,6 +23,7 @@ import {
 	OWNER_TTL_MS,
 	forgettable,
 	isFinishedStatus,
+	isSessionRecord,
 	type SessionRecord
 } from './core/sessionRegistry';
 
@@ -85,8 +86,10 @@ export class SessionStore {
 				continue;
 			}
 			try {
-				const parsed = JSON.parse(await readFile(join(this.dir, name), 'utf8')) as SessionRecord;
-				if (parsed?.sessionId && parsed.owner) {
+				const parsed: unknown = JSON.parse(await readFile(join(this.dir, name), 'utf8'));
+				// 真か偽かではなく**型**まで見る（T-347）。`sessionId: 123` のような型違いが
+				// 素通りすると、一覧を組む側が TypeError で落ち、無事な記録まで見えなくなる
+				if (isSessionRecord(parsed)) {
 					records.push(parsed);
 				}
 			} catch {
