@@ -157,6 +157,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
+- 🔒 @session-i | T-345 | 2026-08-31 00:58 | nimbus/tests/gui/cases/adv-*.mjs, nimbus/tests/gui/cases/47-session-tabs.mjs, nimbus/tests/gui/cases/54-new-session-draft.mjs, nimbus/tests/gui/cases/57-session-groups.mjs, nimbus/docs/testing/adversarial.md
+
 
 
 
@@ -181,11 +183,14 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       GUI 全件 → `--untrusted` → doctor → `degrade check --full`）。② 敵対的試験は
       `--adversarial` で opt-in する別束（既定の全件には混ぜない＝他セッションの緑を汚さない）。
       設計は [`nimbus/docs/testing/adversarial.md`](nimbus/docs/testing/adversarial.md)。
-      済: ①`--adversarial` の土台（b4b38a4562a）②設計書（5c94f7b06f0・採用 17 / 却下 26、却下も表で残した）
-      ③ケース 16 本（`adv-01`〜`adv-16`。構文・helpers の実在・書き先が ctx 配下・finally の有無まで機械確認済み）
-      / 残: 00:23 の総合試験＋敵対束の実行 / 次: 00:23 に `package-app.sh` から順に回す [P1]
-      **未決 1 件**: adv-12（Home の開閉）は `cockpit-home.md` が「provider が覚える」と書いており、
-      「面ごとの見えかた」に倒すかは決まっていない。赤が出たら直す前に利用者へ確認する。 [P1]
+      済: ①`--adversarial` の土台（b4b38a4562a）②設計書（5c94f7b06f0）③ケース 16 本（a7e10982c18）
+      ④固め直し・スモーク ✔・**モジュール 1426/1426・スクリプト 27/27**・**パッケージ版 GUI 61/63**・
+      **ドクター 要対応 0** ⑤`≡` 廃止（d02cd68fc1f）で置き去りになっていた GUI ケース 47/54/57 を
+      新しい入口（`nimbus.openHome` と `#homeBack`）へ直した
+      / 残: `--untrusted`・敵対束・デグレチェック・探索的な追い込み / 次: 敵対束を回す [P1]
+      **未決 1 件**: adv-12 の crosstalk（触っていない面の Home が別の面の操作で動く）は
+      `cockpit-home.md` が「provider が覚える」と書いたままで、面ごとに持つかが決まっていない。
+      判定にせず観察だけにしてある。利用者の判断待ち。 [P1]
 - [ ] T-340 **GUI ケース 54 が束で走ると落ちる（単独では通る）** — 2026-08-29 に発覚。
       `--only セッション`（8 件）で走らせると 54 だけ「タブ列の 2 枚目を押しても前面が移らない」で落ち、
       `--only 54-` の単独では通る（ただし **`--with-claude` を付けると単独でも落ちる** — 起動時の

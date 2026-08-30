@@ -353,7 +353,21 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
 
 同じ操作の 2 回目・別の面・別の入口。**単独では通り、束では落ちる**が生まれる場所。
 
-#### adv-12 コックピットをタブで開き直しても、触っていないサイドバーの Home は閉じない（`cases/adv-12-home-crosstalk.mjs`）
+#### adv-12 タブの面でも一覧が開き、← で会話へ戻れる（`cases/adv-12-home-crosstalk.mjs`）
+
+> **2026-08-31 00:30 に書き直した。** 設計時の前提だった ≡（`#homeToggle`）は `d02cd68fc1f` で
+> 廃止され、開く役は面のタイトルの `nimbus.openHome`、戻る役は `#homeBack` に割れた。
+> 下の「疑っている壊れかた」は当時の記述。**いま実装されているのは次の 2 つ**:
+>
+> - **判定する（決まっている）** — タブの面で一覧が開き、← が出て、押すと会話へ戻る。
+>   仕様 `cockpit-home.md` 6 項が「`view/title` と `editor/title` の**両方**。全画面は
+>   サイドバーごと畳むので、片方だけだと入口がゼロになる」と決めている。ところが
+>   回帰ケース 65 は**サイドバーの面しか見ていない**ので、ここがその穴を塞ぐ。
+> - **観察だけする（決まっていない）** — 下の crosstalk。`ctx.expect` にせず `console.log` に残す。
+>   仕様は「provider が覚える」と書いたままで、面ごとに持つかが決まっていない（4 節 ①）。
+>   決まったら判定へ格上げする。
+
+<details><summary>設計時の記述（≡ 廃止前）</summary>
 
 - **疑っている壊れかた** — Home の開閉が「面ごと」ではなく **provider ごとに 1 個**で、新しい面の `ready` が
   その値を `view` と `panel` の**両方**へ配る。タブ側で ≡ を閉じてからタブを開き直すと、2 回目の `ready` が
@@ -385,6 +399,8 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
   `extensions/nimbus/src/webview/WebviewViewHost.ts:145-148` /
   `extensions/nimbus/media/cockpit.js:23, 26, 1009, 1303, 1305-1312, 1591-1593` /
   `nimbus/docs/specs/cockpit-home.md`（UI 配線）
+
+</details>
 
 #### adv-16 全画面をやめたら、必ず元の見えかたへ戻る（`cases/adv-16-fullscreen-restore.mjs`）
 
