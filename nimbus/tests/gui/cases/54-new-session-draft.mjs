@@ -5,10 +5,11 @@
  * まだ送っていないセッションは**下書き**として出るので、
  * **実セッション（課金）無しで**「押すと増える」を確かめられる。
  *
- * T-314 から、**狭いサイドバーではセッションの列を並べず ≡（Home）に畳む**
- * （利用者とすり合わせた形）。ここで見るのは
- * ① 2 回押すと ≡ の行が現れる ② ≡ を押すと Home に下書きが 2 行出る（前面は後のほう）
- * ③ 行を押すと前面が移り、Home が閉じて会話へ戻る。
+ * ここで見るのは ① 2 回押すとタブ列が見える ② 一覧を開くと Home に下書きが 2 行出る
+ * （前面は後のほう）③ 行を押すと前面が移り、Home が閉じて会話へ戻る。
+ *
+ * **≡ は廃止された**（T-345 / `d02cd68fc1f`）。開くのは面のタイトルの `nimbus.openHome`、
+ * 戻るのは列の頭に出る「← 会話へ戻る」。観点はそのままで、押す場所だけが変わっている。
  */
 
 /** 面のタイトルの「新しいセッション」を押す */
@@ -47,13 +48,37 @@ async function readHomeRows(page) {
 	return [];
 }
 
-/** ≡（Home の開閉）を押す */
-async function pressHomeToggle(page) {
+/**
+ * Home を開く。**≡ は廃止された**（T-345 / `d02cd68fc1f`）ので、入口は面のタイトル。
+ * 59-home-checklist.mjs:38-39 と同じ押しかた。
+ */
+async function pressOpenHome(page) {
+	return page.evaluate(() => {
+		const found = [
+			...document.querySelectorAll(
+				'.part.sidebar .composite.title .actions-container a, .part.sidebar .composite.title .action-label'
+			)
+		].find((el) =>
+			`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes('一覧（Home）')
+		);
+		if (!found) {
+			return false;
+		}
+		found.click();
+		return true;
+	});
+}
+
+/** Home から会話へ戻る。開いているときだけ出る「← 会話へ戻る」（T-345） */
+async function pressBackToChat(page) {
 	for (const frame of page.frames()) {
-		const toggle = await frame.$('#homeToggle').catch(() => null);
-		if (toggle) {
-			await toggle.click();
-			return true;
+		const back = await frame.$('#homeBack').catch(() => null);
+		if (back) {
+			const shown = await back.evaluate((el) => !el.hidden).catch(() => false);
+			if (shown) {
+				await back.click();
+				return true;
+			}
 		}
 	}
 	return false;
@@ -87,8 +112,8 @@ export default {
 		ctx.expect(stripShown, '「+」を 2 回押したのに、タブ列が**見えて**いない');
 
 
-		// ≡ を押すと Home に下書きが 2 行。前面は後から押したほう
-		ctx.expect(await pressHomeToggle(page), '≡ を押せない');
+		// 一覧を開くと Home に下書きが 2 行。前面は後から押したほう
+		ctx.expect(await pressOpenHome(page), '面のタイトルの「一覧（Home）」を押せない');
 		await page.waitForTimeout(600);
 		let rows = await readHomeRows(page);
 		ctx.expect(
@@ -117,7 +142,7 @@ export default {
 			}
 		}
 		ctx.expect(homeClosed, 'Home の行を押しても会話へ戻らない');
-		await pressHomeToggle(page);
+		await pressOpenHome(page);
 		await page.waitForTimeout(600);
 		rows = await readHomeRows(page);
 		ctx.expect(
@@ -126,9 +151,9 @@ export default {
 		);
 
 		await ctx.shot('new-session-draft');
-		// **Home は閉じて終える。** ケースはアプリを共有しているので、開きっぱなしは
-		// 次のケースの ≡ を「閉じる」動作に変えてしまう（フル実行でだけ落ちる罠になった）
-		await pressHomeToggle(page);
+		// **Home は閉じて終える。** ケースはアプリを共有しているので、開きっぱなしだと
+		// 次のケースが「一覧しか見えない面」を掴む（フル実行でだけ落ちる罠になった）
+		await pressBackToChat(page);
 		await page.waitForTimeout(600);
 
 		// 列を**直接**押しても切り替わること（利用者の主要動線・T-338）。

@@ -88,14 +88,18 @@ export default {
 			}
 		}
 
-		// 素の DOM から中身へは入れない（実測）。Playwright のフレーム越しに読む
-		for (const frame of page.frames()) {
-			const toggle = await frame.$('#homeToggle').catch(() => null);
-			if (toggle) {
-				await toggle.click();
-				break;
-			}
-		}
+		// Home を開く。**≡ は廃止された**（T-345 / `d02cd68fc1f`）ので、入口は面のタイトル。
+		// 素の DOM から webview の中身へは入れない（実測）ので、押すのはタイトル側
+		await page.evaluate(() => {
+			const found = [
+				...document.querySelectorAll(
+					'.part.sidebar .composite.title .actions-container a, .part.sidebar .composite.title .action-label'
+				)
+			].find((el) =>
+				`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes('一覧（Home）')
+			);
+			found?.click();
+		});
 		let strip = [];
 		for (let i = 0; i < 20 && strip.length < 2; i++) {
 			for (const frame of page.frames()) {

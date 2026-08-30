@@ -1,39 +1,47 @@
 /**
  * タブ（セッションの束）の作成・改名・削除（T-314）。
  *
- * 利用者とすり合わせた形 — サイドバーの Home（≡）にタブごとの束が出て、
+ * 利用者とすり合わせた形 — サイドバーの Home にタブごとの束が出て、
  * タブは自由に作れて改名できる。名前の入力は**拡張側の InputBox** なので、
  * webview の外（メインの quick input）へ打ち込む。
+ *
+ * **≡ は廃止された**（T-345 / `d02cd68fc1f`）。開くのは面のタイトルの `nimbus.openHome`、
+ * 閉じるのは「← 会話へ戻る」。観点はそのままで、押す場所だけが変わっている。
  *
  * **存在確認で止めない**（T-244）: ＋ 新しいタブ → 名前を打つ → 束が現れる →
  * 鉛筆で改名 → 見出しが変わる → × → 消える、まで実際に押す。
  * セッションは要らない（空のタブも Home に出す仕様なので、束だけで確かめられる）。
  */
 
-/** 面のタイトルの「新しいセッション」を押す（下書きを増やして ≡ を出すため） */
-async function pressNewSession(page) {
-	return page.evaluate(() => {
+/** 面のタイトルのボタンを、名前の一部で押す（59-home-checklist.mjs:19-34 と同じ） */
+async function pressTitleAction(page, label) {
+	return page.evaluate((needle) => {
 		const found = [
 			...document.querySelectorAll(
 				'.part.sidebar .composite.title .actions-container a, .part.sidebar .composite.title .action-label'
 			)
 		].find((el) =>
-			`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes('新しいセッション')
+			`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes(needle)
 		);
 		if (!found) {
 			return false;
 		}
 		found.click();
 		return true;
-	});
+	}, label);
 }
+
+/** 下書きを増やして列を出すため */
+const pressNewSession = (page) => pressTitleAction(page, '新しいセッション');
+/** ≡ を廃止した分の入口（T-345 / `d02cd68fc1f`）。Home を開くのはここ */
+const pressOpenHome = (page) => pressTitleAction(page, '一覧（Home）');
 
 /** コックピットのフレームを掴む */
 async function cockpitFrame(page, { attempts = 16 } = {}) {
 	for (let i = 0; i < attempts; i++) {
 		for (const frame of page.frames()) {
 			try {
-				if (await frame.$('#homeToggle')) {
+				if (await frame.$('#homeBack')) {
 					return frame;
 				}
 			} catch {
@@ -78,25 +86,27 @@ export default {
 		await page.keyboard.press('Escape');
 		await page.waitForTimeout(600);
 
-		// ≡ を出すために下書きを 2 つ（1 本では畳む行が出ない）
+		// 列を出すために下書きを 2 つ（1 本では列が出ない）
 		ctx.expect(await pressNewSession(page), '「新しいセッション」が押せない');
 		await page.waitForTimeout(700);
 		await pressNewSession(page);
 		const frame = await cockpitFrame(page);
-		ctx.expect(frame !== undefined, 'コックピットの ≡ が見つからない');
+		ctx.expect(frame !== undefined, 'コックピットの面が見つからない');
 
-		// Home を開く
-		let barShown = false;
-		for (let i = 0; i < 12 && !barShown; i++) {
+		// 列が**見えて**から進む（下書きが 2 本届いた合図。以前は ≡ の行で代用していた）
+		let stripShown = false;
+		for (let i = 0; i < 12 && !stripShown; i++) {
 			await page.waitForTimeout(500);
-			barShown = await frame.$eval('#homeBar', (el) => !el.hidden).catch(() => false);
+			stripShown = await frame
+				.$eval('#sessionTabs', (el) => !el.hidden && el.offsetParent !== null && el.offsetHeight > 0)
+				.catch(() => false);
 		}
-		ctx.expect(barShown, '≡ の行が出ない');
-		// ≡ はトグルなので、押す前に**開いているか**を見る（前のケースが開いたまま
-		// 終えていると、押した結果が「閉じる」になり、隠れた古い面を読むことになる）
+		ctx.expect(stripShown, '「新しいセッション」を 2 回押したのに、タブ列が**見えて**いない');
+		// 開く操作は面のタイトルへ移った（T-345）。押す前に**開いているか**を見るのは変えない
+		// — 前のケースが開いたまま終えていると、隠れた古い面を読むことになる
 		const homeHidden = await frame.$eval('#home', (el) => el.hidden).catch(() => true);
 		if (homeHidden) {
-			await frame.$eval('#homeToggle', (el) => el.click());
+			ctx.expect(await pressOpenHome(page), '面のタイトルの「一覧（Home）」を押せない');
 		}
 		await page.waitForTimeout(600);
 		ctx.expect(
@@ -161,7 +171,7 @@ export default {
 		// **Home は閉じて終える。** ケースはアプリを共有しているので、開きっぱなしは
 		// 次のケースの前提を壊す（54 に書いた教訓を自分が破っていて、59（T-332）の
 		// 「開く前から Home が出ている」で顕在化した）
-		await frame.$eval('#homeToggle', (el) => el.click());
+		await frame.$eval('#homeBack', (el) => el.click());
 		await page.waitForTimeout(400);
 	}
 };
