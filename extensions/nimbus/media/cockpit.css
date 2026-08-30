@@ -1170,6 +1170,12 @@ body {
 	margin-bottom: 2px;
 }
 
+/*
+ * 札は**面の中に収まる**（T-357・敵対的試験 adv-10）。ファイル名は最大 255 字あり、
+ * 幅の上限が無いと 1 枚で面を突き抜けて（実測 1,420px / 面 559px）×（外す）が画面の外へ出る。
+ * 折るのではなく切る — 札は 1 行の目印であって、読ませる本文ではない。
+ * 全部の名前は `title` 属性（下の JS が入れている）で読める。
+ */
 .attachment {
 	display: flex;
 	align-items: center;
@@ -1181,6 +1187,16 @@ body {
 	padding: 2px 6px;
 	font-size: var(--nimbus-label2);
 	cursor: pointer;
+	max-width: 100%;
+	min-width: 0;
+}
+
+/* 名前だけが縮む（× は必ず押せる場所に残す） */
+.attachment > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
 }
 
 .attachment svg {

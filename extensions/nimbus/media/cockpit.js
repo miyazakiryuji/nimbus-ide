@@ -693,8 +693,9 @@
 			const chip = document.createElement('button');
 			chip.className = 'attachment';
 			chip.type = 'button';
-			// 押したら外せる。貼り間違いを送るしかないのは困る
-			chip.title = '外す';
+			// 押したら外せる。貼り間違いを送るしかないのは困る。
+			// **名前も添える**（T-357）— 札は幅で切るので、切れた先はここでしか読めない
+			chip.title = `${item.name}（押すと外す）`;
 			const name = document.createElement('span');
 			name.textContent = item.name;
 			chip.appendChild(name);
