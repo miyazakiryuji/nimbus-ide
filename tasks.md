@@ -157,8 +157,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-i | T-345 | 2026-08-30 20:35 | nimbus/tests/gui/cases/adv-*.mjs, nimbus/docs/testing/adversarial.md
-
 
 
 
