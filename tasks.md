@@ -181,8 +181,11 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       GUI 全件 → `--untrusted` → doctor → `degrade check --full`）。② 敵対的試験は
       `--adversarial` で opt-in する別束（既定の全件には混ぜない＝他セッションの緑を汚さない）。
       設計は [`nimbus/docs/testing/adversarial.md`](nimbus/docs/testing/adversarial.md)。
-      済: ①`--adversarial` の土台（b4b38a4562a）②設計書 16 本ぶん（採用 17 / 却下 26・却下も表で残した）
-      / 残: 敵対ケース 16 本の実装・00:23 の実行 / 次: `cases/adv-01`〜`adv-16` を書く [P1]
+      済: ①`--adversarial` の土台（b4b38a4562a）②設計書（5c94f7b06f0・採用 17 / 却下 26、却下も表で残した）
+      ③ケース 16 本（`adv-01`〜`adv-16`。構文・helpers の実在・書き先が ctx 配下・finally の有無まで機械確認済み）
+      / 残: 00:23 の総合試験＋敵対束の実行 / 次: 00:23 に `package-app.sh` から順に回す [P1]
+      **未決 1 件**: adv-12（Home の開閉）は `cockpit-home.md` が「provider が覚える」と書いており、
+      「面ごとの見えかた」に倒すかは決まっていない。赤が出たら直す前に利用者へ確認する。 [P1]
 - [ ] T-340 **GUI ケース 54 が束で走ると落ちる（単独では通る）** — 2026-08-29 に発覚。
       `--only セッション`（8 件）で走らせると 54 だけ「タブ列の 2 枚目を押しても前面が移らない」で落ち、
       `--only 54-` の単独では通る（ただし **`--with-claude` を付けると単独でも落ちる** — 起動時の

@@ -508,10 +508,11 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
   - `ctx.withClaude` のときは先頭で `return`（後始末の空 history が本物のセッションの帯を殺す）。
   - finally: 空の `history`（`resetToBlank` と同じ形）を送って `.turn` が 0 に戻ったことを確かめる。
     `#log` の `innerText` を丸ごと読まない。
-- **根拠** — `extensions/nimbus/media/cockpit.js:145-176, 184-208, 593-614, 1528, 1596-1608` /
+- **根拠** — `extensions/nimbus/media/cockpit.js:146-148（atBottom）, 173-177（stickToBottom）, 1596-1608（描き直し）` /
   `extensions/nimbus/media/cockpit.css:307-311, 380-384` /
-  `extensions/nimbus/src/extension.ts:294, 297, 3123-3128, 3595` /
-  `extensions/nimbus/src/cockpit/CockpitViewProvider.ts:183, 439`
+  `extensions/nimbus/src/extension.ts:294（MAX_RETAINED_EVENTS）, 297, 3123-3128` /
+  `extensions/nimbus/src/cockpit/CockpitViewProvider.ts:294（snapshot）, 297` /
+  `extensions/nimbus/src/events.ts:164-178`（流し込む形）
   （※ タブ切り替えで送られるのは `MAX_ARCHIVED_EVENTS = 500`。2,000 件が一度に届くのは
   面を開き直したときの `snapshot()` 経路。このケースは後者を模している）
 
