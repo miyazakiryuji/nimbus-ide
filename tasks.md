@@ -157,7 +157,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-i | T-345 | 2026-08-30 19:30 | nimbus/tests/gui/run.mjs, nimbus/tests/gui/cases/adv-*.mjs, nimbus/docs/testing/adversarial.md
+- 🔒 @session-i | T-345 | 2026-08-30 20:35 | nimbus/tests/gui/cases/adv-*.mjs, nimbus/docs/testing/adversarial.md
 
 
 
@@ -181,7 +181,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       GUI 全件 → `--untrusted` → doctor → `degrade check --full`）。② 敵対的試験は
       `--adversarial` で opt-in する別束（既定の全件には混ぜない＝他セッションの緑を汚さない）。
       設計は [`nimbus/docs/testing/adversarial.md`](nimbus/docs/testing/adversarial.md)。
-      済: — / 残: 敵対ケースの実装・00:23 の実行 / 次: 敵対ケースを書く [P1]
+      済: ①`--adversarial` の土台（b4b38a4562a）②設計書 16 本ぶん（採用 17 / 却下 26・却下も表で残した）
+      / 残: 敵対ケース 16 本の実装・00:23 の実行 / 次: `cases/adv-01`〜`adv-16` を書く [P1]
 - [ ] T-340 **GUI ケース 54 が束で走ると落ちる（単独では通る）** — 2026-08-29 に発覚。
       `--only セッション`（8 件）で走らせると 54 だけ「タブ列の 2 枚目を押しても前面が移らない」で落ち、
       `--only 54-` の単独では通る（ただし **`--with-claude` を付けると単独でも落ちる** — 起動時の
