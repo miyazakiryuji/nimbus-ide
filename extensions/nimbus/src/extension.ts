@@ -4024,6 +4024,16 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		vscode.commands.registerCommand('nimbus.restoreSession', () => restoreSession()),
 		// 走っているセッションを横断で見る（T-251 / T-252）。持ち主のいないものは続きから開ける
 		vscode.commands.registerCommand('nimbus.showSessions', () => showSessions()),
+		/*
+		 * 一覧（Home）を開く（T-345）。以前は webview の ≡ が唯一の入口だったが、
+		 * ≡ を廃止したので**面のタイトルへ移す**。入口を消すだけにすると、
+		 * 束の管理と「続きから」が名前を知っている人にしか届かなくなる（CLAUDE.md「入口も足す」）。
+		 */
+		vscode.commands.registerCommand('nimbus.openHome', async () => {
+			await cockpit.reveal();
+			const groupsFile = await groupStore.load();
+			cockpit.post({ type: 'home', groups: buildHome(groupsFile, currentTabs()), open: true });
+		}),
 		// 取り込んで押し上げる（T-306）
 		vscode.commands.registerCommand('nimbus.syncBranch', () => syncBranch()),
 		// コミットメッセージを作って SCM の入力欄に入れる（T-305 / 型は T-309）

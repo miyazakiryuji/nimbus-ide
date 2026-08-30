@@ -445,9 +445,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 			// 状態は上の帯ではなく**入力欄の中**に置く。送るときに目が要る情報なので、
 			// 送信ボタンと同じ視野に入っているほうがよい（人間工学 E2 / E3）
 			body: `	<div id="homeBar" class="home-bar" hidden>
-		<button id="homeToggle" class="icon-button" type="button" title="タブとセッションの一覧（Home）"></button>
 		<span id="homeBarSession" class="home-bar-session"></span>
 	</div>
+	<button id="homeBack" class="icon-button home-back" type="button" title="会話へ戻る" hidden></button>
 	<nav id="groupTabs" class="group-tabs" hidden></nav>
 	<div class="cockpit-columns">
 	<nav id="sessionTabs" class="session-tabs" hidden></nav>

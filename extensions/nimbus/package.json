@@ -640,6 +640,12 @@
         "icon": "$(server-process)"
       },
       {
+        "command": "nimbus.openHome",
+        "title": "セッションの一覧（Home）を開く",
+        "category": "Nimbus",
+        "icon": "$(list-tree)"
+      },
+      {
         "command": "nimbus.checkTasks",
         "title": "%command.checkTasks%",
         "category": "Nimbus",
@@ -1358,6 +1364,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "nimbus.openHome",
+          "when": "view == nimbus.cockpit",
+          "group": "navigation@2.5"
+        },
+        {
           "command": "nimbus.fullscreenCockpit",
           "when": "view == nimbus.cockpit",
           "group": "navigation@3"
@@ -1476,6 +1487,11 @@
           "command": "nimbus.showSessions",
           "when": "activeWebviewPanelId == nimbus.cockpitTab",
           "group": "navigation@2"
+        },
+        {
+          "command": "nimbus.openHome",
+          "when": "activeWebviewPanelId == nimbus.cockpitTab",
+          "group": "navigation@2.5"
         },
         {
           "command": "nimbus.showSessionSide",

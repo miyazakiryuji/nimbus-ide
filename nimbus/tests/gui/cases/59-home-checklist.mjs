@@ -1,8 +1,11 @@
 /**
- * Home（≡）の確認項目の自動化ぶん（T-332）。
+ * Home の確認項目の自動化ぶん（T-332）。
+ *
+ * **≡ は廃止した**（T-345）。開くのは面のタイトル（`nimbus.openHome`）、
+ * 戻るのは列の頭に出る「← 会話へ戻る」。開閉の観点はそのまま、押す場所だけが変わっている。
  *
  * 観点の全体は nimbus/docs/testing/home-checklist.md。ここで押すのは:
- * ① 開閉 — ≡ で Home と会話が入れ替わる・ツールチップも入れ替わる・
+ * ① 開閉 — タイトルから Home が開き、← で会話へ戻る・← は開いているときだけ出る・
  *          開いた状態がエディタタブの面にも引き継がれる
  * ② 束 — 束 1 つならタブ列は出ない / 空の束も「セッションはまだありません」で出る
  * ③ 行 — 番号と状態の言葉が全行に入る・下書きに「移す」を出さない
@@ -12,30 +15,35 @@
  * セッションは要らない（下書き 2 本と空の束で全部確かめられる・課金なし）。
  */
 
-/** 面のタイトルの「新しいセッション」を押す（下書きを増やして ≡ を出すため） */
-async function pressNewSession(page) {
-	return page.evaluate(() => {
+/** 面のタイトルのボタンを、名前の一部で押す */
+async function pressTitleAction(page, label) {
+	return page.evaluate((needle) => {
 		const found = [
 			...document.querySelectorAll(
 				'.part.sidebar .composite.title .actions-container a, .part.sidebar .composite.title .action-label'
 			)
 		].find((el) =>
-			`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes('新しいセッション')
+			`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.includes(needle)
 		);
 		if (!found) {
 			return false;
 		}
 		found.click();
 		return true;
-	});
+	}, label);
 }
+
+/** 下書きを増やして列を出すため */
+const pressNewSession = (page) => pressTitleAction(page, '新しいセッション');
+/** ≡ を廃止した分の入口（T-345）。Home を開くのはここ */
+const pressOpenHome = (page) => pressTitleAction(page, '一覧（Home）');
 
 /** コックピットのフレームを全部掴む（サイドバー・エディタタブ） */
 async function cockpitFrames(page) {
 	const frames = [];
 	for (const frame of page.frames()) {
 		try {
-			if (await frame.$('#homeToggle')) {
+			if (await frame.$('#sessionTabs')) {
 				frames.push(frame);
 			}
 		} catch {
@@ -61,7 +69,8 @@ async function readHomeState(frame) {
 	return frame.evaluate(() => ({
 		panelShown: !document.getElementById('home').hidden,
 		logShown: !document.getElementById('log').hidden,
-		toggleTitle: document.getElementById('homeToggle').title,
+		// ← は Home を開いているときだけ出る（T-345）
+		backShown: !document.getElementById('homeBack').hidden,
 		groupTabsShown: !document.getElementById('groupTabs').hidden
 	}));
 }
@@ -116,19 +125,16 @@ export default {
 		ctx.expect(!before.groupTabsShown, '束が 1 つしか無いのにタブ列が出ている（後方互換が壊れた疑い）');
 		ctx.expect(!before.panelShown && before.logShown, '開く前から Home が出ている');
 		ctx.expect(
-			before.toggleTitle === 'タブとセッションの一覧（Home）',
-			`閉じているときの ≡ のツールチップが違う: ${before.toggleTitle}`
+			!before.backShown,
+			'会話を見ているのに「← 会話へ戻る」が出ている（押しても何も起きないボタンを置かない）'
 		);
 
-		// ① 開く: Home が出て会話が隠れ、ツールチップが入れ替わる
-		await (await side.$('#homeToggle')).click();
-		await page.waitForTimeout(600);
+		// ① 開く: タイトルの入口（T-345）で Home が出て会話が隠れ、← が現れる
+		ctx.expect(await pressOpenHome(page), 'タイトルの「一覧（Home）」が押せない');
+		await page.waitForTimeout(900);
 		const opened = await readHomeState(side);
-		ctx.expect(opened.panelShown && !opened.logShown, '≡ を押しても Home と会話が入れ替わらない');
-		ctx.expect(
-			opened.toggleTitle === '会話へ戻る',
-			`開いたときの ≡ のツールチップが違う: ${opened.toggleTitle}`
-		);
+		ctx.expect(opened.panelShown && !opened.logShown, 'タイトルから Home と会話が入れ替わらない');
+		ctx.expect(opened.backShown, '一覧を開いたのに「← 会話へ戻る」が出ない');
 
 		// ③④ 行: 番号と状態の言葉が全行に入る・下書きに「移す」は無い・active は多くても 1 つ
 		const rows = await readRows(side);
@@ -186,10 +192,10 @@ export default {
 			await closers[0].click();
 			await page.waitForTimeout(500);
 		}
-		await (await side.$('#homeToggle')).click();
-		await page.waitForTimeout(600);
+		ctx.expect(await pressOpenHome(page), '2 回目の「一覧（Home）」が押せない');
+		await page.waitForTimeout(900);
 		// **新しく開いた面だけ**を掴むため、コマンドの前後でフレーム集合を差分する。
-		// 「#homeToggle を持つ side 以外」だと、ヘルプ（ゆあ）の webview（同じ実装＝同じ DOM）や
+		// 「#sessionTabs を持つ side 以外」だと、ヘルプ（ゆあ）の webview（同じ実装＝同じ DOM）や
 		// 前のケースが残した面を掴んでしまう — フル実行でだけそれを読んで偽って落ちた
 		const framesBefore = await cockpitFrames(page);
 		await page.keyboard.press('F1');
@@ -228,7 +234,11 @@ export default {
 			nodes.map((node) => (node.textContent ?? '').trim()).filter((text) => text.startsWith('点検用'))
 		);
 		ctx.expect(leftover.length === 0, '後片付けで束を閉じられなかった');
-		await (await side.$('#homeToggle')).click();
-		await page.waitForTimeout(400);
+		// 会話へ戻して次のケースへ渡す（開いたままだと、次が Home を会話と読み違える）
+		const back = await side.$('#homeBack');
+		if (back) {
+			await back.click();
+			await page.waitForTimeout(400);
+		}
 	}
 };

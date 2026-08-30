@@ -20,7 +20,7 @@
 	const sessionTabs = /** @type {HTMLElement} */ (document.getElementById('sessionTabs'));
 	const railSash = /** @type {HTMLElement} */ (document.getElementById('railSash'));
 	const homeBar = /** @type {HTMLElement} */ (document.getElementById('homeBar'));
-	const homeToggle = /** @type {HTMLButtonElement} */ (document.getElementById('homeToggle'));
+	const homeBack = /** @type {HTMLButtonElement} */ (document.getElementById('homeBack'));
 	const homeBarSession = /** @type {HTMLElement} */ (document.getElementById('homeBarSession'));
 	const groupTabs = /** @type {HTMLElement} */ (document.getElementById('groupTabs'));
 	const homePanel = /** @type {HTMLElement} */ (document.getElementById('home'));
@@ -97,7 +97,9 @@
 		menu: 'M2 4h12v1.4H2zM2 7.3h12v1.4H2zM2 10.6h12V12H2z',
 		edit: 'M11.1 2.2a1.6 1.6 0 0 1 2.3 0l.4.4a1.6 1.6 0 0 1 0 2.3l-7.3 7.3-3.2.9.9-3.2zM10 4.5l1.5 1.5',
 		home: 'M8 2 2 7.4l.9 1L4 7.4V13h3.2V9.6h1.6V13H12V7.4l1.1 1 .9-1z',
-		move: 'M9.2 4.2 12.9 8l-3.7 3.8-1-1 2-2.1H3.5V7.3h6.7l-2-2.1z'
+		move: 'M9.2 4.2 12.9 8l-3.7 3.8-1-1 2-2.1H3.5V7.3h6.7l-2-2.1z',
+		// 一覧から会話へ戻る（T-345）。ブラウザの戻ると同じ向き
+		back: 'M7.4 2.5 8.5 3.6 5.1 7H14v2H5.1l3.4 3.4-1.1 1.1L1.9 8z'
 	};
 
 	/** @param {string} name @param {string} [className] */
@@ -951,8 +953,14 @@
 		}
 	});
 
-	homeToggle.appendChild(icon('menu'));
-	homeToggle.addEventListener('click', () => setHomeOpen(!homeOpen));
+	/*
+	 * 一覧を開いているときだけ出る「← 会話へ戻る」（T-345・利用者依頼 2026-08-30）。
+	 * 以前は ≡（ハンバーガー）が開閉の両方を兼ねていたが、**閉じているときの ≡ は
+	 * 「何が起きるか」を言わない**。列そのものが常に見えるようになった（T-341）いま、
+	 * 開く役は面のタイトル（`nimbus.openHome`）に移し、ここは戻るだけを持つ。
+	 */
+	homeBack.appendChild(icon('back'));
+	homeBack.addEventListener('click', () => setHomeOpen(false));
 	sendButton.appendChild(icon('send'));
 	interruptButton.appendChild(icon('stop'));
 	attachButton.appendChild(icon('attach'));
@@ -1001,8 +1009,8 @@
 		homePanel.hidden = !next;
 		// Home と会話は入れ替わりで出す（両方見えると、どちらに打つのか分からない）
 		log.hidden = next;
-		homeToggle.classList.toggle('open', next);
-		homeToggle.title = next ? '会話へ戻る' : 'タブとセッションの一覧（Home）';
+		// 会話を見ているときは出さない。押しても何も起きないボタンを置かない
+		homeBack.hidden = !next;
 		if (next) {
 			renderHome();
 		}
@@ -1298,9 +1306,10 @@
 
 	function renderSessionTabs(tabs) {
 		sessionTabs.textContent = '';
-		// ≡（Home）は列の先頭に住む（T-338）。textContent = '' で外れるので、毎回置き直す。
-		// 同じ要素を移しているだけなので、click のリスナーはそのまま生きている
-		sessionTabs.appendChild(homeToggle);
+		// 「← 会話へ戻る」は列の先頭に住む（T-338 の場所を T-345 が引き継ぐ）。
+		// textContent = '' で外れるので、毎回置き直す。同じ要素を移しているだけなので
+		// click のリスナーはそのまま生きている
+		sessionTabs.appendChild(homeBack);
 		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
 		sessionTabs.hidden = !tabs || (tabs.length < 2 && !tabs.some((tab) => tab.resumable));
 		// 境目は列があるときだけ。畳んでいるときに掴めると、掴んだ先に何も無い（T-342）

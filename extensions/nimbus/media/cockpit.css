@@ -164,12 +164,18 @@ body.rail-dragging {
 	user-select: none;
 	/* 縦なので左右は詰める — 1px でも名前の場所に回す（T-341） */
 	padding: 4px 8px;
+	/* 指を置いた・前面が移ったことが分かる程度に（T-346）。位置は動かさない */
+	transition: background 120ms ease-out, color 120ms ease-out;
 	border: none;
 	border-radius: 0;
 	background: var(--vscode-tab-inactiveBackground);
 	color: var(--vscode-tab-inactiveForeground);
 	cursor: pointer;
 	font-size: var(--nimbus-label1);
+}
+
+.session-tab:hover:not(.active) {
+	background: var(--vscode-list-hoverBackground);
 }
 
 .session-tab.active {
@@ -717,11 +723,34 @@ body {
  * タブ列は**どの幅でも出す**（T-338）。以前は狭い面（< 520px）で列を隠して ≡ に畳んでいたが、
  * いつも見えていたタブが消え、1 日に何十回の切り替えが想起頼みになって
  * 「切り替えられない」と報告された。タブは縮む（T-291）ので、狭くても並ぶ。
- * ≡ は列の先頭に住み、Home（束の俯瞰と続きから）の入口として残る。
+ *
+ * **≡ は廃止した**（T-345）。列そのものが常に見えるようになった（T-341）ので、
+ * 閉じているときの ≡ は「何が起きるか」を言わないまま場所だけ取っていた。
+ * Home を開く役は面のタイトル（`nimbus.openHome`）へ移し、列の先頭には
+ * **一覧を開いているときだけ「← 会話へ戻る」**が座る。
  */
-#homeToggle {
+#homeBack {
 	flex: 0 0 auto;
-	align-self: center;
+	align-self: flex-start;
+	/* 下のタブと同じ左端から始める（列の頭が揃う） */
+	justify-content: flex-start;
+	width: auto;
+	height: 24px;
+	padding: 0 8px;
+	color: var(--vscode-tab-inactiveForeground);
+}
+
+#homeBack:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+	color: var(--vscode-tab-activeForeground);
+}
+
+#homeBack[hidden] {
+	display: none;
+}
+
+#homeBack:not([hidden]) {
+	animation: nimbus-fade-in 140ms ease-out;
 }
 
 .home-bar {
@@ -745,10 +774,6 @@ body {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-#homeToggle.open {
-	background: var(--vscode-toolbar-activeBackground, var(--vscode-list-activeSelectionBackground));
 }
 
 /* 広い面の上段: タブ（束）の列 */
@@ -809,6 +834,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
+	/* 会話と入れ替わる面なので、**どちらから来たか**が分かるように少しだけ動かす（T-346） */
+	animation: nimbus-slide-in 160ms ease-out;
 }
 
 .home[hidden] {
@@ -1431,4 +1458,36 @@ body {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* ───────────────────────── 動き（T-346） ─────────────────────────
+ *
+ * **控えめに、短く。** 動きは「何が起きたか」を伝えるためだけに使う。
+ * 装飾のための動きは、並列で何本も走っている画面では雑音になる。
+ * 120〜180ms・ease-out で揃え、**位置が変わるものだけ**を動かす。
+ */
+@keyframes nimbus-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes nimbus-slide-in {
+	from { opacity: 0; transform: translateX(-6px); }
+	to { opacity: 1; transform: none; }
+}
+
+/*
+ * **動きに弱い人には害になる。** OS の「視差効果を減らす」を尊重して、全部止める。
+ * 見えかたは変えず、動きだけを外す（情報は動きに載せていないので落ちるものは無い）。
+ */
+@media (prefers-reduced-motion: reduce) {
+	.home,
+	#homeBack:not([hidden]) {
+		animation: none;
+	}
+
+	.session-tab,
+	.rail-sash {
+		transition: none;
+	}
 }

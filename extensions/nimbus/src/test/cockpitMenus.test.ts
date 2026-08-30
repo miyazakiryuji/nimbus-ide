@@ -39,6 +39,8 @@ test('コックピットの面から、主な操作がすべて押せる（T-294
 		// 並びは使う頻度の順。上 3 つはアイコンとして、下 2 つは `...` に入る
 		'nimbus.newSession',
 		'nimbus.showSessions',
+		// 一覧（Home）— ≡ を廃止した分の入口（T-345）。webview から面のタイトルへ移した
+		'nimbus.openHome',
 		'nimbus.fullscreenCockpit',
 		// 待ち時間コンパス（T-336）。開いた先の頭に判定が出る
 		'nimbus.openRhythm',
@@ -57,7 +59,15 @@ test('全画面（エディタタブ）でも同じ操作が押せる（T-290 / 
 	// ここに置かないと、全画面にした瞬間に**入口がゼロになる**
 	assert.deepStrictEqual(
 		titleCommands(menus['editor/title'], 'activeWebviewPanelId == nimbus.cockpitTab'),
-		['nimbus.newSession', 'nimbus.showSessions', 'nimbus.showSessionSide', 'nimbus.fullscreenCockpit', 'nimbus.openRhythm']
+		[
+			'nimbus.newSession',
+			'nimbus.showSessions',
+			// 全画面はサイドバーを畳むので、ここに無いと Home の入口がゼロになる（T-345）
+			'nimbus.openHome',
+			'nimbus.showSessionSide',
+			'nimbus.fullscreenCockpit',
+			'nimbus.openRhythm'
+		]
 	);
 });
 
