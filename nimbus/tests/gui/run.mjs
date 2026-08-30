@@ -7,6 +7,7 @@
  *   node nimbus/tests/gui/run.mjs --list         # ケース一覧だけ出す（起動しない）
  *   node nimbus/tests/gui/run.mjs --only theme   # 名前に一致するケースだけ
  *   node nimbus/tests/gui/run.mjs --untrusted    # 信頼していないフォルダでの見え方だけ
+ *   node nimbus/tests/gui/run.mjs --adversarial  # わざと壊しにいくケースだけ（T-345）
  *
  * ケースの足しかた: `cases/` に 1 ファイル増やすだけ。
  *   export default { name: '...', async run(page, ctx) { ... } }
@@ -159,8 +160,13 @@ async function resetWorkbench(page) {
 async function main() {
 	const cases = await loadCases();
 	const only = value('only');
-	// 信頼を確かめるケースは起動のしかたが違うので、既定の一覧からは外す
-	const forThisRun = cases.filter((c) => Boolean(c.untrusted) === flag('untrusted'));
+	// 信頼を確かめるケースは起動のしかたが違うので、既定の一覧からは外す。
+	// 敵対的ケース（`adversarial: true`・T-345）も同じ理由で外す — わざと壊しにいく束なので、
+	// 既定の全件に混ぜると「普段の緑」が読めなくなり、他のセッションの判断材料を汚す。
+	// `--adversarial` を付けたときだけ、その束**だけ**を走らせる
+	const forThisRun = cases.filter(
+		(c) => Boolean(c.untrusted) === flag('untrusted') && Boolean(c.adversarial) === flag('adversarial')
+	);
 	// 開発ビルドでは成り立たないものがある（表示言語は `VSCODE_DEV` があると upstream 側で
 	// 英語に短絡する）。素通りさせると「確かめた」ことになってしまうので、**外したことを言う**
 	const skipped = flag('packaged') ? [] : forThisRun.filter((c) => c.packagedOnly);
