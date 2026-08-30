@@ -3074,12 +3074,30 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		renameSession(chosen.tab.sessionId, name);
 	}
 
+	/** いま起こしている最中の「前回のセッション」。二度押しで 2 本起こさないための札（T-344） */
+	const resuming = new Set<string>();
+
 	function switchSession(sessionId: string): void {
 		// 前回のセッション（T-318）。押されたら続きから起こす
 		const dormant = resumableRecords.get(sessionId);
 		if (dormant && !sessions.get(sessionId)) {
-			resumableRecords.delete(sessionId);
-			void resumeRecord(dormant);
+			/*
+			 * **起こし切るまで台帳から消さない**（T-344）。
+			 * 以前はここで `resumableRecords.delete()` を先に呼んでいたが、`resumeRecord` は
+			 * 投げっぱなしなので、成功する前に行だけが消えていた —
+			 * ①同時実行の上限で弾かれると行が二度と戻らない
+			 * ②起こし終わる前に別のセッションを押すと `updateSessionTabs()` が走り、その場で消える
+			 * （利用者報告: 動作していないものを押してから動作中のものを押すと消えた）。
+			 * 消すのは成功した `resumeRecord` の役目。ここは二度押しだけ止める。
+			 */
+			if (resuming.has(sessionId)) {
+				return;
+			}
+			resuming.add(sessionId);
+			void resumeRecord(dormant).finally(() => {
+				resuming.delete(sessionId);
+				updateSessionTabs();
+			});
 			return;
 		}
 		// 下書きのタブ（T-303）。まだ中身が無いので、面を白紙にして選び直すだけ
