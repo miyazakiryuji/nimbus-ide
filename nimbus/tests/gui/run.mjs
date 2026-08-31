@@ -146,7 +146,7 @@ async function resetWorkbench(page) {
 		for (let i = 0; i < 6; i++) {
 			const tabs = await page.evaluate(() => document.querySelectorAll('.tabs-container .tab').length);
 			if (tabs === 0) {
-				return;
+				break;
 			}
 			await runCommand(page, 'Revert and Close Editor');
 			await page.waitForTimeout(500);
@@ -154,6 +154,69 @@ async function resetWorkbench(page) {
 	} catch {
 		// 戻せないこと自体では落とさない（T-240 と同じ方針）。ただし次の行で気づける
 		console.log('  ！ 画面の後始末に失敗しました（前のケースのエディタが残っています）');
+	}
+	return resetExtensionState(page);
+}
+
+/**
+ * 拡張が持っている状態も戻す（T-359）。
+ *
+ * エディタを閉じるだけでは足りない。**セッション・下書き・承認待ち・全画面・右半分・
+ * 面の中身（添付・入力欄・Home・レール幅）**は拡張と webview に残り、次のケースへ持ち越される。
+ * 実測で「セッションが無いのに `! 許可待ち`」「下書きが 3 行」「会話を見ているのに ← が出ている」
+ * が起き、**同じバイナリでも走らせるたびに 8 件前後落ちていた**（直し前 55/63・直し後 54/63 の A/B）。
+ *
+ * **投げっぱなしにしない。** 拡張は全部の面から ACK が返るまで待ち、
+ * 「何が残ったか」を返す。残っていたら**そのまま次のケースへ進まず、はっきり言う** —
+ * 隔離できていない状態で 63 件を走らせても、結果を解釈できない。
+ */
+async function resetExtensionState(page) {
+	// 口はコックピットの webview の中に在る（`window.__nimbusTest`）。
+	// 拡張のコマンドにすると製品の面が 1 つ増えるうえ、ランナーから**戻り値が取れない**
+	let report;
+	try {
+		let hook;
+		for (const frame of page.frames()) {
+			const has = await frame.evaluate(() => Boolean(window.__nimbusTest)).catch(() => false);
+			if (has) {
+				hook = frame;
+				break;
+			}
+		}
+		if (!hook) {
+			return; // コックピットの面がまだ無い（起動直後など）。エディタだけ戻して先へ
+		}
+		report = await hook.evaluate(() => window.__nimbusTest.reset());
+	} catch (error) {
+		console.log(`  ！ 拡張の状態を戻せませんでした: ${error instanceof Error ? error.message : String(error)}`);
+		return;
+	}
+	if (report?.timedOut) {
+		console.log('  ！ リセットの返事が来ませんでした（拡張が応じていない）');
+		return;
+	}
+	if (!report || report.unavailable) {
+		return; // 口が無い版（古いビルド）では、これまでどおりエディタだけ戻す
+	}
+	const dirty = [];
+	if (report.acked < report.surfaces) {
+		dirty.push(`面の返事が ${report.acked}/${report.surfaces}`);
+	}
+	if (report.sessions) { dirty.push(`セッション ${report.sessions}`); }
+	if (report.drafts) { dirty.push(`下書き ${report.drafts}`); }
+	if (report.pending) { dirty.push(`承認待ち ${report.pending}`); }
+	for (const left of report.left ?? []) {
+		for (const [key, value] of Object.entries(left)) {
+			if (value) {
+				dirty.push(`面に ${key}=${value}`);
+			}
+		}
+	}
+	for (const error of report.errors ?? []) {
+		dirty.push(`エラー: ${error}`);
+	}
+	if (dirty.length > 0) {
+		console.log(`  ！ リセットが効いていません（次のケースが汚れます）: ${dirty.join(' / ')}`);
 	}
 }
 

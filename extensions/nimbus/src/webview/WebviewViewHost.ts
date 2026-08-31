@@ -168,6 +168,17 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 		void this.panel?.webview.postMessage(message);
 	}
 
+	/**
+	 * いま生きている面の数（T-359）。
+	 *
+	 * 試験のリセットは**全部の面から ACK が返ったこと**で「効いた」と判断する。
+	 * 何枚あるのかを知らないと、1 枚だけ返ってきたのを「全部返った」と読んでしまう。
+	 * `postMessage` が配る先と**同じ 2 つ**を数える（束縛面は自分で ready を返すので含めない）。
+	 */
+	public liveSurfaceCount(): number {
+		return (this.view ? 1 : 0) + (this.panel ? 1 : 0);
+	}
+
 	/** 同梱アセットの URI */
 	protected mediaUri(webview: vscode.Webview, name: string): vscode.Uri {
 		return webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', name));

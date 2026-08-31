@@ -1641,8 +1641,96 @@
 	pickModel.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseModel' }));
 	pickEffort.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'nimbus.chooseEffort' }));
 
+	/**
+	 * 試験からリセットを頼むための口（T-359）。**拡張側が `NIMBUS_SMOKE` のときしか応じない**ので、
+	 * 製品では投げても何も起きない（コマンドを 1 つも増やさずに済む）。
+	 * ランナーは `frame.evaluate(() => window.__nimbusTest.reset())` で呼び、
+	 * **返ってきた報告で「効いたか」を確かめる**。
+	 */
+	const testResetWaiters = new Map();
+	window.__nimbusTest = {
+		reset(timeoutMs = 8000) {
+			const token = `t${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+			return new Promise((resolve) => {
+				testResetWaiters.set(token, resolve);
+				setTimeout(() => {
+					if (testResetWaiters.delete(token)) {
+						resolve({ timedOut: true });
+					}
+				}, timeoutMs);
+				vscode.postMessage({ type: 'requestTestReset', token });
+			});
+		}
+	};
+
 	window.addEventListener('message', (e) => {
 		const message = e.data;
+		/*
+		 * **試験のためのリセット**（T-359）。GUI テストは 1 つの Electron を全ケースで共有するので、
+		 * 面に残った状態が次のケースへ持ち越される。実測で「セッションが無いのに `! 許可待ち`」
+		 * 「下書きが 3 行」「会話を見ているのに ← が出ている」が起き、**同じバイナリでも
+		 * 走らせるたびに 8 件前後落ちていた**（A/B で確認）。
+		 *
+		 * `history: []` を送るだけでは足りない — あれは `#log` と控えを消すだけで、
+		 * **添付・入力欄・Home・レール幅・承認カードは残る**（Codex の指摘 2026-08-31）。
+		 *
+		 * **必ず ACK を返す。** 返さないと拡張側が「効いたかどうか」を確かめられず、
+		 * 「リセットしたつもりで効いていない」まま次のケースへ進んでしまう。
+		 * ACK には**残っている数**を載せる — 自己申告と実画面の二重確認ができるように。
+		 */
+		if (message.type === 'testResetDone') {
+			const resolve = testResetWaiters.get(message.token);
+			if (resolve) {
+				testResetWaiters.delete(message.token);
+				resolve(message.report);
+			}
+			return;
+		}
+		if (message.type === 'testReset') {
+			try {
+				pending.length = 0;
+				renderPending();
+				input.value = '';
+				autoGrow();
+				closeSlash();
+				setHomeOpen(false);
+				log.textContent = '';
+				// **空にするだけでは足りない。** 会話が空のときは案内（`.suggestion`）が出ているのが
+				// 素の状態で、消しっぱなしだと次のケースが「空のときの候補が出ていない」で落ちる
+				// （実測 — ケース 45 がこれで落ちた）。リセットは**素の状態に戻す**ことであって、
+				// 全部消すことではない
+				showWelcome();
+				approvals.textContent = '';
+				approvals.hidden = true;
+				sessionTabs.textContent = '';
+				sessionTabs.appendChild(homeBack);
+				railWanted = false;
+				railCollapsedByWidth = false;
+				sessionTabs.style.width = '';
+				sessionTabs.style.maxWidth = '';
+				layoutRail();
+				// 覚えた幅も捨てる（面ごとに永続するので、消さないと次のケースへ効く）
+				const state = vscode.getState() ?? {};
+				delete state.railWidth;
+				vscode.setState(state);
+			} catch (error) {
+				vscode.postMessage({ type: 'testResetAck', token: message.token, error: String(error) });
+				return;
+			}
+			vscode.postMessage({
+				type: 'testResetAck',
+				token: message.token,
+				left: {
+					attachments: document.querySelectorAll('.attachment').length,
+					approvals: document.querySelectorAll('#approvals > *').length,
+					sessionTabs: document.querySelectorAll('.session-tab').length,
+					turns: document.querySelectorAll('.turn').length,
+					input: input.value.length,
+					homeOpen: !homePanel.hidden
+				}
+			});
+			return;
+		}
 		if (message.type === 'sessionState') {
 			// 状態は**記号・丸・言葉・色の 4 つ**で同じことを言う（T-298）。
 			// 記号だけ・色だけだと、小さくて読み取れないという声が出た

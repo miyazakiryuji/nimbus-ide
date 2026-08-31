@@ -52,6 +52,13 @@ export type InboundMessage =
 	 */
 	| { type: 'homeOpened'; open: boolean }
 	/**
+	 * 試験のリセットが効いたことの返事（T-359）。**面ごとに 1 通**返る。
+	 * `left` には残っている数が入る — 自己申告と実画面の二重確認のため
+	 */
+	| { type: 'testResetAck'; token: string; error?: string; left?: Record<string, number | boolean> }
+	/** 試験からのリセット依頼（T-359）。**拡張が `NIMBUS_SMOKE` のときしか応じない** */
+	| { type: 'requestTestReset'; token: string }
+	/**
 	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
 	 * 画面のボタンが任意のコマンドを呼べる状態にはしない。
 	 */
@@ -114,7 +121,11 @@ export type OutboundMessage =
 	 * 使い始めの「準備」（T-285）。足りないものを、詰まる場所に出すための材料。
 	 * 揃っていても送るので、`checks` は常に渡す（画面側が出し分ける）。
 	 */
-	| { type: 'readiness'; checks: readonly ReadyCheck[] };
+	| { type: 'readiness'; checks: readonly ReadyCheck[] }
+	/** 試験のリセット（T-359・試験専用）。受けた面は `testResetAck` を返す */
+	| { type: 'testReset'; token: string }
+	/** リセットの報告（T-359）。頼んできた面にだけ返す */
+	| { type: 'testResetDone'; token: string; report: unknown };
 
 /** `/` で引ける定型 1 つ */
 export interface SlashCommand {
@@ -172,6 +183,11 @@ export interface CockpitHandlers {
 	homeGroups?(): readonly HomeGroup<SessionTab>[];
 	/** タブ（束）の操作（T-314）。入力と確認は拡張側で行う */
 	onGroup?(op: 'create' | 'rename' | 'remove' | 'assign', target: { groupId?: string; sessionId?: string }): void | Promise<void>;
+	/**
+	 * 試験からのリセット（T-359）。**`NIMBUS_SMOKE` のときだけ渡す** — 渡さなければ、
+	 * webview がいくら頼んでも何も起きない（製品にコマンドを増やさずに済む）。
+	 */
+	onTestReset?(): Promise<unknown>;
 	/** 診断用。Webview の生存を外から確認できるようにしておく */
 	log(message: string): void;
 }
@@ -248,6 +264,45 @@ export class CockpitViewProvider extends WebviewViewHost {
 	 * 生まれるときは直前の見えかたを引き継ぎ、生まれたあとは他の面に動かされない。
 	 */
 	private lastHomeOpen = false;
+
+	/** 進行中のリセットごとに、面から返ってきた ACK を溜める（T-359） */
+	private readonly testResetAcks = new Map<string, { error?: string; left?: Record<string, number | boolean> }[]>();
+
+	/**
+	 * 全部の面をまっさらにして、**返事が揃うまで待つ**（T-359・試験専用）。
+	 *
+	 * 待たずに投げっぱなしにすると「リセットしたつもりで効いていない」まま次のケースへ進む。
+	 * それがまさに T-359 の症状だったので、**効いたことを機械で確かめられる形**にする。
+	 * 返すのは「何枚に送って、何枚から返り、何が残っていたか」。呼び手はこれを見て、
+	 * 揃わなければケースを走らせずに止める。
+	 */
+	public async resetForTests(token: string, timeoutMs = 4000): Promise<{
+		surfaces: number;
+		acked: number;
+		left: Record<string, number | boolean>[];
+		errors: string[];
+	}> {
+		const surfaces = this.liveSurfaceCount();
+		this.testResetAcks.set(token, []);
+		try {
+			this.post({ type: 'testReset', token });
+			const until = Date.now() + timeoutMs;
+			while (Date.now() < until && (this.testResetAcks.get(token)?.length ?? 0) < surfaces) {
+				await new Promise((resolve) => setTimeout(resolve, 50));
+			}
+			const acks = this.testResetAcks.get(token) ?? [];
+			this.lastHomeOpen = false;
+			this.homeOpen.clear();
+			return {
+				surfaces,
+				acked: acks.length,
+				left: acks.map((ack) => ack.left ?? {}),
+				errors: acks.map((ack) => ack.error).filter((error): error is string => Boolean(error))
+			};
+		} finally {
+			this.testResetAcks.delete(token);
+		}
+	}
 
 	constructor(
 		extensionUri: vscode.Uri,
@@ -379,6 +434,15 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'group':
 					await this.handlers.onGroup?.(message.op, { groupId: message.groupId, sessionId: message.sessionId });
+					break;
+				case 'requestTestReset': {
+					// 応じるかどうかは拡張側の判断（`onTestReset` を渡していなければ何もしない）
+					const report = await this.handlers.onTestReset?.();
+					void surface.webview.postMessage({ type: 'testResetDone', token: message.token, report: report ?? { unavailable: true } });
+					break;
+				}
+				case 'testResetAck':
+					this.testResetAcks.get(message.token)?.push({ error: message.error, left: message.left });
 					break;
 				case 'homeOpened':
 					// 送ってきた面のぶんだけ書き換える（T-356）。`nimbus.openHome` は

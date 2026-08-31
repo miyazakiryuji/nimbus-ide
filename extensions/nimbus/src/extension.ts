@@ -660,6 +660,11 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// Home（タブごとの束・T-314）。タブ列と同じ材料から組む
 		homeGroups: () => buildHome(groupsFile, currentTabs()),
 		onGroup: (op, target) => runGroupOp(op, target),
+		/*
+		 * 試験からのリセット（T-359）。**`NIMBUS_SMOKE` のときだけ渡す** —
+		 * 渡さなければ webview がいくら頼んでも何も起きないので、製品の面には出ない
+		 */
+		onTestReset: process.env['NIMBUS_SMOKE'] ? () => resetForTests() : undefined,
 		// `/` で引ける定型（T-271）。既にある指示のテンプレートをそのまま候補に出す
 		slashCommands: () =>
 			loadTemplates().map((template) => ({
@@ -4933,6 +4938,82 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		if (prompt) {
 			void send(prompt);
 		}
+		/*
+		 * **ケースの間で全部まっさらに戻す**（T-359・試験専用）。
+		 *
+		 * GUI テストは 1 つの Electron を全ケースで共有するので、拡張が持っている状態
+		 * （セッション・下書き・承認待ち・全画面・右半分）が次のケースへ持ち越される。
+		 * ランナーの `resetWorkbench` はエディタしか閉じていなかったので、実測で
+		 * 「セッションが無いのに `! 許可待ち`」「下書きが 3 行」が起き、
+		 * **同じバイナリでも走らせるたびに 8 件前後落ちていた**（A/B で確認）。
+		 *
+		 * `NIMBUS_SMOKE` が無ければ**登録すらしない** — 製品の面には出さない。
+		 * 返り値は「何が残ったか」。呼び手（ランナー）はこれを見て、
+		 * 残っていればケースを走らせずに止める（黙って汚れたまま進めない）。
+		 */
+	}
+
+	/*
+	 * **ケースの間で全部まっさらに戻す**（T-359・試験専用）。
+	 *
+	 * GUI テストは 1 つの Electron を全ケースで共有するので、拡張が持っている状態
+	 * （セッション・下書き・承認待ち・全画面・右半分）が次のケースへ持ち越される。
+	 * ランナーの `resetWorkbench` はエディタしか閉じていなかったので、実測で
+	 * 「セッションが無いのに `! 許可待ち`」「下書きが 3 行」が起き、
+	 * **同じバイナリでも走らせるたびに 8 件前後落ちていた**（A/B で確認）。
+	 *
+	 * **`NIMBUS_SMOKE` のときしか `CockpitHandlers` へ渡さない** — 製品では
+	 * webview がいくら頼んでも何も起きない。コマンドを 1 つも増やさずに済む。
+	 *
+	 * 返すのは「何が残ったか」。ランナーはこれを見て、残っていればはっきり言う
+	 * （黙って汚れたまま次のケースへ進めない）。
+	 */
+	async function resetForTests(): Promise<unknown> {
+		const errors: string[] = [];
+		// 1. 走っているものを止め、答え待ちを断る（断らないと次のケースへカードが残る）
+		for (const entry of broker.pending()) {
+			broker.decide(entry.id, 'deny');
+		}
+		try {
+			await sessions.stopAll();
+		} catch (error) {
+			errors.push(`stopAll: ${error instanceof Error ? error.message : String(error)}`);
+		}
+		// 2. 拡張が覚えているものを捨てる
+		drafts.length = 0;
+		activeDraftId = undefined;
+		activeSessionId = undefined;
+		archived.clear();
+		sessionTitles.clear();
+		sessionNumbers.clear();
+		resumableRecords.clear();
+		sessionEfforts.clear();
+		retained.length = 0;
+		lastTabsSignature = '';
+		lastQuota = undefined;
+		lastRun = undefined;
+		lastState = undefined;
+		cockpitFullscreen = false;
+		cockpitFullscreenBusy = false;
+		cockpitFullscreenPending = false;
+		void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', false);
+		await sidePane.show('off', undefined).catch(() => undefined);
+		// 3. 台帳も空にする（別ケースが置いた毒を持ち越さない）
+		for (const record of await sessionStore.list({ fresh: true })) {
+			await sessionStore.forget(record.sessionId).catch(() => undefined);
+		}
+		// 4. 面をまっさらにして、**返事が揃うまで待つ**
+		const surfaces = await cockpit.resetForTests(`reset-${Date.now()}`);
+		updateSessionTabs();
+		return {
+			errors: [...errors, ...surfaces.errors],
+			surfaces: surfaces.surfaces,
+			acked: surfaces.acked,
+			left: surfaces.left,
+			sessions: sessions.list().length,
+			drafts: drafts.length,
+			pending: broker.pending().length
+		};
 	}
 
 	// 他の拡張へ渡す口（T-092）。`activate()` の戻り値が公開面になる
