@@ -290,7 +290,18 @@ export function forgettable(
 ): SessionRecord[] {
 	const ttlMs = options?.ttlMs ?? OWNER_TTL_MS;
 	const forgetAfterMs = options?.forgetAfterMs ?? FORGET_AFTER_MS;
+	/*
+	 * **「最後に生きていた時刻」は `updatedAt` だけでは決まらない**（T-374・Codex の指摘 2026-09-01）。
+	 *
+	 * 心拍（`beat()`）は `owner.heartbeatAt` だけを進め、`updatedAt` は触らない。
+	 * だから「7 日以上 `awaiting-input` のまま窓を開けっぱなしにしていたセッション」は、
+	 * 直前まで心拍が打たれていても `updatedAt` は 7 日前のまま。閉じて開き直すと、
+	 * 復元候補を作るより先に `sweep()` が消してしまう ＝ **開いていたものが消える**（T-368 と同じ形）。
+	 * 心拍も含めた最後の生存時刻で測る。
+	 */
 	return records.filter(
-		(record) => !isOwnerAlive(record, now, ttlMs) && now - record.updatedAt > forgetAfterMs
+		(record) =>
+			!isOwnerAlive(record, now, ttlMs) &&
+			now - Math.max(record.updatedAt, record.owner.heartbeatAt) > forgetAfterMs
 	);
 }

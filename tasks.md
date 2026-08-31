@@ -235,6 +235,28 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       残: 実台帳を種にして「続きから開く」まで通す GUI ケース（fake SDK の口が要る・Codex 提案）
       次: Codex の穴の棚卸し A-2〜A-7・B・C を順に潰す
 
+- [ ] T-372 **復元候補のピン・名前・番号が、起動のたびに消される** — Codex の棚卸し A-2。 @session-i
+      `updateSessionTabs()` の掃除も「生きている」を `sessions.list()` だけで作っていた。
+      復元候補は `resumableRecords` に居るだけで `SessionManager` には無いので、
+      `restoreResumables()` が呼ぶ掃除でピン・名前・番号が消え、`currentTabs()` が
+      **番号を振り直す**。仕様書 `session-registry.md` の「同じ番号・同じ名前で出る」と矛盾。
+      直し: `liveMembership()` に台帳（復元候補）と下書きを入れて数える。
+
+- [ ] T-373 **動いているタブを × で閉じても、台帳から消えない** — Codex の棚卸し A-3。 @session-i
+      `sessions.discard()` は Map から外すだけで、台帳の削除も完了イベントも起こさない。
+      同じ窓では `sessionsSeenHere` が復活を抑えるが、**その Set は窓ごと**なので
+      次の窓では「閉じたはずのセッション」が候補に戻る。前回セッションのタブを閉じる経路は
+      既に `forget()` しているので、揃えるだけ。**T-371 を直すと表に出る穴**（それまでは
+      上書きで鍵が失われ、候補から落ちて見えていなかった）。
+
+- [ ] T-374 **長く開けっぱなしだったセッションが、閉じた途端に掃除される** — Codex の棚卸し A-5。 @session-i
+      心拍（`beat()`）は `owner.heartbeatAt` だけを進め `updatedAt` は触らないのに、
+      `forgettable()` は `updatedAt` だけで測っていた。7 日以上 `awaiting-input` のまま
+      窓を開けていたセッションは、**直前まで心拍が打たれていても**次の起動の `sweep()` で
+      復元候補を作るより先に消える。直し: `max(updatedAt, owner.heartbeatAt)` で測る。
+      既存テストが直す前の振る舞いを写していたので、意図（本当の置き去りは掃除する）を
+      保ったまま直した。
+
 - [ ] T-370 **束（グループ）の所属が、開き直すたびに全部消える** — T-369 の掘り下げで発見。 @session-i
       **データが失われる不具合。** `activate()` の `pruneMembers(file, alive)` に渡す `alive` が
       `sessions.list()`（＝**その場で動いているセッションだけ**）＋下書き。開いた直後は

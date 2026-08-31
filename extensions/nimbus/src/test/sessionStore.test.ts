@@ -13,7 +13,7 @@ import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { test } from 'node:test';
-import { resumeCandidates } from '../core/sessionRegistry';
+import { forgettable, resumeCandidates } from '../core/sessionRegistry';
 import { SessionStore } from '../sessionStore';
 
 function storeIn(dir: string, windowId: string, now: () => number): SessionStore {
@@ -234,5 +234,39 @@ test('開き直した窓が同じ ID を書いても、鍵・見出し・作成�
 	assert.deepStrictEqual(
 		resumeCandidates(after, { now: resumedAt + 60_000, cwd: '/w/app' }).map((r) => r.sessionId),
 		['s1']
+	);
+});
+
+/**
+ * T-374 — **長く開けっぱなしだったセッションが、閉じた途端に消える。**
+ *
+ * 心拍（`beat()`）は `owner.heartbeatAt` だけを進め、`updatedAt` は触らない。
+ * `forgettable()` が `updatedAt` だけで測っていたので、「7 日以上 `awaiting-input` のまま
+ * 窓を開けていた」セッションは、**直前まで心拍が打たれていたのに**次の起動の `sweep()` で
+ * 復元候補を作るより先に消されていた。利用者から見れば T-368 と同じ「開いていたものが消えた」。
+ */
+test('心拍が続いていたセッションは、閉じた直後に掃除されない（T-374）', () => {
+	const day = 86_400_000;
+	const now = 100 * day;
+	const owner = { windowId: 'win-a', pid: 1, heartbeatAt: now - 60_000 };
+	const base = { sessionId: 's1', cwd: '/w/app', status: 'awaiting-input' as const, claudeSessionId: 'c1' };
+
+	assert.deepStrictEqual(
+		forgettable(
+			[
+				// 8 日前から会話は動いていないが、**1 分前まで心拍が打たれていた**
+				{ ...base, createdAt: now - 9 * day, updatedAt: now - 8 * day, owner },
+				// こちらは本当に置き去り — 心拍も 8 日前で止まっている
+				{
+					...base,
+					sessionId: 's2',
+					createdAt: now - 9 * day,
+					updatedAt: now - 8 * day,
+					owner: { ...owner, heartbeatAt: now - 8 * day }
+				}
+			],
+			now
+		).map((record) => record.sessionId),
+		['s2']
 	);
 });

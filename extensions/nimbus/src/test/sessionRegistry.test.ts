@@ -123,11 +123,23 @@ test('同じ場所で動いている生きたセッションだけを、重な�
 });
 
 test('持ち主がいないまま置き去りになった記録だけを掃除の対象にする', () => {
+	const WEEK_PLUS = 8 * 24 * 60 * 60 * 1000;
 	const dead = { windowId: 'win-b', pid: 200, heartbeatAt: NOW - 120_000 };
+	/*
+	 * **置き去りかどうかは、心拍も含めた最後の生存時刻で測る**（T-374 で正した）。
+	 * ここは以前 `old` を「心拍は 2 分前・会話は 8 日前」で置いていたが、それは
+	 * 「ついさっきまで窓が開いていたセッション」であって置き去りではない。
+	 * 閉じた直後に消えてしまい、利用者から見ると「開いていたものが消えた」（T-368 と同じ形）。
+	 * 本当に置き去りのものは、**心拍も止まっている**。
+	 */
+	const abandoned = { ...dead, heartbeatAt: NOW - WEEK_PLUS };
 	const records = [
 		record({ sessionId: 'fresh', owner: dead, updatedAt: NOW - 60_000 }),
-		record({ sessionId: 'old', owner: dead, updatedAt: NOW - 8 * 24 * 60 * 60 * 1000 }),
-		record({ sessionId: 'alive', updatedAt: NOW - 8 * 24 * 60 * 60 * 1000 })
+		// 心拍も会話も 8 日前で止まっている ＝ 本当の置き去り
+		record({ sessionId: 'old', owner: abandoned, updatedAt: NOW - WEEK_PLUS }),
+		// 会話は 8 日前でも、**2 分前まで心拍が打たれていた** ＝ 消してはいけない（T-374）
+		record({ sessionId: 'just-closed', owner: dead, updatedAt: NOW - WEEK_PLUS }),
+		record({ sessionId: 'alive', updatedAt: NOW - WEEK_PLUS })
 	];
 	assert.deepStrictEqual(forgettable(records, NOW).map((r) => r.sessionId), ['old']);
 });

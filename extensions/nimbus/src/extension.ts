@@ -3016,8 +3016,21 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 			activeDraftId = undefined;
 		}
-		// 消えたセッションのピン・名前は掃除する（残すと workspaceState が育ち続ける）
-		const alive = new Set(sessions.list().map((session) => session.sessionId));
+		/*
+		 * 消えたセッションのピン・名前は掃除する（残すと workspaceState が育ち続ける）。
+		 *
+		 * **「消えた」を `sessions.list()` だけで決めない**（T-372・Codex の指摘 2026-09-01）。
+		 * 復元候補（`resumableRecords`）は台帳に居るだけで `SessionManager` にはまだ無いので、
+		 * `restoreResumables()` が呼ぶこの掃除で**ピン・名前・番号が消され**、
+		 * そのあと `currentTabs()` が新しい番号を振り直していた。
+		 * 仕様書（`session-registry.md`）の「同じ番号・同じ名前で出る」と正面から矛盾する。
+		 * 下書きも同じ理由で数に入れる（T-368 で残るようになった）。
+		 */
+		const alive = liveMembership({
+			ledger: [...resumableRecords.keys()],
+			running: sessions.list().map((session) => session.sessionId),
+			drafts: drafts.map((draft) => draft.id)
+		});
 		let pruned = false;
 		for (const id of [...pinnedSessions]) {
 			if (!alive.has(id)) {
@@ -3032,7 +3045,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 		}
 		for (const id of [...sessionNumbers.keys()]) {
-			if (!alive.has(id) && !drafts.some((draft) => draft.id === id)) {
+			if (!alive.has(id)) {
 				sessionNumbers.delete(id);
 				pruned = true;
 			}
@@ -3115,6 +3128,19 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 		}
 		await sessions.discard(sessionId);
+		/*
+		 * **台帳からも消す**（T-373・Codex の指摘 2026-09-01）。
+		 *
+		 * ここは `sessions.discard()` だけを呼んでいた。`discard()` は Map から外すだけで
+		 * 完了イベントも台帳の削除も起こさないので、記録は `running` / `awaiting-input` の
+		 * まま残る。この窓では `sessionsSeenHere` が復活を抑えるが、**その Set は窓ごと**なので、
+		 * 次に開いた窓では「続きから」の候補として**閉じたはずのセッションが戻ってくる**。
+		 * 前回セッションのタブを × で閉じる経路（上）は既に `forget()` している。揃える。
+		 *
+		 * T-371 を直すまでは、上書きで鍵が失われていたおかげで候補から落ちて**見えていなかった**。
+		 * 片方を直すともう片方が出る類なので、同じコミットで塞ぐ。
+		 */
+		void sessionStore.forget(sessionId);
 		pinnedSessions.delete(sessionId);
 		sessionNames.delete(sessionId);
 		sessionNumbers.delete(sessionId);
