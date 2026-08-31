@@ -905,6 +905,8 @@
 		}
 		historyIndex = history.length;
 		input.value = '';
+		// 送った文は打ちかけではない（残すと、次に開いたとき二重に見える）
+		rememberDraftText();
 		closeSlash();
 		autoGrow();
 		vscode.postMessage({ type: 'send', text, images });
@@ -912,6 +914,7 @@
 
 	input.addEventListener('input', () => {
 		autoGrow();
+		rememberDraftText();
 		updateSlash();
 	});
 
@@ -1375,6 +1378,40 @@
 		return typeof width === 'number' ? width : undefined;
 	}
 
+	/**
+	 * **打ちかけの本文を覚える**（T-376）。
+	 *
+	 * 下書きの「タブ」は台帳側で残るようになった（T-368）が、**入力欄に打った文字**は
+	 * どこにも保存されていなかった。長い指示を書いている途中でアプリを閉じると、
+	 * それだけで消える — 利用者から見れば「開いていたものが消えた」と同じ痛みで、
+	 * しかも打ち直すしかない。
+	 *
+	 * 置き場は `vscode.setState()`（面ごと・レール幅と同じ器）。**送ったら消す**ので、
+	 * 残るのは「まだ送っていない文」だけ。
+	 */
+	function rememberDraftText() {
+		const state = vscode.getState() ?? {};
+		const text = input.value;
+		if (text) {
+			vscode.setState({ ...state, draftText: text });
+		} else if (state.draftText !== undefined) {
+			delete state.draftText;
+			vscode.setState(state);
+		}
+	}
+
+	/** 覚えていた打ちかけを戻す。**既に何か入っていれば触らない**（上書きしない） */
+	function restoreDraftText() {
+		if (input.value) {
+			return;
+		}
+		const text = vscode.getState()?.draftText;
+		if (typeof text === 'string' && text) {
+			input.value = text;
+			autoGrow();
+		}
+	}
+
 	let sashFrom = null;
 
 	railSash.addEventListener('pointerdown', (event) => {
@@ -1748,9 +1785,10 @@
 				sessionTabs.style.width = '';
 				sessionTabs.style.maxWidth = '';
 				layoutRail();
-				// 覚えた幅も捨てる（面ごとに永続するので、消さないと次のケースへ効く）
+				// 覚えた幅と打ちかけも捨てる（面ごとに永続するので、消さないと次のケースへ効く）
 				const state = vscode.getState() ?? {};
 				delete state.railWidth;
+				delete state.draftText;
 				vscode.setState(state);
 			} catch (error) {
 				vscode.postMessage({ type: 'testResetAck', token: message.token, error: String(error) });
@@ -1876,6 +1914,8 @@
 
 	setRunning(false);
 	showWelcome();
+	// 打ちかけていた文を戻す（T-376）。`autoGrow()` より前に入れて、高さも合わせる
+	restoreDraftText();
 	autoGrow();
 	vscode.postMessage({ type: 'ready' });
 }());

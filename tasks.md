@@ -157,7 +157,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-i | T-368/T-369/T-370/T-371 | 2026-09-01 01:00 | extensions/nimbus/src/extension.ts, nimbus/tests/gui/run.mjs, nimbus/tests/gui/cases/69-*.mjs, nimbus/tests/gui/cases/70-*.mjs, nimbus/tests/gui/cases/71-*.mjs, extensions/nimbus/src/sessionStore.ts, extensions/nimbus/src/session/SessionManager.ts
+- 🔒 @session-i | T-368/T-369/T-370〜T-376 | 2026-09-01 01:30 | extensions/nimbus/src/extension.ts, nimbus/tests/gui/run.mjs, nimbus/tests/gui/cases/69-*.mjs, nimbus/tests/gui/cases/70-*.mjs, nimbus/tests/gui/cases/71-*.mjs, extensions/nimbus/src/sessionStore.ts, extensions/nimbus/src/session/SessionManager.ts, extensions/nimbus/media/cockpit.js
 
 
 
@@ -234,6 +234,25 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
          作成時刻が消えない」— **A/B で修正前は落ち、修正後は通ることを確認**
       残: 実台帳を種にして「続きから開く」まで通す GUI ケース（fake SDK の口が要る・Codex 提案）
       次: Codex の穴の棚卸し A-2〜A-7・B・C を順に潰す
+
+- [ ] T-376 **入力欄に打ちかけた本文が、閉じただけで消える** — Codex の棚卸し A-6。 @session-i
+      下書きの「タブ」は T-368 で残るようになったが、**入力欄に打った文字**はどこにも
+      保存されていなかった（`vscode.setState()` はレール幅しか扱っていない）。
+      長い指示を書いている途中で閉じると、それだけで消えて打ち直すしかない。
+      直し: 打つたびに `setState({draftText})`・起動時に戻す・**送ったら消す**。
+      守り: GUI ケース 71（A/B で修正前は落ちる）。
+
+- [ ] T-375 **タスクを「レビュー待ち」へ倒しても、起動直後の同期で `running` に戻る** —
+      Codex の棚卸し A-4。**一撃では直せないので手を付けていない。**
+      `TaskService` は Memento から読んだ `running` / `awaiting-approval` を `restoreState()` で
+      `review` へ倒すが、`updatedAt` を触らない。起動直後の `syncWithStore()` で
+      `mergeTasks()` が「同時刻ならディスク側を採用」するため、ディスクの `running` に戻る。
+      仕様（`parallel-tasks.md`）は「再起動後はレビュー待ち」。
+      **単純に `updatedAt` を今にするのは危険** — Memento には他の窓のタスクも入っているので、
+      生きている窓が本当に走らせているタスクまでレビュー待ちへ倒す。`ownerWindowId` も
+      起動ごとに変わる `randomUUID()` なので鍵にならない。
+      筋の良い直し: タスクの `sessionId` を**セッション台帳**（`isOwnerAlive`）に当てて、
+      持ち主が居ないものだけ倒す。`TaskService` へ台帳を渡す配線（任意引数）が要る。
 
 - [ ] T-372 **復元候補のピン・名前・番号が、起動のたびに消される** — Codex の棚卸し A-2。 @session-i
       `updateSessionTabs()` の掃除も「生きている」を `sessions.list()` だけで作っていた。
