@@ -157,7 +157,7 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-i | T-368/T-369 | 2026-09-01 00:40 | extensions/nimbus/src/extension.ts, nimbus/tests/gui/run.mjs, nimbus/tests/gui/cases/69-*.mjs
+- 🔒 @session-i | T-368/T-369/T-370/T-371 | 2026-09-01 01:00 | extensions/nimbus/src/extension.ts, nimbus/tests/gui/run.mjs, nimbus/tests/gui/cases/69-*.mjs, nimbus/tests/gui/cases/70-*.mjs, nimbus/tests/gui/cases/71-*.mjs, extensions/nimbus/src/sessionStore.ts, extensions/nimbus/src/session/SessionManager.ts
 
 
 
@@ -213,6 +213,35 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       残: Codex の穴の棚卸しを受けて、残りの経路（ピン・名前・束・台帳からの復元）も足す
       次: Codex の報告（`ba9jx9l55`）を突き合わせる
 
+
+- [ ] T-371 **「続きから開く」が、正常な台帳を空のレコードで上書きする** — T-368 の真因。 @session-i
+      **利用者が見た「全部消えた」の本体。Codex が実ログの時刻まで突き合わせて特定（2026-09-01）。**
+      私の当初の見立て（「最初から更新されなかった」）は**誤り**だった。`createdAt === updatedAt` は
+      更新が無かった証拠ではなく、**再開時に同じ ID で作り直された**証拠。
+      実例: `3d2e3879` は 08-31 18:47 に `starting → running → awaiting-input` まで進み
+      Claude の session ID も持っていたが、09-01 00:04:21 の「続きから開く」で消え、
+      いまの `createdAt` はちょうどその 00:04:21。
+      経路: ① `SessionManager.createSession()` が `resumeClaudeSessionId` を SDK の
+      `options.resume` にだけ渡し、**新しい `ManagedSession.claudeSessionId` へ写していない**
+      ② 直後に同期で `status:'starting'` を発行（再開は `firstMessage` が無いので `user-text` も無い）
+      ③ `recordSession()` が `claudeSessionId: undefined` で `upsert()`
+      ④ `SessionStore.upsert()` は `this.mine`（**メモリだけ**）を既存値として見るので、
+         新しい拡張ホストでは必ず「新規」— `createdAt`・`claudeSessionId`・`title` が消える
+      ⑤ `flush()` が正常な JSON をその空レコードで置き換える
+      → 次の起動で `resumeCandidates()` の `Boolean(record.claudeSessionId)` に落ちて全滅
+      済: ①`SessionManager` が再開の鍵をサマリーへ写す ②`upsert()` が `lastRead`（ディスク）を
+         既存値として引き継ぐ ③回帰テスト「開き直した窓が同じ ID を書いても、鍵・見出し・
+         作成時刻が消えない」— **A/B で修正前は落ち、修正後は通ることを確認**
+      残: 実台帳を種にして「続きから開く」まで通す GUI ケース（fake SDK の口が要る・Codex 提案）
+      次: Codex の穴の棚卸し A-2〜A-7・B・C を順に潰す
+
+- [ ] T-370 **束（グループ）の所属が、開き直すたびに全部消える** — T-369 の掘り下げで発見。 @session-i
+      **データが失われる不具合。** `activate()` の `pruneMembers(file, alive)` に渡す `alive` が
+      `sessions.list()`（＝**その場で動いているセッションだけ**）＋下書き。開いた直後は
+      `sessions.list()` が空なので、**本物のセッションの所属が全部「死んだ」と見なされ**、
+      `groupStore.update()` でディスクへ書き戻されて永久に消える。
+      直し: `alive` を**台帳**（`sessionStore.list()`）∪ 下書き ∪ 走っているもの で作る。
+      台帳は `sweep()` が刈るので、寿命の管理はそのまま効く。
 
 - [ ] T-367 **プロンプト編集を Copilot と同等まで仕上げる（添付・モデル・会話の切り詰め）** —
       T-363 の続き。初版は入口と非破壊まで入れた（`edit-request.md` の「実装」節）。

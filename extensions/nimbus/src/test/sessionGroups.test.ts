@@ -18,6 +18,7 @@ import {
 	groupOf,
 	normalizeGroups,
 	normalizeGroupName,
+	liveMembership,
 	pruneMembers,
 	removeGroup,
 	renameGroup
@@ -120,6 +121,33 @@ test('消えたセッションの所属は掃除される', () => {
 	assert.deepStrictEqual(pruned.members, { s2: 'g1' });
 	// 変わらないときは同じものを返す（無駄な書き出しを起こさない）
 	assert.strictEqual(pruneMembers(pruned, new Set(['s2'])), pruned);
+});
+
+/**
+ * T-370 — **開き直すたびに束が空になっていた。**
+ *
+ * `pruneMembers` は渡された集合の外を消して**ディスクへ書き戻す**。呼び出し側が
+ * 「いまこの窓で動いているセッション」だけを渡していたので、`activate()` の時点
+ * （動いているものは必ず 0 件）で本物のセッションの所属がまるごと消えていた。
+ * 生死の正本は台帳であることを、ここで固定する。
+ */
+test('台帳にだけ在るセッションは、束から刈られない（T-370）', () => {
+	let file = addGroup(emptyGroups(), 'g1', '束', 100);
+	file = assignSession(file, 'ledger-only', 'g1');
+	file = assignSession(file, 'draft-1', 'g1');
+	file = assignSession(file, 'gone', 'g1');
+
+	const alive = liveMembership({
+		// 開き直した直後 — 動いているセッションは 1 つも無い
+		ledger: ['ledger-only'],
+		running: [],
+		drafts: ['draft-1']
+	});
+
+	assert.deepStrictEqual(pruneMembers(file, alive).members, {
+		'ledger-only': 'g1',
+		'draft-1': 'g1'
+	});
 });
 
 test('横断の一覧は束で畳み、止まっているもの（許可待ち）が先頭（T-316）', () => {

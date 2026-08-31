@@ -223,8 +223,32 @@ export function buildHome<T extends { sessionId: string }>(
 }
 
 /**
+ * 束を刈るときの「まだ在る」集合（T-370）。
+ *
+ * **`pruneMembers` は渡された集合の外を消して書き戻す**ので、ここに何を入れるかが
+ * そのままデータの寿命になる。実際に、呼び出し側が「**いまこの窓で動いているセッション**」
+ * だけを渡していたため、開き直すたびに本物のセッションの所属がまるごと消えていた
+ * （`activate()` の時点で、動いているセッションは必ず 0 件）。
+ *
+ * 生死の正本は**台帳**（窓をまたいで残り、寿命は `sweep()` が見る）。
+ * 動いているものと下書き（台帳に載らない）を足して補う。
+ */
+export function liveMembership(sources: {
+	/** 台帳に在る記録。**これが正本** */
+	ledger: readonly string[];
+	/** いまこの窓で動いているセッション */
+	running: readonly string[];
+	/** まだ 1 通も送っていない下書き（台帳には載らない） */
+	drafts: readonly string[];
+}): Set<string> {
+	return new Set([...sources.ledger, ...sources.running, ...sources.drafts]);
+}
+
+/**
  * 消えたセッションの所属を掃除する。
  * 台帳の `sweep()` と同じ発想 — 残っていても実害は無いが、育つ一方のものは刈る。
+ *
+ * **渡す集合は `liveMembership()` で作ること**（T-370）。ここは渡されたものを信じて消す。
  */
 export function pruneMembers(file: GroupsFile, liveSessionIds: ReadonlySet<string>): GroupsFile {
 	const members: Record<string, string> = {};

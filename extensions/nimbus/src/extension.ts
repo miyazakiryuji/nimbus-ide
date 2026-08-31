@@ -184,6 +184,7 @@ import {
 	emptyGroups,
 	groupOf,
 	listByGroup,
+	liveMembership,
 	normalizeGroupName,
 	pruneMembers,
 	removeGroup,
@@ -4974,11 +4975,23 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	// タブ（束）の定義を読み、消えたセッションの所属を刈る（T-314）
 	void groupStore
 		.load()
-		.then((file) => {
-			const alive = new Set([
-				...sessions.list().map((session) => session.sessionId),
-				...drafts.map((draft) => draft.id)
-			]);
+		.then(async (file) => {
+			/*
+			 * **「生きている」を台帳で決める**（T-370）。
+			 *
+			 * ここは以前 `sessions.list()`（＝**この窓でいま動いているセッション**）だけを見ていた。
+			 * `activate()` の時点でそれは必ず空なので、**本物のセッションの所属が毎回まるごと
+			 * 「死んだ」と見なされ**、下の `groupStore.update()` でディスクへ書き戻されて
+			 * 永久に消えていた。開き直すたびに束が空になる ＝ T-368 と同じ種類のデータ喪失。
+			 *
+			 * 台帳（`sessionStore`）は窓をまたいで残り、寿命は `sweep()` が見ている。
+			 * それに下書き（T-368 で残るようになった）と、いま動いているものを足す。
+			 */
+			const alive = liveMembership({
+				ledger: (await sessionStore.list({ fresh: true }).catch(() => [])).map((record) => record.sessionId),
+				running: sessions.list().map((session) => session.sessionId),
+				drafts: drafts.map((draft) => draft.id)
+			});
 			groupsFile = pruneMembers(file, alive);
 			return groupsFile === file ? file : groupStore.update(() => groupsFile);
 		})

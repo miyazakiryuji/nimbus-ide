@@ -171,3 +171,68 @@ test('型が崩れた記録は読み飛ばし、まともな記録だけを返�
 	writer.dispose();
 	assert.deepStrictEqual(listed, ['good']);
 });
+
+/**
+ * T-371 — **「続きから開く」が、正常な記録を空のレコードで上書きしていた。**
+ *
+ * 利用者報告「一度閉じてから開いた時に、開いていた複数セッションが全て消えていました」
+ * （2026-09-01）の本体。実ログで筋書きまで裏が取れている — あるセッションは
+ * `starting → running → awaiting-input` まで進んで Claude の session ID も持っていたのに、
+ * 翌日の再開操作のあと、`createdAt` がその再開時刻に化けて鍵と見出しが消えていた。
+ *
+ * 壊れかた: 開き直した拡張ホストでは `this.mine` が**必ず空**。そこへ再開直後の
+ * `status:'starting'`（`claudeSessionId` も `title` も無い）が来ると、ディスクに正常な
+ * レコードがあっても「新規」として作り直され、`flush()` がそれを書き込む。
+ * 次の起動で `resumeCandidates()` の `Boolean(claudeSessionId)` に落ちて全滅する。
+ *
+ * **消えてはいけないのは身元** — 鍵（`claudeSessionId`）・最初に頼んだこと（`title`）・
+ * 作成時刻（`createdAt`）。
+ */
+test('開き直した窓が同じ ID を書いても、鍵・見出し・作成時刻が消えない（T-371）', async () => {
+	const dir = join(mkdtempSync(join(tmpdir(), 'nimbus-sessions-')), 'sessions');
+	const created = 1_000_000;
+
+	// 1 日目 — 普通に動いて、鍵と見出しまで揃った記録が残る
+	const first = storeIn(dir, 'win-a', () => created);
+	first.upsert('s1', { cwd: '/w/app', status: 'running', claudeSessionId: 'claude-1', title: 'ここを直して' });
+	first.upsert('s1', { status: 'awaiting-input' });
+	await first.flush();
+	first.dispose();
+
+	// 2 日目 — アプリを開き直す。**新しい窓なので `mine` は空**
+	const resumedAt = created + 86_400_000;
+	const second = storeIn(dir, 'win-b', () => resumedAt);
+	// 起動時の復元がディスクを読む（`restoreResumables()` → `refresh()` と同じ）
+	await second.list({ fresh: true });
+	// 「続きから開く」の直後に出る status イベント。再開なので鍵も見出しも載っていない
+	second.upsert('s1', { cwd: '/w/app', status: 'starting' });
+	await second.flush();
+	second.dispose();
+
+	const after = await storeIn(dir, 'win-c', () => resumedAt).list({ fresh: true });
+	assert.deepStrictEqual(
+		after.map((record) => ({
+			sessionId: record.sessionId,
+			claudeSessionId: record.claudeSessionId,
+			title: record.title,
+			createdAt: record.createdAt,
+			status: record.status
+		})),
+		[
+			{
+				sessionId: 's1',
+				// 消えると次の起動で「続きから」の候補から落ちる ＝ 利用者から見て全損
+				claudeSessionId: 'claude-1',
+				title: 'ここを直して',
+				createdAt: created,
+				// 状態だけは新しいものが正しい（いま起こし直しているところ）
+				status: 'starting'
+			}
+		]
+	);
+	// 鍵が残っているので、次の起動でも「続きから」に出る
+	assert.deepStrictEqual(
+		resumeCandidates(after, { now: resumedAt + 60_000, cwd: '/w/app' }).map((r) => r.sessionId),
+		['s1']
+	);
+});

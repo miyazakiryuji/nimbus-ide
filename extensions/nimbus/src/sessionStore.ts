@@ -138,7 +138,21 @@ export class SessionStore {
 		patch: Partial<Omit<SessionRecord, 'sessionId' | 'owner'>> & { cwd?: string }
 	): SessionRecord {
 		const at = this.now();
-		const existing = this.mine.get(sessionId);
+		/*
+		 * **記憶に無ければ、ディスクで読んだものを引き継ぐ**（T-371）。
+		 *
+		 * 以前はここが `this.mine` だけだった。`mine` は**この拡張ホストで自分が触ったもの**なので、
+		 * アプリを開き直した直後は必ず空。だから「続きから開く」で同じ ID を `upsert()` すると、
+		 * ディスクに正常なレコードがあっても**新規扱い**になり、`createdAt`・`claudeSessionId`・
+		 * `title` が丸ごと消えて `flush()` がそれを書き込んでいた。
+		 * 次の起動では `resumeCandidates()` の `Boolean(claudeSessionId)` に落ちる ＝
+		 * 利用者から見て「開いていたセッションが全部消えた」（T-368）。
+		 *
+		 * `lastRead` は `list()` が読んだ最後の姿。古いことはあっても、
+		 * **消すよりは古いほうが桁違いにましな種類の値**（身元・作成時刻・最初に頼んだこと）。
+		 * 持ち主は下で自分に書き換えるので、ここで引き継ぐのは中身だけ。
+		 */
+		const existing = this.mine.get(sessionId) ?? this.lastRead.find((record) => record.sessionId === sessionId);
 		const record: SessionRecord = {
 			sessionId,
 			status: patch.status ?? existing?.status ?? 'starting',

@@ -139,6 +139,17 @@ export class SessionManager extends EventEmitter {
       status: 'starting',
       cwd,
       createdAt: Date.now(),
+      /*
+       * **再開なら、鍵は最初から分かっている**（T-371）。
+       *
+       * 以前はこれを SDK の `options.resume` へ渡すだけで、サマリーには写していなかった。
+       * この直後に同期で出る `status:'starting'` を受けた `recordSession()` は
+       * `claudeSessionId: undefined` を書き、台帳の正常なレコードを空にしていた
+       * （再開は `firstMessage` が無いので `title` も付かない）。
+       * `session-init` が来れば直るはずだが、実ログでは来ないことがある。
+       * **知っている値を、知らないふりで流さない。**
+       */
+      ...(input.resumeClaudeSessionId ? { claudeSessionId: input.resumeClaudeSessionId } : {}),
       queue,
       handle
     }

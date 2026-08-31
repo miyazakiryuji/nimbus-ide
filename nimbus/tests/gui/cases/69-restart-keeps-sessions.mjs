@@ -15,6 +15,10 @@
  *   ② `activate()` の直下にタブを描き直す呼び出しが無く、戻すものがあっても出なかった
  *      （`ready` の `snapshot()` 経由でしか描かれない）
  *
+ * **ここが見ているのは下書き**（`drafts`）であって、台帳の本物のセッションではない。
+ * 台帳側の破壊（T-371「続きから開くと鍵と見出しが消える」）は
+ * `sessionStore.test.ts` の「開き直した窓が同じ ID を書いても…」が守っている。
+ *
  * **「+ を押した数だけタブが残る」ところまで見る。** 存在確認で止めると、
  * 空の器を本物として通してしまう（利用者指示「押して実行されるまで確かめる」）。
  *
@@ -48,7 +52,7 @@ async function tabs(frame) {
 }
 
 export default {
-	name: '閉じて開き直しても、開いていたセッションが消えない（T-368 / T-369）',
+	name: '閉じて開き直しても、下書きのタブが消えず・増えもしない（T-368 / T-369）',
 	async run(page, ctx) {
 		ctx.expect(await openNimbusSidebar(page), 'Nimbus のサイドバーを開けない');
 
@@ -75,21 +79,18 @@ export default {
 		ctx.expect(frame !== undefined, '開き直したあとコックピットのタブ列が見つからない');
 
 		const after = await tabs(frame);
-		ctx.expect(
-			after.length >= before.length,
-			`閉じて開いたらタブが減った（利用者が見た「全部消えた」そのもの）: ` +
-				`${before.length} 枚 → ${after.length} 枚 / 前 ${JSON.stringify(before)} 後 ${JSON.stringify(after)}`
-		);
 		/*
-		 * 番号（T-316）は名札であって席順ではない。**同じ番号が同じだけ戻る**ことまで見る —
-		 * 枚数だけだと「別のものが 3 枚出た」を通してしまう
+		 * **`>=` で見ない**（Codex の指摘 2026-09-01）。減っていないことだけを見ると、
+		 * **幽霊タブや二重復元が増えていても通る**。復元は「消えない」と「増えない」の両方で
+		 * 初めて正しい。番号（T-316）は名札であって席順ではないので、並びは問わず**集合として**
+		 * 一致することを見る。
 		 */
-		for (const number of before) {
-			ctx.expect(
-				after.includes(number),
-				`開き直したらセッション ${number} が消えた: 前 ${JSON.stringify(before)} 後 ${JSON.stringify(after)}`
-			);
-		}
+		ctx.expect(
+			JSON.stringify([...after].sort()) === JSON.stringify([...before].sort()),
+			`閉じて開いたらタブの顔ぶれが変わった（減れば利用者が見た「全部消えた」、` +
+				`増えれば二重復元）: 前 ${before.length} 枚 ${JSON.stringify(before)} / ` +
+				`後 ${after.length} 枚 ${JSON.stringify(after)}`
+		);
 
 		await ctx.shot('restart-keeps-sessions');
 	}
