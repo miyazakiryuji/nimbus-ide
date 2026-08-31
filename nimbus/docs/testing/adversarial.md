@@ -18,7 +18,7 @@
 
 敵対的ケースは**既定の全件に混ぜない。** わざと壊しにいく束なので、混ぜると「普段の緑」が読めなくなり、
 並行して走っている他のセッションの判断材料を汚す。`--adversarial` を付けたときだけ、その束**だけ**が走る
-（`run.mjs:164-169` の `Boolean(c.adversarial) === flag('adversarial')`）。
+（`run.mjs:167-169` の `Boolean(c.adversarial) === flag('adversarial')`）。
 
 ```bash
 bash nimbus/scripts/package-app.sh --copy /tmp/nimbus-gui-app          # 固めて写しを作る
