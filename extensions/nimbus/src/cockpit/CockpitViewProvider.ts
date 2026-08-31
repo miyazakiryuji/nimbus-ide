@@ -59,6 +59,11 @@ export type InboundMessage =
 	/** 試験からのリセット依頼（T-359）。**拡張が `NIMBUS_SMOKE` のときしか応じない** */
 	| { type: 'requestTestReset'; token: string }
 	/**
+	 * 送った指示を直したい（T-363）。**押した時点では何も壊さない** —
+	 * 確認と巻き戻しは拡張側で、送信を押したときに行う（Copilot と同じ組み立て）
+	 */
+	| { type: 'editRequest'; turnIndex: number }
+	/**
 	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
 	 * 画面のボタンが任意のコマンドを呼べる状態にはしない。
 	 */
@@ -125,7 +130,9 @@ export type OutboundMessage =
 	/** 試験のリセット（T-359・試験専用）。受けた面は `testResetAck` を返す */
 	| { type: 'testReset'; token: string }
 	/** リセットの報告（T-359）。頼んできた面にだけ返す */
-	| { type: 'testResetDone'; token: string; report: unknown };
+	| { type: 'testResetDone'; token: string; report: unknown }
+	/** 巻き戻しが済んだので、本文を入力欄へ戻す（T-363） */
+	| { type: 'restoreInput'; text: string };
 
 /** `/` で引ける定型 1 つ */
 export interface SlashCommand {
@@ -183,6 +190,11 @@ export interface CockpitHandlers {
 	homeGroups?(): readonly HomeGroup<SessionTab>[];
 	/** タブ（束）の操作（T-314）。入力と確認は拡張側で行う */
 	onGroup?(op: 'create' | 'rename' | 'remove' | 'assign', target: { groupId?: string; sessionId?: string }): void | Promise<void>;
+	/**
+	 * 送った指示を直す（T-363）。`turnIndex` は画面の `.turn.user` の並び順。
+	 * 確認・巻き戻し・本文の戻しは拡張側が持つ（webview に判断を持たせない）
+	 */
+	onEditRequest?(turnIndex: number): void | Promise<void>;
 	/**
 	 * 試験からのリセット（T-359）。**`NIMBUS_SMOKE` のときだけ渡す** — 渡さなければ、
 	 * webview がいくら頼んでも何も起きない（製品にコマンドを増やさずに済む）。
@@ -434,6 +446,9 @@ export class CockpitViewProvider extends WebviewViewHost {
 					break;
 				case 'group':
 					await this.handlers.onGroup?.(message.op, { groupId: message.groupId, sessionId: message.sessionId });
+					break;
+				case 'editRequest':
+					await this.handlers.onEditRequest?.(message.turnIndex);
 					break;
 				case 'requestTestReset': {
 					// 応じるかどうかは拡張側の判断（`onTestReset` を渡していなければ何もしない）

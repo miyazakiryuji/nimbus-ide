@@ -218,6 +218,37 @@
 		return element;
 	}
 
+	/**
+	 * 送った指示を、押して直せるようにする（T-363・利用者依頼 2026-08-31）。
+	 *
+	 * **GitHub Copilot の「Edit request」に合わせた**（同梱の upstream 実装を読んで写した。
+	 * `src/vs/workbench/contrib/chat/browser/widget/chatListRenderer.ts` の
+	 * `chat.editRequests === 'inline'` の枝）。要は次の 2 つ:
+	 *
+	 * - **発言そのものが押せる**（鉛筆を別に置かない）。ホバーで何が起きるかを言う
+	 * - **押した瞬間には何も壊さない。** 壊れるのは送信を押したとき。だから
+	 *   「直そうとしてやめた」で何も失われない
+	 *
+	 * 押しても編集に入らない場面も Copilot と同じ — **リンクの上・文字を選んでいるとき**・
+	 * コードブロックの中。とくに選択は T-339 で直したばかりなので、ここを壊さない。
+	 */
+	function makeEditable(element) {
+		const index = document.querySelectorAll('.turn.user').length - 1;
+		element.classList.add('editable');
+		element.title = '押すと、この指示を直せます';
+		element.addEventListener('click', (event) => {
+			if (event.target instanceof HTMLElement && event.target.closest('a, pre, code')) {
+				return; // リンクとコードは、押した先が別にある
+			}
+			const selection = window.getSelection();
+			if (selection && !selection.isCollapsed && selection.toString().length > 0) {
+				return; // 文字を選んでいる最中（T-339 で直した選択を奪わない）
+			}
+			vscode.postMessage({ type: 'editRequest', turnIndex: index });
+		});
+		return element;
+	}
+
 	// ───────────────────────── 本文（塊 → DOM） ─────────────────────────
 
 	/** 行の中の断片を並べる */
@@ -599,7 +630,7 @@
 				break;
 
 			case 'user-text':
-				plainTurn('user', 'あなた', event.text, 'user');
+				makeEditable(plainTurn('user', 'あなた', event.text, 'user'));
 				break;
 
 			case 'assistant-text': {
@@ -1678,6 +1709,14 @@
 		 * 「リセットしたつもりで効いていない」まま次のケースへ進んでしまう。
 		 * ACK には**残っている数**を載せる — 自己申告と実画面の二重確認ができるように。
 		 */
+		if (message.type === 'restoreInput') {
+			// 巻き戻しが済んでから届く（T-363）。**押した瞬間ではなく、確定してから**戻す
+			input.value = message.text ?? '';
+			autoGrow();
+			input.focus();
+			input.setSelectionRange(input.value.length, input.value.length);
+			return;
+		}
 		if (message.type === 'testResetDone') {
 			const resolve = testResetWaiters.get(message.token);
 			if (resolve) {

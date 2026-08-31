@@ -1541,3 +1541,33 @@ body {
 		transition: none;
 	}
 }
+
+/*
+ * 送った指示は押して直せる（T-363・利用者依頼 2026-08-31）。
+ *
+ * **鉛筆のアイコンを別に置かない** — Copilot の `inline` と同じで、発言そのものが入口。
+ * ただし「押せる」ことが黙って分かる必要があるので、指を置いたときだけ手がかりを出す。
+ * 常設すると、読むだけの人にとって会話が落ち着かなくなる。
+ *
+ * 動きは T-346 の決めごとに乗せる（120〜180ms・ease-out・位置は動かさない）。
+ */
+.turn.user.editable {
+	cursor: text;
+	border-radius: var(--nimbus-radius-inner);
+	transition: background 120ms ease-out;
+}
+
+.turn.user.editable:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+/* 文字を選んでいる最中は、押せる見た目を引っ込める（押しても編集に入らないので・T-339） */
+.turn.user.editable:active {
+	background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.turn.user.editable {
+		transition: none;
+	}
+}

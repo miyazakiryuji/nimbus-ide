@@ -89,7 +89,7 @@ import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
 import { McpViewProvider } from './mcpView';
 import { canReconnect, type McpServer } from './core/mcp';
-import { buildCheckpoints, checkpointLabel, describeRewind } from './core/checkpoints';
+import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns } from './core/checkpoints';
 import { searchTranscripts } from './transcriptSearch';
 import { openCompletionReport } from './completionReport';
 import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from './core/attachments';
@@ -660,6 +660,8 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		// Home（タブごとの束・T-314）。タブ列と同じ材料から組む
 		homeGroups: () => buildHome(groupsFile, currentTabs()),
 		onGroup: (op, target) => runGroupOp(op, target),
+		/** 送った指示を直す（T-363） */
+		onEditRequest: (turnIndex) => editRequest(turnIndex),
 		/*
 		 * 試験からのリセット（T-359）。**`NIMBUS_SMOKE` のときだけ渡す** —
 		 * 渡さなければ webview がいくら頼んでも何も起きないので、製品の面には出ない
@@ -4951,6 +4953,81 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		 * 返り値は「何が残ったか」。呼び手（ランナー）はこれを見て、
 		 * 残っていればケースを走らせずに止める（黙って汚れたまま進めない）。
 		 */
+	}
+
+	/**
+	 * 送った指示を直す（T-363・利用者依頼 2026-08-31「GitHub Copilot みたく、ワンクリックで」）。
+	 *
+	 * **Copilot の組み立てに合わせた**（同梱の upstream 実装を読んで写した。
+	 * `chatEditingActions.ts` の `restoreSnapshotWithConfirmationByRequestId`）:
+	 *
+	 * - **押した時点では何も壊さない。** 壊れるのはここ（確認を取ってから）
+	 * - 消えるのは「その発言と、それ以降すべて」。**戻すファイルがあるときだけ確認を出す** —
+	 *   1 つも変わっていないなら黙って通す
+	 * - 文面には**実数**を入れる（1 件ならファイル名、複数なら件数と `+N / -M`）
+	 * - 確認が取れて**巻き戻しが成功したときだけ**、本文を入力欄へ戻す
+	 *
+	 * 走っている最中は入口を出さない（初版）。`interrupt()` はツールの書き込み完了までは
+	 * 保証しないので、止め切る前に巻き戻すとファイルが壊れる（Codex の指摘 2026-08-31）。
+	 */
+	async function editRequest(turnIndex: number): Promise<void> {
+		if (!activeSessionId) {
+			return;
+		}
+		const summary = sessions.get(activeSessionId);
+		if (summary && (summary.status === 'running' || summary.status === 'starting')) {
+			void vscode.window.showWarningMessage(
+				'Nimbus: 動いている間は指示を直せません。止めてからやり直してください。'
+			);
+			return;
+		}
+		const turns = pairUserTurns(retained);
+		const turn = turns[turnIndex];
+		if (!turn) {
+			return;
+		}
+		if (!turn.messageUuid) {
+			// **黙って押せないボタンにしない。** 理由を言う（CLAUDE.md「押しても何も起きない〜」）
+			void vscode.window.showWarningMessage(
+				'Nimbus: この指示は戻る先が残っていないので、直せません（会話が畳まれたか、再開した後の発言です）。'
+			);
+			return;
+		}
+		const preview = await sessions.rewind(activeSessionId, turn.messageUuid, true);
+		if (!preview?.canRewind) {
+			void vscode.window.showErrorMessage(`Nimbus: ${describeRewind(preview ?? { canRewind: false })}。`);
+			return;
+		}
+		const files = preview.filesChanged?.length ?? 0;
+		if (files > 0) {
+			// 戻すファイルがあるときだけ確認する（Copilot と同じ）。
+			// 文面は「何が消えて、何が戻るか」を実数で言う
+			const CONFIRM = '戻して直す';
+			const answer = await vscode.window.showWarningMessage(
+				`この指示からやり直しますか？`,
+				{
+					modal: true,
+					detail:
+						`「${checkpointLabel({ messageUuid: turn.messageUuid, text: turn.text, at: 0, index: 0 })}」より後の応答を取り消し、\n` +
+						`${describeRewind(preview)} を元に戻します。`
+				},
+				CONFIRM
+			);
+			if (answer !== CONFIRM) {
+				return; // やめても何も壊れていない
+			}
+		}
+		const result = await sessions.rewind(activeSessionId, turn.messageUuid, false);
+		if (!result?.canRewind) {
+			// **会話も消さず、本文も戻さない。** 半端な状態を作らない
+			void vscode.window.showErrorMessage(`Nimbus: ${describeRewind(result ?? { canRewind: false })}。`);
+			return;
+		}
+		log(`[edit] ${describeRewind(result)}`);
+		cockpit.post({ type: 'restoreInput', text: turn.text });
+		if (files > 0) {
+			void vscode.window.showInformationMessage(`Nimbus: 戻しました（${describeRewind(result)}）。直して送り直せます。`);
+		}
 	}
 
 	/*

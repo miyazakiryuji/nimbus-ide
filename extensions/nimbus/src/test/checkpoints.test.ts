@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import type { NimbusEvent } from '../events';
-import { buildCheckpoints, checkpointLabel, describeRewind } from '../core/checkpoints';
+import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns } from '../core/checkpoints';
 import { canReconnect, describeServer, sortServers, statusLabel, toolBadge, type McpServer } from '../core/mcp';
 
 function checkpoint(timestamp: number, messageUuid: string, text: string): NimbusEvent {
@@ -120,4 +120,42 @@ test('破壊的なツールは使う前に分かる', () => {
 		[toolBadge({ destructive: true }), toolBadge({ readOnly: true }), toolBadge(), toolBadge({})],
 		['破壊的', '読み取り専用', '', '']
 	);
+});
+
+/**
+ * T-363 — 画面の発言と巻き戻し先を**並び順で**結ぶ。
+ *
+ * **本文で突き合わせない。** 表示用の `user-text` と SDK 由来の `checkpoint` は別イベントなので、
+ * 同じ文を 2 回送ると本文では見分けが付かない（Codex の指摘）。ここではそれを固定する。
+ */
+test('同じ文を 2 回送っても、発言と戻り先が取り違わらない（T-363）', () => {
+	const at = 1;
+	const events = [
+		{ kind: 'user-text', text: '直して', timestamp: at, sessionId: 's' },
+		{ kind: 'checkpoint', messageUuid: 'uuid-1', text: '直して', timestamp: at, sessionId: 's' },
+		{ kind: 'assistant-text', text: 'はい', timestamp: at, sessionId: 's' },
+		// **まったく同じ本文**をもう一度送る
+		{ kind: 'user-text', text: '直して', timestamp: at, sessionId: 's' },
+		{ kind: 'checkpoint', messageUuid: 'uuid-2', text: '直して', timestamp: at, sessionId: 's' }
+	] as unknown as Parameters<typeof pairUserTurns>[0];
+	assert.deepStrictEqual(pairUserTurns(events), [
+		{ turnIndex: 0, text: '直して', messageUuid: 'uuid-1' },
+		{ turnIndex: 1, text: '直して', messageUuid: 'uuid-2' }
+	]);
+});
+
+test('戻り先が残っていない発言は、落とさず messageUuid 無しで返す（T-363）', () => {
+	/*
+	 * 鉛筆を隠すだけでなく「この発言は戻る先が残っていません」と**理由を言える**ようにするため、
+	 * 落とさずに返す。落とすと画面の並び順とずれて、別の発言を編集してしまう
+	 */
+	const events = [
+		{ kind: 'user-text', text: '古い指示', timestamp: 1, sessionId: 's' },
+		{ kind: 'user-text', text: '新しい指示', timestamp: 2, sessionId: 's' },
+		{ kind: 'checkpoint', messageUuid: 'uuid-2', text: '新しい指示', timestamp: 2, sessionId: 's' }
+	] as unknown as Parameters<typeof pairUserTurns>[0];
+	assert.deepStrictEqual(pairUserTurns(events), [
+		{ turnIndex: 0, text: '古い指示' },
+		{ turnIndex: 1, text: '新しい指示', messageUuid: 'uuid-2' }
+	]);
 });
