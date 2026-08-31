@@ -14,6 +14,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const WELCOME_CONTENT = 'src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts'
 const WELCOME_PAGE = 'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts'
@@ -33,7 +34,7 @@ const LAYOUT = 'src/vs/workbench/browser/layout.ts'
 const productName = JSON.parse(readFileSync(join(process.cwd(), 'product.json'), 'utf8')).nameShort
 
 /** [ファイル, 置換前, 置換後] — 置換前は必ず 1 箇所だけ一致すること */
-const replacements = [
+export const replacements = [
   // サイドバーの既定幅を広げる（T-341）。Nimbus の主面はコックピットで、
   // セッションの縦レールと会話が同じ面を分け合うため、300px では会話が読めない。
   [
@@ -349,16 +350,21 @@ function nimbusDefaultSideBarWidth(viewContainerId: string, containerWidth: numb
 	/**
 	 * アクティビティバーに出さないビューコンテナ。
 	 *
-	 * 標準のデバッグは、Claude 用のものを用意するまで出さない（T-246）。
-	 * **登録は消していない** — F5・ブレークポイント・デバッグコンソール・\`workbench.view.debug\`
-	 * （⇧⌘D）は今までどおり動き、デバッグ中はサイドバーも開く。アイコンが出なくなるだけなので、
-	 * この集合から外せばそのまま戻る。
+	 * - \`workbench.view.debug\` — 標準のデバッグ。Claude 用のものを用意するまで出さない（T-246）
+	 * - \`workbench.panel.chat\` — VS Code 内蔵のチャット。Nimbus のチャットはコックピットなので、
+	 *   似て非なるものが右に常駐していると、どちらに書けばよいのか分からない（T-238）
+	 *
+	 * **登録は消していない** — F5・ブレークポイント・⇧⌘D も、内蔵チャットのコマンドも
+	 * 今までどおり呼べる。アイコンが出なくなるだけなので、この集合から外せばそのまま戻る。
 	 *
 	 * ここで外すのは、バーがコンテナを引く口がこの 2 つしかないため。
 	 * 「このバーの担当ではない」を表す既存の道すじにそのまま乗るので、
 	 * 表示・非表示の判定を各所に足すより副作用が少ない。
 	 */
-	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set(['workbench.view.debug']);
+	private static readonly NIMBUS_HIDDEN_VIEW_CONTAINERS: ReadonlySet<string> = new Set([
+		'workbench.view.debug',
+		'workbench.panel.chat'
+	]);
 	// --- End Nimbus ---
 
 	private getViewContainer(id: string): ViewContainer | undefined {
@@ -633,6 +639,15 @@ const buildRoot = path.dirname(root);`
   ]
 ]
 
+/**
+ * パッチを当てる。**直接実行したときだけ走る**（T-366）。
+ *
+ * 以前はモジュールの直下で走っていたので、`import` しただけでツリーが書き換わり、
+ * **試験から呼べなかった**。呼べないから守りが無く、T-238 でツリーだけ直したときに
+ * script の置換文字列が取り残され、**素で走らせると throw する**状態が続いていた
+ * （upstream 追従のときにだけ効く形で腐る — CLAUDE.md「回帰の 3 大原因」の 3 つめ）。
+ */
+export function applyCoreChanges() {
 let applied = 0
 let alreadyDone = 0
 const byFile = new Map()
@@ -655,3 +670,9 @@ for (const [file, from, to] of replacements) {
 
 for (const [file, text] of byFile) writeFileSync(join(process.cwd(), file), text)
 console.log(`製品名の直書きを置換: ${applied} 件（適用済み ${alreadyDone} 件）`)
+return { applied, alreadyDone }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  applyCoreChanges()
+}
