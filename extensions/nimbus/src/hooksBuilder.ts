@@ -33,13 +33,73 @@ function settingsUri(root: vscode.Uri): vscode.Uri {
 	return vscode.Uri.joinPath(root, '.claude', 'settings.json');
 }
 
-async function readSettings(uri: vscode.Uri): Promise<Record<string, unknown>> {
+/**
+ * `settings.json` を読んだ結果（T-352）。
+ * 「読めた（無いので空を含む）」と「在るのに読めない」を**呼ぶ側に区別させる**ための形。
+ */
+type SettingsRead =
+	| { readonly ok: true; readonly settings: Record<string, unknown> }
+	| { readonly ok: false; readonly reason: string };
+
+/**
+ * 読めなかった理由を日本語で返す。**「まだ無い」だけは失敗にしない**（`undefined` を返す）—
+ * 初回はそこから新しく作るのが正しい（T-352）。
+ *
+ * `workspace.fs` は errno を `FileSystemError.code`（FileNotFound / NoPermissions …）へ
+ * 畳んでから投げる。素の errno で来る経路もあるので両方を見る。
+ * **分からない失敗は「読めた」ことにしない** — 書き潰すより、止まって理由を見せるほうが安い。
+ */
+function readFailureReason(error: unknown): string | undefined {
+	const code = (error as { code?: string } | null | undefined)?.code;
+	if (code === 'FileNotFound' || code === 'ENOENT') {
+		return undefined;
+	}
+	if (code === 'NoPermissions' || code === 'EACCES' || code === 'EPERM') {
+		return '読み取りの権限がありません';
+	}
+	if (code === 'FileIsADirectory' || code === 'EISDIR') {
+		return 'ファイルではなくフォルダになっています';
+	}
+	return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * 書き込み前に必ず読み直す。**読めなかったことを、空だったことにしない**（T-352）。
+ *
+ * 以前は readFile の失敗と JSON.parse の失敗を同じ catch で `{}` にしていた。
+ * mode 222（書けるが読めない）だと書き込みだけ成功するので、読めなかった 1 回で
+ * 利用者の `permissions` / `env` が黙って消えた。画面でしか出ない壊れかたなので、
+ * 敵対ケース `nimbus/tests/gui/cases/adv-08-unreadable-settings.mjs` が現物で押さえている。
+ */
+async function readSettings(uri: vscode.Uri): Promise<SettingsRead> {
+	let content: string;
 	try {
-		const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
-		return JSON.parse(content) as Record<string, unknown>;
+		content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+	} catch (error) {
+		const reason = readFailureReason(error);
+		return reason === undefined ? { ok: true, settings: {} } : { ok: false, reason };
+	}
+	try {
+		return { ok: true, settings: JSON.parse(content) as Record<string, unknown> };
 	} catch {
-		// 無い・壊れているときは空から始める（既存を消さないよう、書き込み前に必ず読み直す）
-		return {};
+		// 壊れた JSON は空から始める（意図して決めてある振る舞い。T-352 でも変えない）
+		return { ok: true, settings: {} };
+	}
+}
+
+/**
+ * 読めなかったことを伝える（T-352）。
+ *
+ * **ボタンを 1 つ添えるのは飾りではない。** VS Code はボタンの無いエラー通知を 15 秒で消す
+ * （`src/vs/workbench/browser/parts/notifications/notificationsToasts.ts` の PURGE_TIMEOUT と、
+ * `src/vs/workbench/common/notifications.ts` の `get sticky()`）。
+ * 「保存しませんでした」は、消えたら**利用者が保存できたと思い込む**知らせなので居座らせる。
+ * 押されたら、権限を直すのに要るパスを渡す — 直すのは端末側の仕事なので、貼れる形が早い。
+ */
+async function reportUnreadable(uri: vscode.Uri, message: string): Promise<void> {
+	const COPY = 'パスをコピー';
+	if ((await vscode.window.showErrorMessage(message, COPY)) === COPY) {
+		await vscode.env.clipboard.writeText(uri.fsPath);
 	}
 }
 
@@ -74,7 +134,18 @@ export async function manageHooks(log: (message: string) => void): Promise<void>
 		return;
 	}
 	const uri = settingsUri(folder.uri);
-	const settings = await readSettings(uri);
+	const read = await readSettings(uri);
+	if (!read.ok) {
+		// 読めないまま書くと、既存の設定を空とみなして丸ごと消す（T-352）。書かずに理由を言う
+		log(`[hooks] settings.json を読めないので中止しました: ${read.reason}`);
+		await reportUnreadable(
+			uri,
+			`Nimbus: .claude/settings.json を読めないので、フックを保存しませんでした（${read.reason}）。` +
+			'中身を消さないよう、何も書いていません。権限を直してからやり直してください。'
+		);
+		return;
+	}
+	const settings = read.settings;
 	const config = (settings['hooks'] as HooksConfig | undefined) ?? {};
 	const rows = flattenHooks(config);
 
@@ -161,7 +232,17 @@ export async function dryRunHook(log: (message: string) => void): Promise<void> 
 	const uri = settingsUri(folder.uri);
 	// フックは選んだルートで走らせる。別のルートで走らせると結果が変わる
 	const cwd = folder.uri.fsPath;
-	const config = ((await readSettings(uri))['hooks'] as HooksConfig | undefined) ?? {};
+	const read = await readSettings(uri);
+	if (!read.ok) {
+		// 読めないのに「試せるフックがありません」と言うと、無いのだと信じさせてしまう（T-352）
+		await reportUnreadable(
+			uri,
+			`Nimbus: .claude/settings.json を読めないので、フックを取り出せません（${read.reason}）。` +
+			'権限を直してからやり直してください。'
+		);
+		return;
+	}
+	const config = (read.settings['hooks'] as HooksConfig | undefined) ?? {};
 	const rows = flattenHooks(config);
 	if (rows.length === 0) {
 		void vscode.window.showInformationMessage('Nimbus: 試せるフックがありません。');

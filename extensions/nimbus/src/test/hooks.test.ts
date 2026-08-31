@@ -7,6 +7,8 @@
  *   node --test extensions/nimbus/out/test
  */
 import * as assert from 'assert';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { test } from 'node:test';
 import {
 	addHook,
@@ -92,6 +94,36 @@ test('ドライランの入力は本番と同じ形。中身は作り物と分�
 	assert.strictEqual(JSON.parse(dryRunPayload('UserPromptSubmit', '/w')).prompt.includes('ドライラン'), true);
 	// ツールに紐づかないイベントでは tool_name を入れない
 	assert.strictEqual(JSON.parse(dryRunPayload('SessionStart', '/w')).tool_name, undefined);
+});
+
+test('読めない settings.json を、空とみなして上書きしない（T-352）', () => {
+	// 保存先を触るのは `hooksBuilder.ts`。あちらは `vscode` を取り込むので、拡張ホスト無しで
+	// 走るこのテストからは import できない。現物の消失は敵対ケース
+	// `nimbus/tests/gui/cases/adv-08-unreadable-settings.mjs` が押さえているので、
+	// ここでは**「無い」と「読めない」が同じ catch へ畳み戻っていないこと**をソースで留める。
+	const source = readFileSync(
+		join(process.cwd(), 'extensions', 'nimbus', 'src', 'hooksBuilder.ts'),
+		'utf8'
+	);
+	assert.deepStrictEqual(
+		{
+			'「無い」は今までどおり新規作成': /FileNotFound|ENOENT/.test(source),
+			'「読めない」を別に扱う': /NoPermissions|EACCES/.test(source),
+			'読めないときは書かずに理由を言う': source.includes('フックを保存しませんでした'),
+			// ボタンの無いエラー通知は 15 秒で自動的に消える。消えると「保存できた」と
+			// 思い込ませてしまうので、ボタンを添えて居座らせている（外すと adv-08 も落ちる）
+			'その知らせは自動で消えない（ボタン付き）': source.includes('showErrorMessage(message, COPY)'),
+			'壊れた JSON は空から始める（意図した振る舞い・変えない）':
+				source.includes('壊れた JSON は空から始める')
+		},
+		{
+			'「無い」は今までどおり新規作成': true,
+			'「読めない」を別に扱う': true,
+			'読めないときは書かずに理由を言う': true,
+			'その知らせは自動で消えない（ボタン付き）': true,
+			'壊れた JSON は空から始める（意図した振る舞い・変えない）': true
+		}
+	);
 });
 
 test('終了コード 2 だけが「止めた」。ほかの非ゼロはフック側の不具合', () => {

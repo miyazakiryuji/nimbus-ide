@@ -96,6 +96,28 @@ export const KANBAN_COLUMNS: { state: KanbanState; label: string }[] = [
 	{ state: 'done', label: 'Done' }
 ];
 
+/**
+ * 板に列がある状態。**列そのものから作る**ので、列を足したときに取りこぼさない。
+ */
+const KNOWN_STATES: ReadonlySet<string> = new Set(KANBAN_COLUMNS.map((column) => column.state));
+
+/** 板が知っている状態か。別ウィンドウ・旧版・手編集が置いた記録は何が入っているか分からない */
+function isKanbanState(value: unknown): value is KanbanState {
+	return typeof value === 'string' && KNOWN_STATES.has(value);
+}
+
+/**
+ * 知らない状態・欠けた状態を「まだ手を付けていない」へ寄せる（T-351）。
+ *
+ * 板は列（＝状態）ごとに絞ってカードを作るので、列の無い状態の札は**どの列にも入らず消える**。
+ * それでも数には残るため「全 3 なのにカードは 1 枚」— 探しても見つからない仕事が数字だけ
+ * 主張する状態になる。並列で走らせているときに一番損をする壊れかたなので、**読み出しの境で**
+ * 寄せて必ず見える場所に出す。寄せ先は「まだ手を付けていない」に当たる `pending`。
+ */
+export function normalizeState(state: unknown): KanbanState {
+	return isKanbanState(state) ? state : 'pending';
+}
+
 /** 実行枠を占有している状態（同時実行上限の判定に使う） */
 export function occupiesSlot(state: KanbanState): boolean {
 	return state === 'running' || state === 'awaiting-approval';
@@ -106,9 +128,13 @@ export function occupiesSlot(state: KanbanState): boolean {
  * 実行中・承認待ちだったタスクは、プロセスが死んだ時点でセッションも消えている。
  * 実行中のように見せると「動いていないのに待ち続ける」ことになるので、
  * 人間の判断が要る「レビュー待ち」へ倒す。
+ *
+ * ここは Memento からの**読み出しの境**でもあるので、知らない状態もここで寄せる（T-351）。
+ * 既知の 5 状態に対する答えは今までと変わらない。
  */
 export function restoreState(state: KanbanState): KanbanState {
-	return occupiesSlot(state) ? 'review' : state;
+	const known = normalizeState(state);
+	return occupiesSlot(known) ? 'review' : known;
 }
 
 /** 承認待ちの有無を踏まえた表示状態 */

@@ -1213,11 +1213,30 @@
 	/** 会話に残す最小。境目をどこまで引いても、読む場所は残す */
 	const CHAT_MIN = 200;
 
+	/**
+	 * 境目の太さ。畳んでいる間は `display: none` で 0 になるので、最後に測れた値を覚えておく
+	 * （0 を閾値に混ぜると、畳む幅と戻す幅が 4px ずれて、境目のあたりで出たり入ったりする・T-354）
+	 */
+	let lastSashWidth = 4;
+	function railSashWidth() {
+		if (!railSash.hidden && railSash.offsetWidth > 0) {
+			lastSashWidth = railSash.offsetWidth;
+		}
+		return lastSashWidth;
+	}
+
+	/** 列と会話を左右に分けている器の幅。畳まれている面では 0（＝測れない） */
+	function railTotalWidth() {
+		const columns = railSash.parentElement;
+		return columns ? columns.clientWidth : 0;
+	}
+
 	/** いま許される列の幅の範囲。面の広さで変わるので、その都度測る */
 	function railBounds() {
-		const columns = railSash.parentElement;
-		const total = columns ? columns.clientWidth : 0;
-		return { min: RAIL_MIN, max: Math.max(RAIL_MIN, total - CHAT_MIN - railSash.offsetWidth) };
+		return {
+			min: RAIL_MIN,
+			max: Math.max(RAIL_MIN, railTotalWidth() - CHAT_MIN - railSashWidth())
+		};
 	}
 
 	/**
@@ -1225,12 +1244,77 @@
 	 * **必ず範囲へ収める** — 覚えた幅のまま面が狭くなると、会話が消える
 	 */
 	function applyRailWidth(width) {
+		const { min, max } = railBounds();
+		// CSS の `clamp()` は面の狭さを知らない（下限 200px で止まる）ので、
+		// 「会話に 200px を残した残り」を上限として被せる。これで**列のほうが先に譲る**（T-354）
+		sessionTabs.style.maxWidth = `${Math.round(max)}px`;
 		if (typeof width !== 'number' || !Number.isFinite(width)) {
 			sessionTabs.style.width = '';
 			return;
 		}
-		const { min, max } = railBounds();
 		sessionTabs.style.width = `${Math.round(Math.min(max, Math.max(min, width)))}px`;
+	}
+
+	/** 列を出したいか（本数の都合）。出せるか（面の広さ）は `layoutRail()` が決める */
+	let railWanted = false;
+
+	/**
+	 * 面が狭くて畳んでいるか（T-354）。**本数の都合（`railWanted`）とは別に持つ。**
+	 * `sessionTabs.hidden` から理由を逆算すると、「1 本しか無いから畳んだ」と
+	 * 「狭いから畳んだ」を見分けられず、片方の条件が変わったときに戻せなくなる。
+	 */
+	let railCollapsedByWidth = false;
+
+	/**
+	 * 畳む幅と戻す幅をずらす（T-354・Codex の指摘 2026-08-31）。
+	 * 同じ閾値で出し入れすると、**外側のサッシを境目のあたりで引いたときに 1px ごとに
+	 * 列が出たり消えたりする**。16px の遊びを入れて、行き来を 1 回で終わらせる。
+	 */
+	const RAIL_RESTORE_MARGIN = 16;
+
+	/**
+	 * 面の広さに合わせて列を譲らせる（T-354）。順番は **縮める → 畳む**。
+	 *
+	 * サイドバーの最小幅は 170px しかないので、列 150 ＋ 会話 200 ＋ 境目は物理的に入らない。
+	 * 入らない幅で列を立てたままにすると、会話が 0px まで潰れて**読む場所も送る場所も消える**
+	 * （実測: サイドバー 185px で 列 200px・会話 0px・送信ボタンの中心が面の外）。
+	 * 畳んでも一覧へは面のタイトル（`nimbus.openHome`）から戻れる ＝ 入口は奪わない。
+	 * 畳んだことは覚えた幅に混ぜない（`rememberRailWidth` を呼ばない）— 広い面へ戻したときに
+	 * 0 幅が復元されると詰む。
+	 *
+	 * 守りは敵対ケース `nimbus/tests/gui/cases/adv-14-narrow-sidebar.mjs`
+	 * （寸法は画面でしか壊れないので、モジュールテストでは掴めない）。
+	 */
+	function layoutRail() {
+		const total = railTotalWidth();
+		// 面が畳まれている間は測れない（`clientWidth` が 0）。0 を「狭い」と読むと、
+		// 面を戻したときに列が畳まれたまま残る
+		const measurable = total > 0;
+		if (measurable) {
+			// 閾値は魔法数を置かず、**列の下限 ＋ 会話の下限 ＋ 境目**から出す。
+			// 戻す側だけ遊びを足す（同じ値で出し入れすると境目で点滅する）
+			const collapseAt = RAIL_MIN + CHAT_MIN + railSashWidth();
+			if (!railCollapsedByWidth && total < collapseAt) {
+				railCollapsedByWidth = true;
+			} else if (railCollapsedByWidth && total >= collapseAt + RAIL_RESTORE_MARGIN) {
+				railCollapsedByWidth = false;
+			}
+		}
+		// 測れないとき（面が畳まれている）は前の判断を保つ — 0px を「狭い」と読んで畳むと、
+		// 面を戻したときに列が畳まれたまま残る
+		const show = railWanted && !railCollapsedByWidth;
+		sessionTabs.hidden = !show;
+		// 境目は列があるときだけ。畳んでいるときに掴めると、掴んだ先に何も無い（T-342）
+		railSash.hidden = !show;
+		if (!show) {
+			// 畳むときは決めた幅を外す — インラインの幅は `[hidden]` の `width: auto` に勝ってしまう
+			sessionTabs.style.width = '';
+			sessionTabs.style.maxWidth = '';
+			return;
+		}
+		if (measurable) {
+			applyRailWidth(savedRailWidth());
+		}
 	}
 
 	/**
@@ -1238,6 +1322,14 @@
 	 * 拡張側の 1 つの設定に寄せると、どちらかが必ず外れる
 	 */
 	function rememberRailWidth(width) {
+		/*
+		 * **畳んでいる間の幅は覚えない**（T-354・Codex の指摘 2026-08-31）。
+		 * 掴んでいる最中に外側の面が狭まって自動で畳むと、`pointerup` が 0px を保存してしまい、
+		 * 広い面へ戻したときに 0 幅が復元されて詰む。覚えるのは**利用者が決めた幅**だけ。
+		 */
+		if (typeof width === 'number' && (railCollapsedByWidth || sessionTabs.hidden)) {
+			return;
+		}
 		const state = vscode.getState() ?? {};
 		if (typeof width === 'number') {
 			vscode.setState({ ...state, railWidth: width });
@@ -1306,12 +1398,18 @@
 		rememberRailWidth(sessionTabs.getBoundingClientRect().width);
 	});
 
-	// 面が狭くなったら、覚えた幅のまま押し込まず、その場で入る幅へ収め直す
+	// 面が狭くなったら、覚えた幅のまま押し込まず、その場で入る幅へ収め直す。
+	// 縮めても入らない幅では列ごと畳む（T-354）
 	window.addEventListener('resize', () => {
-		if (!sessionTabs.hidden) {
-			applyRailWidth(savedRailWidth());
-		}
+		layoutRail();
 	});
+
+	// 窓の resize だけでは取りこぼす（面を出し入れしても窓の大きさは変わらない）。
+	// **器そのもの**を見て、幅が変わるたびに収め直す（T-354）。
+	// 見ているのは親（`.cockpit-columns`）なので、ここで列の幅を変えても呼び戻されない
+	if (typeof ResizeObserver === 'function' && railSash.parentElement) {
+		new ResizeObserver(() => layoutRail()).observe(railSash.parentElement);
+	}
 
 	function renderSessionTabs(tabs) {
 		sessionTabs.textContent = '';
@@ -1320,15 +1418,15 @@
 		// click のリスナーはそのまま生きている
 		sessionTabs.appendChild(homeBack);
 		// 1 本しか無いときは出さない。切り替える先が無い列は場所を取るだけ
-		sessionTabs.hidden = !tabs || (tabs.length < 2 && !tabs.some((tab) => tab.resumable));
-		// 境目は列があるときだけ。畳んでいるときに掴めると、掴んだ先に何も無い（T-342）
-		railSash.hidden = sessionTabs.hidden;
-		if (sessionTabs.hidden) {
-			// 畳むときは決めた幅を外す — インラインの幅は `[hidden]` の `width: auto` に勝ってしまう
-			sessionTabs.style.width = '';
+		railWanted = Boolean(tabs) && (tabs.length >= 2 || tabs.some((tab) => tab.resumable));
+		// 出す・畳む・幅を収めるの判断は 1 か所（`layoutRail`）に寄せる。
+		// 面の広さでも畳むようになったので、本数だけで決められない（T-354）
+		layoutRail();
+		if (!railWanted) {
 			return;
 		}
-		applyRailWidth(savedRailWidth());
+		// 狭くて畳んでいるときも 1 枚ずつは作っておく。面が広がった瞬間に描き直さずに戻せる
+		// （畳んでいる間は `.session-tabs[hidden] > :not(.home-back)` が CSS で消している）
 		for (const tab of tabs) {
 			// <button> ではなく <div role="tab">（T-311 / T-313）。
 			// **ボタンの中にボタンや入力欄は置けない**（HTML の決まりで、入れ子の操作は

@@ -17,6 +17,13 @@ export interface WebviewSurface {
 	readonly webview: vscode.Webview;
 }
 
+/**
+ * 面の種類（T-356）。中身が同じでも、サイドバーの面（`view`）とエディタタブの面（`panel`）は
+ * **別の面**として扱う。「一覧を開いているか」のように**面ごとに覚える**状態の鍵になる。
+ * `bound` は 1 本のセッションに束縛した面（T-320）。
+ */
+export type SurfaceKind = 'view' | 'panel' | 'bound';
+
 export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 	protected view?: vscode.WebviewView;
 	/** エディタタブとして開いた面（T-258）。開いていなければ undefined */
@@ -103,6 +110,20 @@ export abstract class WebviewViewHost implements vscode.WebviewViewProvider {
 				this.boundPanels.delete(sessionId);
 			}
 		});
+	}
+
+	/**
+	 * メッセージの出どころ（面）を見分ける（T-356）。
+	 *
+	 * `postMessage` は両方の面へ配るので、**その面自身の状態**を返したいときに
+	 * 「どの面から来たのか」が要る。**`onResolved` の中で呼んで閉じ込めること** —
+	 * 面が入れ替わったあとに呼ぶと、古い面を今の面と取り違える。
+	 */
+	protected surfaceKind(surface: WebviewSurface, boundSessionId?: string): SurfaceKind {
+		if (boundSessionId !== undefined) {
+			return 'bound';
+		}
+		return surface === this.view ? 'view' : 'panel';
 	}
 
 	/** 束縛した面が見ているセッション（T-320）。イベントの配りぶんを決めるのに使う */

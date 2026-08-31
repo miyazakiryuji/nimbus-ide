@@ -547,6 +547,13 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	let lastTabsSignature = '';
 	/** 全画面（T-269）。戻すときにサイドバーを開き直すために覚えておく */
 	let cockpitFullscreen = false;
+	/**
+	 * 全画面の切り替えが走っている最中か（T-355）。旗を読んでから書くまでに await が挟まると、
+	 * 1 tick の 2 連打が**両方とも「まだ全画面ではない」を読んで**同じ枝を走る。
+	 */
+	let cockpitFullscreenBusy = false;
+	/** 切り替えの最中に来た押しを覚えておく（T-355）。何回来ても、終わってから 1 回だけ効かせる */
+	let cockpitFullscreenPending = false;
 	/** 枠の残りの 1 行（T-282）。面を作り直したときに出し直すために覚えておく */
 	let lastQuota: { text: string; tooltip?: string; gauges?: readonly QuotaGauge[] } | undefined;
 	/**
@@ -2682,34 +2689,77 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * タブで開いたうえで、サイドバー・パネル・補助バーを畳んで**会話だけ**にする。
 	 * 要は「元に戻せること」— 戻せない全画面は、使う前に躊躇する。もう一度呼べば戻す。
 	 * アクティビティバーは残す（帰り道が消えると、戻りかたを探すことになる）。
+	 *
+	 * **入る側と戻る側を対称にする**（T-355）。直しは 2 つ。
+	 *
+	 * ① 戻す側を「必ず開く」へ倒した。`toggleSidebarVisibility` は画面の実状態で反転するので、
+	 *    全画面のあいだに別の入口からサイドバーを開き直すと、「戻す」が**閉じる**側に倒れていた。
+	 *    続けてもう一度押すと入る側へ行き、`closeSidebar` は空振りするので
+	 *    **押しても何も起きない一手**が生まれる。畳むのが必ず閉じる `closeSidebar` なのだから、
+	 *    戻すのも必ず開く `focusSideBar` で揃える（実状態は拡張ホストからは読めない）。
+	 * ② 旗を**最初の await の前**に倒し、走っている最中の押しは `cockpitFullscreenPending` に
+	 *    溜めて、終わってから 1 回だけ効かせる。先に旗を立てないと、1 tick の 2 連打が
+	 *    両方とも入る枝を走り、2 回押したのにサイドバーが畳まれたまま戻らない。
+	 *
+	 * 画面を畳んだ結果でしか壊れないので、守りは敵対ケースの
+	 * `nimbus/tests/gui/cases/adv-15-fullscreen-burst.mjs`（②の 1 tick 2 連打）と
+	 * `adv-16-fullscreen-restore.mjs`（①の非対称）。
 	 */
 	async function toggleFullscreenCockpit(): Promise<void> {
-		if (cockpitFullscreen) {
-			cockpitFullscreen = false;
-			void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', false);
-			await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
-			log('[cockpit] 全画面をやめました');
+		if (cockpitFullscreenBusy) {
+			/*
+			 * 走っている最中の押しは捨てずに溜める。捨てると 2 連打の 2 回目が無かったことになる。
+			 * **溜めかたは「有無」ではなく「偶奇」**（Codex の指摘 2026-08-31）— `true` を上書きすると
+			 * 3 連打が「入る → 戻る」で終わり、1 回ぶん落ちる（本来は入った状態で終わるべき）。
+			 * 反転で持てば、奇数回は入る・偶数回は戻る、と押した回数どおりに収束する。
+			 */
+			cockpitFullscreenPending = !cockpitFullscreenPending;
 			return;
 		}
-		cockpit.openInEditor('nimbus.cockpitTab', 'Nimbus コックピット');
-		for (const command of [
-			'workbench.action.closeSidebar',
-			'workbench.action.closePanel',
-			'workbench.action.closeAuxiliaryBar'
-		]) {
-			// 既に閉じているものは何も起きない。閉じられなくても全画面自体は成立させる
-			await vscode.commands.executeCommand(command).then(undefined, () => undefined);
+		cockpitFullscreenBusy = true;
+		try {
+			do {
+				cockpitFullscreenPending = false;
+				// **旗は最初の await の前に倒す。** ここから下は await を挟むので、
+				// 旗を後から書くと、その隙間に来た押しが同じ枝をもう一度走る
+				const entering = !cockpitFullscreen;
+				cockpitFullscreen = entering;
+				void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', entering);
+				if (!entering) {
+					// 戻す側は「必ず開く」。閉じられなくても・既に開いていても、結果は「見えている」で揃う。
+					// `toggleSidebarVisibility` へ戻すと非対称が復活する（T-355）ので、差し替えない。
+					// 副作用として焦点もサイドバーへ入る（`FocusSideBarAction` は開いたあと viewlet を focus する）—
+					// 全画面をやめた直後は続きを打ちたいので、向きとしては合っている
+					// 失敗を握りつぶして「やめました」と書かない（Codex の指摘 2026-08-31）—
+					// 旗だけ false でサイドバーが閉じたままだと、記録を見ても原因に辿り着けない
+					const opened = await vscode.commands
+						.executeCommand('workbench.action.focusSideBar')
+						.then(() => true, () => false);
+					log(opened ? '[cockpit] 全画面をやめました' : '[cockpit] 全画面をやめましたが、サイドバーを開き直せませんでした');
+					continue;
+				}
+				cockpit.openInEditor('nimbus.cockpitTab', 'Nimbus コックピット');
+				for (const command of [
+					'workbench.action.closeSidebar',
+					'workbench.action.closePanel',
+					'workbench.action.closeAuxiliaryBar'
+				]) {
+					// 既に閉じているものは何も起きない。閉じられなくても全画面自体は成立させる
+					await vscode.commands.executeCommand(command).then(undefined, () => undefined);
+				}
+				// **全画面にしたら右半分も出す**（T-292）。仕様では右半分は「選んで初めて出る」作りだったが、
+				// その選ぶコマンドがどこにも出ていなかったので、利用者からは「直したのに出ない」に見えた。
+				// 出すものが無いとき（まだ書いていないセッション）は黙って出さない —
+				// 全画面にするたびに「まだ書いていません」と言われるほうが邪魔になる
+				if (activeSessionId && sidePane.current() === 'off' && sidePane.hasDiff(activeSessionId)) {
+					await sidePane.show('diff', activeSessionId);
+				}
+				log('[cockpit] 全画面にしました');
+			} while (cockpitFullscreenPending);
+		} finally {
+			cockpitFullscreenBusy = false;
+			cockpitFullscreenPending = false;
 		}
-		cockpitFullscreen = true;
-		void vscode.commands.executeCommand('setContext', 'nimbus.cockpitFullscreen', true);
-		// **全画面にしたら右半分も出す**（T-292）。仕様では右半分は「選んで初めて出る」作りだったが、
-		// その選ぶコマンドがどこにも出ていなかったので、利用者からは「直したのに出ない」に見えた。
-		// 出すものが無いとき（まだ書いていないセッション）は黙って出さない —
-		// 全画面にするたびに「まだ書いていません」と言われるほうが邪魔になる
-		if (activeSessionId && sidePane.current() === 'off' && sidePane.hasDiff(activeSessionId)) {
-			await sidePane.show('diff', activeSessionId);
-		}
-		log('[cockpit] 全画面にしました');
 	}
 
 	/**

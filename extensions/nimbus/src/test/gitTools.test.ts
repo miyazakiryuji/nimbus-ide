@@ -7,7 +7,13 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { parsePorcelainStatus, renderStatus, validateStagePaths } from '../core/gitTools';
+import {
+	diffBaseRevision,
+	EMPTY_TREE_SHA,
+	parsePorcelainStatus,
+	renderStatus,
+	validateStagePaths
+} from '../core/gitTools';
 
 test('porcelain を、束（staged）と作業ツリーに分けて読む（T-307）', () => {
 	const text = [
@@ -77,4 +83,14 @@ test('stage はパス名指しのみ。まとめ指定・範囲外・フラグ�
 	function path0(message: string): string {
 		return /「([^」]+)」/.exec(message)?.[1] ?? message;
 	}
+});
+
+test('まだコミットが無いフォルダでは、HEAD ではなく空ツリーと比べる（T-353）', () => {
+	// unborn HEAD に `git diff HEAD` を当てると rc=128（fatal: ambiguous argument 'HEAD'）になり、
+	// 「まだコミットが無い」だけの平常の状態が、生の英語つきの赤いエラーとして出ていた。
+	// 空ツリーの SHA は git の固定値で、1 文字でも違うと fatal: bad object に化けるので値ごと固定する
+	assert.deepStrictEqual(
+		[diffBaseRevision(true), diffBaseRevision(false), EMPTY_TREE_SHA],
+		['HEAD', '4b825dc642cb6eb9a060e54bf8d69288fbee4904', '4b825dc642cb6eb9a060e54bf8d69288fbee4904']
+	);
 });

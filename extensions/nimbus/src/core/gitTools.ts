@@ -129,3 +129,21 @@ export function validateStagePaths(paths: readonly string[]): { ok: string[] } |
 	}
 	return { ok: [...paths] };
 }
+
+/**
+ * 空ツリーの SHA。git が固定で持つ値なので、どのリポジトリでも同じものを指す（SHA-1＝git の既定）。
+ * まだコミットが 1 つも無いときの「比較のもと」に使う。
+ */
+export const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+/**
+ * `git diff` の比較先を決める（T-353）。
+ *
+ * `git init` 直後は HEAD がまだどのコミットも指しておらず（unborn HEAD）、
+ * `git diff HEAD` は rc=128 で `fatal: ambiguous argument 'HEAD'…` を返す。
+ * **まだコミットが無いのは壊れた状態ではなく平常**なので、エラーへ流さず空ツリーと比べる —
+ * こうすれば「最初のコミットに入る予定のもの」がそのまま差分として出る。
+ */
+export function diffBaseRevision(hasCommit: boolean): string {
+	return hasCommit ? 'HEAD' : EMPTY_TREE_SHA;
+}

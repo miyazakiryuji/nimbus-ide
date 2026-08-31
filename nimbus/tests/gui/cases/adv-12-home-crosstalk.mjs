@@ -14,15 +14,16 @@
  *
  * **なぜ落ちうるか** — `nimbus.openHome`（`extensions/nimbus/src/extension.ts:4027-4037`）は
  * `cockpit.reveal()` のあと `cockpit.post({ type: 'home', …, open: true })` を呼ぶ。
- * `post` は `WebviewViewHost.ts:145-148` で view と panel の**両方**へ配るので、
+ * `post` は `WebviewViewHost.ts:166-169` で view と panel の**両方**へ配るので、
  * タブの面にも届く**はず**。届いていなければ入口は片面だけになっている。
  * 逆に `#homeBack`（`media/cockpit.js:962-963`）は `setHomeOpen(false)` を自分の面にだけ効かせる。
  *
- * **決めていないことは判定にしない（設計書 4 節 ①）** — 「片方の面を開き直すと、触っていない
- * もう片方の Home が閉じる」（provider に 1 個しかない `homeOpen` が `ready` で両面へ配られる・
- * `CockpitViewProvider.ts:228, 319-323`）は、仕様が「provider が覚える」と書いたままで
- * **面ごとに持つのかが決まっていない**。よってここでは `ctx.expect` にせず、
- * **観察して `console.log` に残すだけ**にする。決まったら判定へ格上げする。
+ * **決まったので判定へ格上げした（T-356・利用者 2026-08-31）** — 「片方の面を開き直すと、
+ * 触っていないもう片方の Home が閉じる」は、仕様が「provider が覚える」と書いたままで
+ * 面ごとに持つのかが決まっていなかったため、以前はここで観察して `console.log` に
+ * 残すだけにしていた。**一覧の開閉は面ごとに持つ**と決まったので、本丸③で落とす。
+ * 壊れかたは「provider に 1 個しかない `homeOpen` を `ready` の返事で両面へ配る」形で、
+ * **面が 2 枚ないと出ない** — だからここが唯一の守り（モジュールテストでは出せない）。
  *
  * 課金しない: Enter・送信・開始は押さない。ネイティブモーダルへ至る操作もしない。
  */
@@ -72,6 +73,29 @@ async function frameInPart(page, partSelector, { attempts = 16 } = {}) {
 		await page.waitForTimeout(500);
 	}
 	return undefined;
+}
+
+/**
+ * 開いているタブを閉じる（×）。開いた面を残すと、後のケースが 2 枚目を掴む（T-329）。
+ * 本丸③（タブを開き直す）と後始末の両方で使う。
+ */
+async function closeOpenTabs(page) {
+	for (let i = 0; i < 3; i++) {
+		const closed = await page
+			.evaluate(() => {
+				const button = document.querySelector('.tabs-container .tab .codicon-close, .tabs-container .tab .tab-close');
+				if (!button) {
+					return false;
+				}
+				button.click();
+				return true;
+			})
+			.catch(() => false);
+		if (!closed) {
+			break;
+		}
+		await page.waitForTimeout(500);
+	}
 }
 
 /** その面が今どう見えているか。`hidden` は `setHomeOpen` が両方まとめて動かす（cockpit.js:1009-1013） */
@@ -135,9 +159,6 @@ export default {
 				`会話を見ているのに ← が出ている（仕様 cockpit-home.md 6 項「一覧を開いているときだけ出す」）: ${describe(tabState)}`
 			);
 
-			// 触っていないサイドバー側の見えかたを控える（観察用・判定にはしない）
-			const sideBefore = await look(side).catch(() => undefined);
-
 			// ── 本丸①: タブの面で一覧が開くか ───────────────────────────────
 			await runCommand(page, OPEN_HOME);
 			await page.waitForTimeout(1800);
@@ -167,43 +188,48 @@ export default {
 				`会話へ戻ったのに ← が出たまま（押しても何も起きないボタンが残る）: ${describe(back)}`
 			);
 
-			// ── 観察（判定にしない・設計書 4 節 ①）─────────────────────────
-			// 「触っていない面の一覧が、別の面の操作で動くか」。仕様が面ごとに持つと決めていないので、
-			// ここでは落とさずに記録だけする。決まったら ctx.expect へ格上げする
+			// ── 本丸③: タブを開き直しても、触っていない面の一覧は動かない（T-356）──
+			// いまサイドバーは「一覧」（`nimbus.openHome` はどの面でも開くので、ここは正しい）、
+			// タブは「会話」（②で戻した）。この食い違ったままタブを開き直すと、
+			// 新しい面が送る `ready` の返事が両面へ配られていた頃は、
+			// **触っていないサイドバーまで会話へ戻っていた**。開閉は面ごとに持つ（T-356）
+			const sideBefore = await look(side).catch(() => undefined);
+			ctx.expect(sideBefore !== undefined, 'サイドバーの面が読めない（面が作り直された可能性）');
+			// ③ が意味を持つのは、2 枚の面が**食い違っている**ときだけ。サイドバーまで会話に
+			// なっていると、crosstalk が直っていなくても後の比較が通ってしまう（判定が空回りする）。
+			// `nimbus.openHome` はどの面でも一覧を開くので、ここは開いているのが正しい
+			ctx.expect(
+				sideBefore.homeOpen,
+				`「${OPEN_HOME}」がサイドバーの面まで届いていない（post は両方の面へ配るはず・` +
+					`WebviewViewHost.ts:166-169）。この状態では本丸③が空回りする: ${describe(sideBefore)}`
+			);
+			ctx.expect(
+				consistent(sideBefore),
+				`サイドバーの面で 一覧 と ← がずれている: ${describe(sideBefore)}`
+			);
+
+			await closeOpenTabs(page);
+			tabOpened = false;
+			await page.waitForTimeout(900);
+			await runCommand(page, labels('command.openCockpitTab')[0]);
+			tabOpened = true;
+			await page.waitForTimeout(2500);
+
 			const sideAfter = await look(side).catch(() => undefined);
-			if (sideBefore && sideAfter) {
-				const moved = sideBefore.homeOpen !== sideAfter.homeOpen;
-				console.log(
-					`      ［観察・判定にしない］触っていないサイドバーの面: ` +
-						`${describe(sideBefore)} → ${describe(sideAfter)}${moved ? '  ← 別の面の操作で動いた（仕様未定・T-347）' : ''}`
-				);
-				if (sideAfter && !consistent(sideAfter)) {
-					console.log(
-						`      ！サイドバーの面で 一覧 と ← がずれている: ${describe(sideAfter)}（こちらは仕様どおりなら起きない）`
-					);
-				}
-			} else {
-				console.log('      ［観察］サイドバーの面が読めなくなった（面が作り直された可能性）');
-			}
+			ctx.expect(sideAfter !== undefined, 'タブを開き直したら、サイドバーの面が読めなくなった');
+			ctx.expect(
+				sideBefore.homeOpen === sideAfter.homeOpen,
+				`タブを開き直しただけで、触っていないサイドバーの面が動いた（一覧の開閉は面ごとに持つ・T-356）: ` +
+					`${describe(sideBefore)} → ${describe(sideAfter)}`
+			);
+			ctx.expect(
+				consistent(sideAfter),
+				`サイドバーの面で 一覧 と ← がずれている: ${describe(sideAfter)}`
+			);
 		} finally {
 			// タブを閉じる。開いた面を残すと、後のケースが 2 枚目を掴む（T-329）
 			if (tabOpened) {
-				for (let i = 0; i < 3; i++) {
-					const closed = await page
-						.evaluate(() => {
-							const button = document.querySelector('.tabs-container .tab .codicon-close, .tabs-container .tab .tab-close');
-							if (!button) {
-								return false;
-							}
-							button.click();
-							return true;
-						})
-						.catch(() => false);
-					if (!closed) {
-						break;
-					}
-					await page.waitForTimeout(500);
-				}
+				await closeOpenTabs(page);
 			}
 			// サイドバーの面を「会話」に戻して終える。一覧を開いたまま返すと、
 			// 次のケースが「一覧しか見えない面」を掴む（54-new-session-draft.mjs:129-131 の実測と同じ罠）

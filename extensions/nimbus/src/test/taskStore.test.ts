@@ -6,11 +6,11 @@
  *   node --test extensions/nimbus/out/test
  */
 import * as assert from 'assert';
-import { mkdtempSync } from 'fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { test } from 'node:test';
-import type { KanbanTask } from '../core/tasks';
+import { KANBAN_COLUMNS, type KanbanTask } from '../core/tasks';
 import { TaskStore } from '../taskStore';
 
 function task(taskId: string): KanbanTask {
@@ -61,6 +61,33 @@ test('進捗は追記だけなので、同時に書いても行が消えない',
 	const entries = await a.readProgress('t1');
 	const last = await a.lastProgressAt();
 	assert.deepStrictEqual([entries.length, last.get('t1')], [100, 149]);
+});
+
+test('知らない状態・欠けた状態の記録も、列のある状態にして読む（T-351）', async () => {
+	// 別ウィンドウ・旧版・手編集が置いた札。素通しすると板のどの列にも入らないまま
+	// 「全 N」にだけ残り、探しても見つからない仕事を数字が主張する
+	const at = dir();
+	mkdirSync(at, { recursive: true });
+	writeFileSync(join(at, 'x.json'), JSON.stringify({ ...task('x'), state: 'banana' }), 'utf8');
+	writeFileSync(join(at, 'y.json'), JSON.stringify({ ...task('y'), state: null }), 'utf8');
+	const noticed: string[] = [];
+	const store = new TaskStore(at, { log: (message) => noticed.push(message) });
+	await store.write(task('z'));
+
+	const read = (await store.load()).sort((a, b) => a.taskId.localeCompare(b.taskId));
+	assert.deepStrictEqual(
+		read.map((t) => [t.taskId, t.state]),
+		[
+			['x', 'pending'],
+			['y', 'pending'],
+			['z', 'pending']
+		]
+	);
+	// 読めた札は必ず列がある＝板に描ける（数えたものは見える場所に出る）
+	assert.ok(read.every((t) => KANBAN_COLUMNS.some((column) => column.state === t.state)));
+	// 黙って寄せない。ただし 5 秒ごとの読み直しで同じ行を吐かない（2 件ぶんだけ）
+	await store.load();
+	assert.strictEqual(noticed.length, 2, noticed.join(' / '));
 });
 
 test('板から消すと、進捗の記録も残らない', async () => {

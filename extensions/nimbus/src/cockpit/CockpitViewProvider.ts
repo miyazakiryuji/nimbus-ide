@@ -15,7 +15,7 @@ import { parseMarkdown, type Block } from '../core/chatMarkdown';
 import { runCodeAction } from './codeActions';
 import { isAllowedAction, type ReadyCheck } from '../core/readiness';
 import type { QuotaGauge } from '../core/usage';
-import { WebviewViewHost, type WebviewSurface } from '../webview/WebviewViewHost';
+import { WebviewViewHost, type SurfaceKind, type WebviewSurface } from '../webview/WebviewViewHost';
 
 /** Webview → 拡張 */
 export type InboundMessage =
@@ -45,7 +45,11 @@ export type InboundMessage =
 	 * （webview に入力 UI を増やさない。実装も入力検証も 1 か所に寄せる）。
 	 */
 	| { type: 'group'; op: 'create' | 'rename' | 'remove' | 'assign'; groupId?: string; sessionId?: string }
-	/** Home（束一覧・T-314）の開閉。拡張は覚えるだけ — 面を開き直したときに戻すため */
+	/**
+	 * Home（束一覧・T-314）の開閉。拡張は覚えるだけ — 面を開き直したときに戻すため。
+	 * 覚えるのは**送ってきた面のぶんだけ**（T-356）。守りは敵対ケース
+	 * `nimbus/tests/gui/cases/adv-12-home-crosstalk.mjs`（面が 2 枚ないと出ない壊れかた）
+	 */
 	| { type: 'homeOpened'; open: boolean }
 	/**
 	 * 「準備」のボタン（T-285）。**許したコマンドしか走らせない** —
@@ -224,8 +228,26 @@ async function pickImages(): Promise<{ name: string; dataUrl: string }[]> {
 export class CockpitViewProvider extends WebviewViewHost {
 	public static readonly viewType = 'nimbus.cockpit';
 
-	/** Home（束一覧）を開いているか（T-314）。面を開き直したときに戻すためだけに覚える */
-	private homeOpen = false;
+	/**
+	 * Home（束一覧）を開いているか（T-314）。面を開き直したときに戻すためだけに覚える。
+	 *
+	 * **面ごとに持つ**（T-356・利用者が 2026-08-31 に決めた）。provider に 1 個だと、
+	 * タブ側で一覧を閉じた状態が新しい面の `ready` の返事に乗り、`postMessage` が
+	 * 両方の面へ配るせいで、**触っていないサイドバーの面まで会話へ戻っていた**。
+	 * 鍵は面の種類なので高々 2 つ（`view` / `panel`）— 溜まって漏れることはない。
+	 * 束縛面（`bound`・T-320）は一覧を出さないので記録しない。
+	 */
+	private readonly homeOpen = new Map<SurfaceKind, boolean>();
+
+	/**
+	 * 最後に**誰かが**一覧を開閉した向き（T-356）。**まだ一度も出ていない面**の初期値に使う。
+	 *
+	 * 面ごとに持つだけにすると、サイドバーで一覧を開いてからタブを開いたときに
+	 * タブが会話で始まり、確認項目「開いた状態がエディタタブの面にも引き継がれる」
+	 * （`cockpit-home.md` / GUI ケース 59）が崩れる。**引き継ぎと独立は別の話** —
+	 * 生まれるときは直前の見えかたを引き継ぎ、生まれたあとは他の面に動かされない。
+	 */
+	private lastHomeOpen = false;
 
 	constructor(
 		extensionUri: vscode.Uri,
@@ -239,6 +261,8 @@ export class CockpitViewProvider extends WebviewViewHost {
 		this.handlers.log(
 			boundSessionId ? `[cockpit] 束縛面を生成しました（${boundSessionId.slice(0, 8)}）` : '[cockpit] Webview を生成しました'
 		);
+		// どの面から来たメッセージかは、面が入れ替わる前にここで閉じ込める（T-356）
+		const kind = this.surfaceKind(surface, boundSessionId);
 
 		surface.webview.onDidReceiveMessage(async (message: InboundMessage) => {
 			// 束縛面（T-320）は 1 本のセッションだけを見る。復元も入力もその面の webview に閉じる
@@ -316,10 +340,19 @@ export class CockpitViewProvider extends WebviewViewHost {
 					if (checks) {
 						this.post({ type: 'readiness', checks });
 					}
-					// Home（T-314）。開き直した面にも束と開閉の状態を戻す
+					// Home（T-314）。開き直した面にも束と開閉の状態を戻す。
+					// 返すのは**その面自身の開閉だけ**（T-356）— `post` は両方の面へ配るので、
+					// ここで使うと触っていないもう片方の一覧まで開閉させてしまう。
+					// 束縛面が自分にだけ返しているのと同じ作法に揃える
 					const groups = this.handlers.homeGroups?.();
 					if (groups) {
-						this.post({ type: 'home', groups, open: this.homeOpen });
+						// まだ一度も出ていない面は**直前の見えかたを引き継ぐ**（ケース 59 の確認項目）。
+						// 一度でも開閉していれば、その面自身の記録が優先される（＝他の面に動かされない）
+						void surface.webview.postMessage({
+							type: 'home',
+							groups,
+							open: this.homeOpen.get(kind) ?? this.lastHomeOpen
+						});
 					}
 					break;
 				}
@@ -348,7 +381,11 @@ export class CockpitViewProvider extends WebviewViewHost {
 					await this.handlers.onGroup?.(message.op, { groupId: message.groupId, sessionId: message.sessionId });
 					break;
 				case 'homeOpened':
-					this.homeOpen = message.open;
+					// 送ってきた面のぶんだけ書き換える（T-356）。`nimbus.openHome` は
+					// 両方の面へ配る（どの面でも一覧を開く）ので、両面ぶんがそれぞれ届く
+					this.homeOpen.set(kind, message.open);
+					// **まだ生まれていない面**の初期値にも使う（下の `ready` を見よ）
+					this.lastHomeOpen = message.open;
 					break;
 				case 'closeSession':
 					this.handlers.onCloseSession?.(message.sessionId);

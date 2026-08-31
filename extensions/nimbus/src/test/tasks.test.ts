@@ -5,7 +5,15 @@
  */
 import * as assert from 'assert';
 import { test } from 'node:test';
-import { deriveState, KANBAN_COLUMNS, nextStartable, occupiesSlot, restoreState, type KanbanTask } from '../core/tasks';
+import {
+	deriveState,
+	KANBAN_COLUMNS,
+	nextStartable,
+	normalizeState,
+	occupiesSlot,
+	restoreState,
+	type KanbanTask
+} from '../core/tasks';
 
 function task(partial: Partial<KanbanTask> & { taskId: string }): KanbanTask {
 	return {
@@ -72,6 +80,37 @@ test('待機中が複数あれば古いものから開始する', () => {
 test('待機中が無ければ何も返さない', () => {
 	assert.strictEqual(nextStartable([task({ taskId: 'a', state: 'review' })], 5, 0), undefined);
 	assert.strictEqual(nextStartable([], 5, 0), undefined);
+});
+
+test('知らない状態・欠けた状態は、列のある pending へ寄せる（T-351）', () => {
+	// 寄せないと、どの列にも入らないまま数にだけ残る（「全 3 なのにカードは 1 枚」）
+	assert.deepStrictEqual(
+		[
+			normalizeState('banana'),
+			normalizeState(null),
+			normalizeState(undefined),
+			normalizeState(42),
+			normalizeState('pending'),
+			normalizeState('running'),
+			normalizeState('awaiting-approval'),
+			normalizeState('review'),
+			normalizeState('done')
+		],
+		['pending', 'pending', 'pending', 'pending', 'pending', 'running', 'awaiting-approval', 'review', 'done']
+	);
+	// 寄せ先は必ず列がある＝板に描ける（数えたものは必ず見える場所に出る）
+	assert.ok(KANBAN_COLUMNS.some((column) => column.state === normalizeState('banana')));
+});
+
+test('Memento からの復元でも、知らない状態を通さない（T-351）', () => {
+	// 既知の 5 状態に対する答えは今までどおり（上の「再起動後〜」のテストが押さえている）
+	assert.deepStrictEqual(
+		[
+			restoreState('banana' as unknown as KanbanTask['state']),
+			restoreState(undefined as unknown as KanbanTask['state'])
+		],
+		['pending', 'pending']
+	);
 });
 
 test('板の列は英語で揃っている（T-257）', () => {
