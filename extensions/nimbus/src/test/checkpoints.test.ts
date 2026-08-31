@@ -58,7 +58,14 @@ test('一覧のラベルは長い指示を畳む', () => {
 test('巻き戻しの結果は「戻せない」「何も変わらない」をはっきり言う', () => {
 	assert.strictEqual(describeRewind({ canRewind: false, error: '対象が見つかりません' }), '巻き戻せません: 対象が見つかりません');
 	assert.strictEqual(describeRewind({ canRewind: false }), '巻き戻せません');
-	assert.strictEqual(describeRewind({ canRewind: true, filesChanged: [] }), 'ファイルの変更はありません（会話だけが戻ります）');
+	/*
+	 * T-364 — **「会話だけが戻ります」と言わない。** 巻き戻しの実体は SDK の `rewindFiles()` で、
+	 * 戻すのはファイルだけ。会話を切り詰める処理は無いのに、それを約束していた。
+	 */
+	assert.strictEqual(
+		describeRewind({ canRewind: true, filesChanged: [] }),
+		'戻せるファイルの変更はありません（会話はそのまま残ります）'
+	);
 	assert.strictEqual(
 		describeRewind({ canRewind: true, filesChanged: ['a.ts', 'b.ts'], insertions: 10, deletions: 4 }),
 		'2 ファイル · +10 / -4'

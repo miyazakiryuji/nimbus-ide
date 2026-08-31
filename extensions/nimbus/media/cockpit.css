@@ -81,7 +81,8 @@
 	flex-direction: column;
 	overflow-y: auto;
 	overflow-x: hidden;
-	gap: 1px;
+	/* 行の境目は線で示す（下の `.session-tab + .session-tab`）。隙間と線を重ねない */
+	gap: 0;
 	flex: 0 0 auto;
 	/*
 	 * 面の広さに応じて分け前を変える。狭い面で固定幅にすると会話が潰れ、
@@ -91,7 +92,17 @@
 	 */
 	width: clamp(200px, 40%, 300px);
 	background: var(--vscode-editorGroupHeader-tabsBackground);
-	border-right: 1px solid var(--vscode-editorGroupHeader-tabsBorder, transparent);
+	/*
+	 * 列と会話の境目（T-362・利用者依頼 2026-08-31「区切りめも分かるように線をいれよう」）。
+	 *
+	 * **線は前からここに在った。見えていなかっただけ。** 使っていた
+	 * `editorGroupHeader.tabsBorder` は dark も light も既定が `null`
+	 * （`src/vs/workbench/common/theme.ts:226`）なので、CSS には線があるのに画面には出ない。
+	 * 面と面を分ける色は `panel.border` — dark / light に実値（`#80808059`）を持ち、
+	 * 高コントラストでは `contrastBorder` に落ちる ＝ **どのテーマでも見える**（同 `:488`）。
+	 * 太さは設計トークンの唯一の線幅（design-tokens「Stroke」）。
+	 */
+	border-right: var(--vscode-strokeThickness) solid var(--vscode-panel-border);
 }
 
 /*
@@ -183,6 +194,18 @@ body.rail-dragging {
 	color: var(--vscode-tab-inactiveForeground);
 	cursor: pointer;
 	font-size: var(--nimbus-label1);
+}
+
+/*
+ * セッション同士の境目（T-362・利用者依頼 2026-08-31「セッション同士とかにもね」）。
+ *
+ * **行と行の境目なので、面の境目より控えめでよい** — 同じ `panel.border` を使っても、
+ * 全高の縦線に比べて 1 行ぶんの横線は自然に軽く見える。色を弱めるより、長さで差が付く。
+ * `+ ` で**間にだけ**引く（先頭の上と末尾の下には引かない）。列の頭の「← 会話へ戻る」と
+ * 末尾の「＋」は操作であって行ではないので、この線の対象に入れない。
+ */
+.session-tab + .session-tab {
+	border-top: var(--vscode-strokeThickness) solid var(--vscode-panel-border);
 }
 
 .session-tab:hover:not(.active) {

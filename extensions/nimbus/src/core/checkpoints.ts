@@ -68,7 +68,14 @@ export function describeRewind(outcome: RewindOutcome): string {
 	}
 	const files = outcome.filesChanged?.length ?? 0;
 	if (files === 0) {
-		return 'ファイルの変更はありません（会話だけが戻ります）';
+		/*
+		 * **「会話だけが戻ります」とは言わない**（T-364・2026-08-31 に訂正）。
+		 * 巻き戻しの実体は SDK の `rewindFiles()` で、戻すのは**ファイルだけ**。
+		 * 会話を切り詰める処理は Nimbus のどこにも無い。
+		 * 「戻したつもりで戻っていない」を防ぐために書いた一文が、それ自体で嘘をついていた。
+		 * 会話の巻き戻しは T-363（送信済みプロンプトの編集）で作る。
+		 */
+		return '戻せるファイルの変更はありません（会話はそのまま残ります）';
 	}
 	const insertions = outcome.insertions ?? 0;
 	const deletions = outcome.deletions ?? 0;

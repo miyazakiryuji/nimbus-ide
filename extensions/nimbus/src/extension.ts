@@ -832,8 +832,18 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			return;
 		}
 		const result = await sessions.rewind(activeSessionId, chosen.checkpoint.messageUuid, false);
-		log(`[rewind] ${describeRewind(result ?? { canRewind: false })}`);
-		void vscode.window.showInformationMessage(`Nimbus: 戻しました（${describeRewind(result ?? { canRewind: false })}）。`);
+		const outcome = result ?? { canRewind: false };
+		log(`[rewind] ${describeRewind(outcome)}`);
+		/*
+		 * **成功と失敗を言い分ける**（T-365・2026-08-31）。以前は `canRewind` を見ずに
+		 * 「戻しました」を出していたので、失敗すると「**戻しました（巻き戻せません: …）**」という
+		 * 自己矛盾した通知になっていた。CLAUDE.md「黙って成功にしない」に反していた。
+		 */
+		if (outcome.canRewind) {
+			void vscode.window.showInformationMessage(`Nimbus: 戻しました（${describeRewind(outcome)}）。`);
+		} else {
+			void vscode.window.showErrorMessage(`Nimbus: ${describeRewind(outcome)}。`);
+		}
 	}
 
 	/** MCP サーバーの一覧を取り直す（T-029 / T-042） */
