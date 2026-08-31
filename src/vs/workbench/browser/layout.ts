@@ -163,6 +163,29 @@ const DEFAULT_WORKSPACE_WINDOW_DIMENSIONS = new Dimension(DEFAULT_WORKSPACE_WIND
 const NIMBUS_DEFAULT_SIDEBAR_WIDTH = 560;
 // --- End Nimbus ---
 
+// --- Start Nimbus ---
+/** upstream のサイドバー既定幅。Nimbus 以外の面（エクスプローラー・検索など）はここへ戻す（T-361） */
+const NIMBUS_UPSTREAM_SIDEBAR_WIDTH = 300;
+
+/** Nimbus のビューコンテナ id の接頭辞（`extensions/nimbus` の `viewsContainers.activitybar`） */
+const NIMBUS_VIEW_CONTAINER_PREFIX = 'workbench.view.extension.nimbus';
+
+/**
+ * 面（ビューコンテナ）ごとの既定幅（T-361）。
+ *
+ * VS Code のサイドバー幅は**全ビュー共有の 1 値**（`sideBar.size`）なので、
+ * コックピットのために 560px にした（台帳 #28）ぶん、エクスプローラーや検索まで 560px になる。
+ * 利用者の言葉:「コックピットを開いている時は今ぐらいのサイズで良いんだけど、
+ * ファイルとかのアクティビティバーをクリックしたときも同じサイズだとちょっと使いづらい」。
+ * だから **Nimbus の面は 560px、それ以外は upstream の 300px** へ落とす。
+ */
+function nimbusDefaultSideBarWidth(viewContainerId: string, containerWidth: number): number {
+	return viewContainerId.startsWith(NIMBUS_VIEW_CONTAINER_PREFIX)
+		? Math.min(NIMBUS_DEFAULT_SIDEBAR_WIDTH, containerWidth * 0.4)		// 台帳 #28 と同じ式
+		: Math.min(NIMBUS_UPSTREAM_SIDEBAR_WIDTH, containerWidth / 4);		// upstream の原式
+}
+// --- End Nimbus ---
+
 export abstract class Layout extends Disposable implements IWorkbenchLayoutService {
 
 	declare readonly _serviceBrand: undefined;
@@ -1721,6 +1744,14 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 				: this.workbenchGrid.getViewSize(this.sideBarPartView).width;
 			this.stateModel.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE, sideBarSize as number);
 
+			// --- Start Nimbus ---
+			// 面を切り替えずに終了しても、いま出ている面の幅を覚える（T-361）。
+			// **この upstream のハンドラの中でなければならない** — `setInitializationValue` は
+			// キャッシュに置くだけで、書き出すのはこのハンドラ末尾の `save(true, true)`。
+			// 別に `onWillSaveState` を足すと登録順で後になり、その保存に間に合わない
+			this.nimbusRememberSideBarWidth(this.paneCompositeService.getActivePaneComposite(ViewContainerLocation.Sidebar)?.getId());
+			// --- End Nimbus ---
+
 			// Panel Size
 			const panelSize = this.stateModel.getRuntimeValue(LayoutStateKeys.PANEL_HIDDEN)
 				? this.workbenchGrid.getViewCachedVisibleSize(this.panelPartView)
@@ -1743,6 +1774,25 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 			// Auxiliary Bar State
 			this.stateModel.setInitializationValue(LayoutStateKeys.AUXILIARYBAR_EMPTY, this.paneCompositeService.getPaneCompositeIds(ViewContainerLocation.AuxiliaryBar).length === 0);
 		}));
+
+		// --- Start Nimbus ---
+		// サイドバーの幅を面ごとに覚える（T-361）。「コックピットは今ぐらいで良いが、
+		// ファイルなどを開いたときも同じ幅だと使いづらい」への答え。
+		// `compositePart.ts` の `doOpenComposite` は close → open の順に**同期で**走り、
+		// 間にグリッドのリサイズが挟まらないので、close の時点ではまだ
+		// 「出ていく面」の幅がグリッドに残っている。
+		// `ViewContainerLocation.Sidebar` で絞る — パネル・補助バーの開閉で表を汚さないため
+		this._register(this.paneCompositeService.onDidPaneCompositeClose(({ composite, viewContainerLocation }) => {
+			if (viewContainerLocation === ViewContainerLocation.Sidebar) {
+				this.nimbusRememberSideBarWidth(composite.getId());
+			}
+		}));
+		this._register(this.paneCompositeService.onDidPaneCompositeOpen(({ composite, viewContainerLocation }) => {
+			if (viewContainerLocation === ViewContainerLocation.Sidebar) {
+				this.nimbusRestoreSideBarWidth(composite.getId());
+			}
+		}));
+		// --- End Nimbus ---
 	}
 
 	layout(): void {
@@ -1936,6 +1986,113 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 			`panel-alignment-${this.getPanelAlignment()}`
 		]);
 	}
+
+	// --- Start Nimbus ---
+	/**
+	 * 直前に自分で当てた幅（当てたあとに実測し直した値）。
+	 *
+	 * `resizeView` は兄弟（エディタ）の最小幅に当たると要求どおりの幅を出せず切り詰める。
+	 * その切り詰められた幅を次の切り替えで「利用者が引いた幅」として焼き付けると、
+	 * 面を往復するたびにコックピットの希望幅が痩せていく。目印を持って書き込みを止める（T-361）。
+	 */
+	private nimbusAppliedSideBarWidth: number | undefined;
+
+	/**
+	 * 起動後にサイドバーの面を測ったか（T-361）。
+	 *
+	 * 起動直後に復元される `sideBar.size` は「最後に開いていた面の幅」なので、
+	 * **Nimbus の面に限って**その 1 回だけは既定へ落とさずに表へ取り込む。そうしないと、
+	 * この機能を入れた最初の起動でコックピットの引いた幅を 1 回失う。
+	 * **2 回目以降は必ず既定へ落とす** — でないと「知らない面を開いたら、出ていった面の幅を
+	 * そのまま名乗る」ことになり、直したい症状そのものになる
+	 */
+	private nimbusSideBarWidthSeeded = false;
+
+	/**
+	 * 面ごとの幅の表を、必ず「素のオブジェクト」として取り出す（T-361）。
+	 *
+	 * 読み出しは `loadKeyFromStorage` の `JSON.parse` が裸で走るので、
+	 * 保存値が壊れていると `null` や配列が入ってくることがある。そのまま添字を引くと落ちる
+	 */
+	private nimbusSideBarWidthsByView(): { [viewContainerId: string]: number } {
+		const sizes = this.stateModel.getInitializationValue(LayoutStateKeys.SIDEBAR_SIZE_BY_VIEW);
+		return sizes && typeof sizes === 'object' && !Array.isArray(sizes) ? sizes : {};
+	}
+
+	/**
+	 * 出ていく面の幅を控える（T-361）。
+	 *
+	 * 式は upstream が `sideBar.size` を保存するとき（`onWillSaveState`）とまったく同じ。
+	 * 畳む経路では close の時点で既に `SIDEBAR_HIDDEN = true` なので、
+	 * `getViewSize().width` だけを見ると 0 を覚えてしまう。
+	 */
+	private nimbusRememberSideBarWidth(viewContainerId: string | undefined): void {
+		if (!viewContainerId || !this.workbenchGrid || !this.sideBarPartView) {
+			return;
+		}
+
+		const width = this.stateModel.getRuntimeValue(LayoutStateKeys.SIDEBAR_HIDDEN)
+			? this.workbenchGrid.getViewCachedVisibleSize(this.sideBarPartView)
+			: this.workbenchGrid.getViewSize(this.sideBarPartView).width;
+		if (typeof width !== 'number' || width < this.sideBarPartView.minimumWidth) {
+			return; // 畳みきっている・まだ幅が無い
+		}
+
+		if (width === this.nimbusAppliedSideBarWidth) {
+			return; // 自分が当てたまま = 利用者は引いていない。希望幅を切り詰め値で潰さない
+		}
+
+		const sizes = this.nimbusSideBarWidthsByView();
+		if (sizes[viewContainerId] === width) {
+			return;
+		}
+
+		// 既定値 `{}` は参照のままキャッシュに入るので、直接書き換えるとキー自体の既定が汚れる。
+		// 必ず新しいオブジェクトを作って差し替える
+		this.stateModel.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE_BY_VIEW, { ...sizes, [viewContainerId]: width });
+	}
+
+	/** 入ってくる面の幅へ戻す（T-361）。覚えていなければ面ごとの既定へ落ちる */
+	private nimbusRestoreSideBarWidth(viewContainerId: string): void {
+		if (!this.workbenchGrid || !this.sideBarPartView || this.stateModel.getRuntimeValue(LayoutStateKeys.SIDEBAR_HIDDEN)) {
+			return;
+		}
+
+		const sizes = this.nimbusSideBarWidthsByView();
+		const stored = sizes[viewContainerId];
+		const current = this.workbenchGrid.getViewSize(this.sideBarPartView);
+
+		// 起動後にサイドバーを測る最初の 1 回。いま出ている幅は `sideBar.size` の復元値、
+		// つまり利用者が最後に引いた幅なので、覚えていなければ取り込む。
+		//
+		// **取り込むのは Nimbus の面だけ。** パッケージ版（`isBuilt`）の冷起動では、上の
+		// `initLayoutState` が「既定のビューコンテナへ戻す」道を通るので、**起動時に復元される面は
+		// ほぼ必ずエクスプローラー**（拡張のビューは既定になれない）。ここで面を選ばずに取り込むと、
+		// エクスプローラーが 560px を自分の幅として名乗って固定され、**直したい症状がそのまま残る**。
+		// Nimbus 以外はここを素通りさせ、下で既定（300px）へ縮める
+		if (!this.nimbusSideBarWidthSeeded) {
+			this.nimbusSideBarWidthSeeded = true;
+			if (viewContainerId.startsWith(NIMBUS_VIEW_CONTAINER_PREFIX) && typeof stored !== 'number' && current.width >= this.sideBarPartView.minimumWidth) {
+				this.stateModel.setInitializationValue(LayoutStateKeys.SIDEBAR_SIZE_BY_VIEW, { ...sizes, [viewContainerId]: current.width });
+				this.nimbusAppliedSideBarWidth = current.width;
+				return;
+			}
+		}
+
+		const target = typeof stored === 'number' && stored > 0
+			? stored
+			: nimbusDefaultSideBarWidth(viewContainerId, this._mainContainerDimension.width);
+
+		if (Math.abs(current.width - target) < 1) {
+			this.nimbusAppliedSideBarWidth = current.width;
+			return; // 既に目標の幅。定常状態ではここを通るので、切り替えでちらつかない
+		}
+
+		this.workbenchGrid.resizeView(this.sideBarPartView, { width: target, height: current.height });
+		// 実際に出た幅を読み戻す — 切り詰められたぶんを「利用者が引いた幅」と取り違えないため
+		this.nimbusAppliedSideBarWidth = this.workbenchGrid.getViewSize(this.sideBarPartView).width;
+	}
+	// --- End Nimbus ---
 
 	private setSideBarHidden(hidden: boolean): void {
 		if (!hidden && this.setAuxiliaryBarMaximized(false) && this.isVisible(Parts.SIDEBAR_PART)) {
@@ -2866,6 +3023,15 @@ const LayoutStateKeys = {
 	// Part Sizing
 	// --- Start Nimbus ---
 	SIDEBAR_SIZE: new InitializationStateKey<number>('sideBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, NIMBUS_DEFAULT_SIDEBAR_WIDTH),
+	// --- End Nimbus ---
+	// --- Start Nimbus ---
+	/**
+	 * 面（ビューコンテナ id）ごとのサイドバー幅（T-361）。`sideBar.size` は触らない —
+	 * upstream の 1 値はそのまま「いま出ている面の幅」として使い、この表は面を切り替えたときに
+	 * 戻す先を覚えるためだけに使う。値は必ず `{ id: 幅(number) }` のフラットな形にすること
+	 * （読み出しは `JSON.parse` が裸で走るので、壊れた形を書くと起動が落ちる）。
+	 */
+	SIDEBAR_SIZE_BY_VIEW: new InitializationStateKey<{ [viewContainerId: string]: number }>('sideBar.sizeByView', StorageScope.PROFILE, StorageTarget.MACHINE, {}),
 	// --- End Nimbus ---
 	AUXILIARYBAR_SIZE: new InitializationStateKey<number>('auxiliaryBar.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),
 	PANEL_SIZE: new InitializationStateKey<number>('panel.size', StorageScope.PROFILE, StorageTarget.MACHINE, 300),
