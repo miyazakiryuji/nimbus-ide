@@ -301,11 +301,20 @@ async function main() {
 		env.NIMBUS_SMOKE_PROMPT = 'Reply with exactly: NIMBUS_GUI_OK';
 	}
 
-	const app = await electron.launch({ executablePath, args: launchArgs, env, timeout: 120000 });
-	const page = await app.firstWindow({ timeout: 120000 });
-	await page.waitForSelector('.monaco-workbench', { timeout: 120000 });
-	// 拡張が起動しきるまでの猶予（onStartupFinished）
-	await page.waitForTimeout(8000);
+	/**
+	 * 起動して、画面が出るまで待つ。**開き直しでも同じ手順を使う**（T-369）。
+	 * 同じ `userDataDir` と同じフォルダで開き直すので、再起動をまたぐ振る舞いを確かめられる。
+	 */
+	async function launch() {
+		const started = await electron.launch({ executablePath, args: launchArgs, env, timeout: 120000 });
+		const first = await started.firstWindow({ timeout: 120000 });
+		await first.waitForSelector('.monaco-workbench', { timeout: 120000 });
+		// 拡張が起動しきるまでの猶予（onStartupFinished）
+		await first.waitForTimeout(8000);
+		return { app: started, page: first };
+	}
+
+	let { app, page } = await launch();
 
 	const ctx = {
 		workspace,
@@ -322,6 +331,28 @@ async function main() {
 			const file = join(OUT, `${name}.png`);
 			await page.screenshot({ path: file });
 			return file;
+		},
+		/**
+		 * **アプリを閉じて、同じプロファイルで開き直す**（T-369）。
+		 *
+		 * ここが 2026-09-01 まで**一度も通っていなかった経路**。GUI テストは 1 つの Electron を
+		 * 起動しっぱなしで全件を回すので、**再起動をまたぐ振る舞い**（台帳・タブの復元・
+		 * 下書き・覚えた幅）が丸ごと未検査だった。利用者の「閉じて開いたらセッションが全部消えた」
+		 * （T-368）は、この穴をまっすぐ通り抜けている。
+		 *
+		 * 返すのは新しい `page`。**ケース側は返り値を使い直すこと**（古い `page` は死んでいる）。
+		 */
+		async restart() {
+			await app.close().catch(() => undefined);
+			// 終了処理（flush・dispose）が終わるのを待つ。待たずに開くと、
+			// 「書き終える前に読む」を製品の不具合と読み違える
+			await new Promise((resolve) => setTimeout(resolve, 3000));
+			/*
+			 * ここで**閉包の `page` ごと差し替える**。ケースの失敗経路でも入れ替わるので、
+			 * 以後のケースが死んだ `page` を触ることはない（返り値は当のケース用）。
+			 */
+			({ app, page } = await launch());
+			return page;
 		}
 	};
 

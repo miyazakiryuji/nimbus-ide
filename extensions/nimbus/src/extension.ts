@@ -375,7 +375,39 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * まだ 1 通も送っていないセッション（T-303）。`sessions.list()` には載らないので、
 	 * 「+」で用意したぶんはここで持ってタブに出す。送った時点で本物に置き換わる。
 	 */
-	const drafts: { id: string; createdAt: number }[] = [];
+	interface Draft {
+		id: string;
+		createdAt: number;
+	}
+	/** 戻す下書きの上限。押しっぱなしで際限なく育つのを止めるためだけの数 */
+	const MAX_RESTORED_DRAFTS = 20;
+	/**
+	 * **閉じても消えない**（T-368・利用者報告 2026-09-01「一度閉じてから開いた時に、
+	 * 開いていた複数セッションが全て消えていました」）。
+	 *
+	 * 下書きは `sessions.list()` にも台帳にも載らない。以前はここがメモリだけだったので、
+	 * 「+」で用意したタブは**閉じた瞬間に痕跡ごと消えていた**。番号（T-316）は
+	 * `nimbus.sessionNumbers` 側に残るので、戻すのは id と作成時刻だけでよい。
+	 */
+	const drafts: Draft[] = (() => {
+		const saved = context.workspaceState.get<Draft[]>('nimbus.drafts', []);
+		if (!Array.isArray(saved)) {
+			return [];
+		}
+		// 壊れた値が 1 つ混ざっただけで全部を失わないよう、1 件ずつ検める
+		const sound = saved.filter(
+			(draft): draft is Draft =>
+				Boolean(draft) && typeof draft.id === 'string' && typeof draft.createdAt === 'number'
+		);
+		/*
+		 * **古さでは捨てない**（空の下書きが古いのは当たり前で、消えたら T-368 の再発）。
+		 * 上限だけ置いて、あふれたぶんは**黙って捨てずに数を言う**。
+		 */
+		return sound.length <= MAX_RESTORED_DRAFTS ? sound : sound.slice(-MAX_RESTORED_DRAFTS);
+	})();
+	function persistDrafts(): void {
+		void context.workspaceState.update('nimbus.drafts', drafts);
+	}
 	/**
 	 * 台帳に残っている「前回のセッション」（T-318）。開き直したときにタブへ戻す —
 	 * トーストは消えるが、タブは残る。押すと続きから開き、× で台帳ごと忘れる
@@ -2979,6 +3011,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				}
 				sessionNumbers.delete(activeDraftId);
 				drafts.splice(index, 1);
+				persistDrafts();
 			}
 			activeDraftId = undefined;
 		}
@@ -3048,6 +3081,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		const draftIndex = drafts.findIndex((draft) => draft.id === sessionId);
 		if (draftIndex >= 0) {
 			drafts.splice(draftIndex, 1);
+			persistDrafts();
 			sessionNumbers.delete(sessionId);
 			if (activeDraftId === sessionId) {
 				activeDraftId = undefined;
@@ -3460,6 +3494,15 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	}
 
 	async function send(rawText: string, images?: { name: string; dataUrl: string }[]): Promise<void> {
+		/**
+		 * 先に押さえた ID（T-368）。`createSession` が失敗したとき、これを**必ず手放す**。
+		 *
+		 * 以前は失敗しても放置していたので、起こせなかったセッションが
+		 * **`status:'starting'` のまま台帳に残り**、心拍が生きているあいだ同時実行の枠を
+		 * 1 つ食い続けた。しかも `claudeSessionId` が無いので `resumeCandidates()` から落ち、
+		 * 開き直してもタブに戻らない ＝ 利用者から見ると「消えた」。
+		 */
+		let claimedSessionId: string | undefined;
 		try {
 			if (!(await requireTrust())) {
 				return;
@@ -3506,14 +3549,24 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			}
 			const sessionId = randomUUID();
 			activeSessionId = sessionId;
+			claimedSessionId = sessionId;
 			retained.length = 0;
 			await sessions.createSession({ cwd, firstMessage: text, firstImages: attachments, reuseSessionId: sessionId });
+			claimedSessionId = undefined;
 			log(`[session] 新規セッション ${sessionId} cwd=${cwd}`);
 			// 同じ場所を別のセッションが触っていたら言う（T-253）
 			void warnIfOverlapping(cwd, sessionId);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			log(`[session] 送信に失敗: ${message}`);
+			// 起こせなかったセッションを、台帳にも前面にも残さない（T-368）
+			if (claimedSessionId) {
+				if (activeSessionId === claimedSessionId) {
+					activeSessionId = undefined;
+				}
+				void sessionStore.forget(claimedSessionId);
+				updateSessionTabs();
+			}
 			if (isTransientFailure(message)) {
 				// 繋がらない類の失敗だけ預かる。書き方の誤りは送り直しても同じ結果になる
 				outbox.add(rawText, message, Date.now());
@@ -3677,6 +3730,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		resetToBlank();
 		const draft = { id: `draft-${randomUUID()}`, createdAt: Date.now() };
 		drafts.push(draft);
+		persistDrafts();
 		activeDraftId = draft.id;
 		updateSessionTabs();
 		await cockpit.reveal();
@@ -5058,6 +5112,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		}
 		// 2. 拡張が覚えているものを捨てる
 		drafts.length = 0;
+		persistDrafts();
 		activeDraftId = undefined;
 		activeSessionId = undefined;
 		archived.clear();
