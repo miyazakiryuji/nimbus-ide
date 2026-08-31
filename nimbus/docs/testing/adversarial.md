@@ -3,6 +3,11 @@
 **タスク**: T-345 / **走らせるもの**: `node nimbus/tests/gui/run.mjs --packaged --adversarial` /
 **ケース**: `nimbus/tests/gui/cases/adv-*.mjs` / **仕様**: 各節の「根拠」に挙げたファイル
 
+> **この紙は「何を叩くか」の台帳です。** やりかた（観点の出しかた・ケースを書く掟・
+> 落ちた赤の切り分け・退行と環境要因の A/B・Codex を第二の目として使う手順）は
+> [`adversarial-test` スキル](../../../.agents/skills/adversarial-test/SKILL.md) にあります。
+> **ケースを足す前にそちらを読んでください。**
+
 ## 1. なぜやるか
 
 総合試験は「決めた道を通ると、決めたとおりに動く」ことしか見ない。壊れるのはいつも決めていない道

@@ -272,6 +272,24 @@ IDE 基礎機能（スクラッチファイルなど）— これらの振る舞
 書けなかったときは、**なぜ書けなかったかを [`tasks.md`](tasks.md) に 1 行残す**（環境が無い、
 API が用意されていない、など）。黙って飛ばすと「テスト済み」と区別が付かなくなります。
 
+### わざと壊しにいく（敵対的試験）
+
+**決めた道を通るテストは、決めていない道の壊れかたを見つけません。** そこで、
+わざと外れた使いかたをする束を別に持っています — 順番と持ち越し・連打・敵意のある入力・
+壊れた保存ファイル・空と欠損・極端な寸法・量・中断。
+
+```bash
+NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged --adversarial
+```
+
+2026-08-31 に初めて当てたとき、**総合試験が 63/63 で緑だったビルドから 11 件の本物の不具合**が
+出ました（うち 1 件は「画像を入力欄へドラッグすると添付が 2 枚溜まる ＝ 送れば二重に課金」で、
+敵対的な使いかたですらない普通の操作でした）。
+
+設計と切り分けの手順、**Codex を第二の目として使う協調レビュー**のやりかたは
+[`adversarial-test` スキル](.agents/skills/adversarial-test/SKILL.md)、
+ケースの一覧は [`nimbus/docs/testing/adversarial.md`](nimbus/docs/testing/adversarial.md)。
+
 ### 複数の AI で並行開発する
 
 このリポジトリは、**複数の AI セッション（Claude Code など）が同じ作業ブランチ `nimbus` を

@@ -1,6 +1,6 @@
 ---
 name: nimbus-test
-description: Nimbus のテストを走らせる。テストコードによるモジュールテストと、実際に GUI を操作するテストの 2 本立て。実装後の確認は該当機能のケースだけを --only で絞って走らせ、全ケースは利用者が「総合試験」と言ったときとリリース前だけ回す。ケースの足しかたも扱う。
+description: Nimbus のテストを走らせる。テストコードによるモジュールテストと、実際に GUI を操作するテストの 2 本立て。実装後の確認は該当機能のケースだけを --only で絞って走らせ、全ケースは利用者が「総合試験」と言ったときとリリース前だけ回す。ケースの足しかたも扱う。わざと壊しにいく試験は adversarial-test スキルへ。
 ---
 
 # テストを走らせる
@@ -86,11 +86,15 @@ bash nimbus/branding/smoke-packaged.sh                               # 身元・
 bash nimbus/scripts/test.sh unit                                     # モジュール＋スクリプトのテスト
 NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged              # GUI 全件
 NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged --untrusted  # 信頼なしの見え方
+NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app node nimbus/tests/gui/run.mjs --packaged --adversarial # わざと壊しにいく束（T-345）
 node nimbus/scripts/doctor.mjs                                       # 不要ファイル・仕様ズレ
 node nimbus/scripts/degrade.mjs check --full                         # 締め: 基準より減っていないか（T-335）
 ```
 
 - 落ちたものがあれば、**次の段へ進む前に**そこで直す
+- **敵対束（`--adversarial`）の赤は「調査対象」であって停止理由ではない。**
+  切り分けかたと設計の作法は [`adversarial-test` スキル](../adversarial-test/SKILL.md)。
+  2026-08-31 は総合試験が 63/63 緑のビルドで **16 本中 11 本が落ち、全部が本物の不具合だった**
 - 実セッションの往復まで見るときは GUI の 2 行に `--with-claude` を足す（課金が発生する —
   利用者に確認してから）
 - 結果は件数まで板に残す（例: `パッケージ版 GUI 55/55`）。「通った」だけでは、後から
