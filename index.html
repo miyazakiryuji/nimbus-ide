@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nimbus を入れる — 導入手順</title>
+<meta name="description" content="Nimbus（エージェントを操縦するためのコックピット）を macOS に入れて、最初の 1 往復を動かすまでの手順。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23D97757' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7.2 16.2a3.7 3.7 0 0 1-.1-7.4 5.1 5.1 0 0 1 9.7 1.3 3.25 3.25 0 0 1 1 6.1H7.2Z'/%3E%3Cpath d='M12 3.6v2'/%3E%3Cpath d='m8 5.3 1.2 1.5'/%3E%3Cpath d='m16 5.3-1.2 1.5'/%3E%3C/g%3E%3Cg fill='%23D97757'%3E%3Ccircle cx='8.7' cy='20' r='.85'/%3E%3Ccircle cx='12' cy='20.7' r='.85'/%3E%3Ccircle cx='15.3' cy='20' r='.85'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#F5F3EC; --surface:#F0EEE6; --surface-2:#EAE7DC; --border:#DCD8CA;
+  --text:#2C2A26; --muted:#6E6858; --accent:#C2603F; --link:#B25B3C;
+  --code-bg:#EAE7DC; --code-text:#2C2A26; --shadow:0 1px 2px rgba(44,42,38,.06), 0 8px 24px rgba(44,42,38,.05);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1F1E1D; --surface:#262624; --surface-2:#2E2C29; --border:#3A3733;
+    --text:#D6D3C7; --muted:#9A9483; --accent:#D97757; --link:#E08A6B;
+    --code-bg:#1A1918; --code-text:#D6D3C7; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.22);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic Medium","Meiryo",sans-serif;
+  font-size:16px; line-height:1.85; letter-spacing:.01em;
+  font-feature-settings:"palt" 1;
+}
+.wrap{max-width:760px; margin:0 auto; padding:0 24px}
+a{color:var(--link); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--link) 30%, transparent)}
+a:hover{border-bottom-color:var(--link)}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace; font-size:.87em;
+  background:var(--code-bg); padding:.15em .42em; border-radius:5px; border:1px solid var(--border); overflow-wrap:anywhere}
+pre{background:var(--code-bg); color:var(--code-text); border:1px solid var(--border); border-radius:10px;
+  padding:16px 18px; overflow-x:auto; font-size:13.5px; line-height:1.75; margin:0}
+pre code{background:none; border:0; padding:0; font-size:inherit; overflow-wrap:normal}
+pre .c{color:var(--muted)}
+
+/* header */
+header{border-bottom:1px solid var(--border); background:var(--surface)}
+.head-in{max-width:760px; margin:0 auto; padding:56px 24px 44px}
+.mark{display:flex; align-items:center; gap:11px; margin-bottom:22px}
+.mark svg{width:30px; height:30px; color:var(--accent); flex:none}
+.mark b{font-size:20px; font-weight:650; letter-spacing:.02em}
+h1{font-size:clamp(27px,5.2vw,36px); line-height:1.45; margin:0 0 14px; font-weight:700; letter-spacing:.01em}
+.lede{font-size:16.5px; color:var(--muted); margin:0 0 28px; max-width:36em}
+.cta{display:flex; flex-wrap:wrap; gap:11px}
+.btn{display:inline-flex; align-items:center; gap:8px; padding:11px 20px; border-radius:9px;
+  font-size:14.5px; font-weight:600; border:1px solid transparent; border-bottom:1px solid transparent; transition:.15s}
+.btn-p{background:var(--accent); color:#fff}
+.btn-p:hover{filter:brightness(1.07); border-bottom-color:transparent}
+.btn-s{background:transparent; color:var(--text); border-color:var(--border)}
+.btn-s:hover{background:var(--surface-2); border-color:var(--muted); border-bottom-color:var(--muted)}
+
+/* blocks */
+section{padding:52px 0 0}
+h2{font-size:21px; font-weight:680; margin:0 0 6px; letter-spacing:.01em}
+h2 + .sub{color:var(--muted); font-size:14.5px; margin:0 0 26px}
+h3{font-size:16px; font-weight:660; margin:0 0 8px}
+p{margin:0 0 15px}
+.note{background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent);
+  border-radius:8px; padding:15px 18px; font-size:14.5px; margin:0 0 18px; color:var(--text)}
+.note strong{font-weight:660}
+.note p:last-child{margin-bottom:0}
+
+/* requirements */
+.reqs{display:grid; gap:12px; grid-template-columns:1fr 1fr}
+@media (max-width:640px){.reqs{grid-template-columns:1fr}}
+.req{background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:18px 19px}
+.req .k{font-size:12px; font-weight:700; color:var(--accent); letter-spacing:.09em; text-transform:uppercase; margin-bottom:7px}
+.req p{font-size:14.5px; color:var(--muted); margin:0}
+.req b{color:var(--text); font-weight:640}
+
+/* steps */
+.steps{counter-reset:s; margin:0; padding:0; list-style:none}
+.step{counter-increment:s; position:relative; padding:0 0 34px 56px; border-left:2px solid var(--border); margin-left:17px}
+.step:last-child{border-left-color:transparent; padding-bottom:8px}
+.step::before{content:counter(s); position:absolute; left:-18px; top:-4px; width:34px; height:34px;
+  display:grid; place-items:center; border-radius:50%; background:var(--accent); color:#fff;
+  font-size:15px; font-weight:700; font-variant-numeric:tabular-nums}
+.step h3{margin-top:0; padding-top:2px}
+.step > :last-child{margin-bottom:0}
+.substeps{margin:0 0 15px; padding-left:1.3em}
+.substeps li{margin-bottom:6px}
+.substeps li::marker{color:var(--muted)}
+
+/* table */
+.tbl{width:100%; border-collapse:collapse; font-size:14px; margin:0 0 16px; display:block; overflow-x:auto}
+.tbl th,.tbl td{border:1px solid var(--border); padding:9px 12px; text-align:left; vertical-align:top}
+.tbl th{background:var(--surface-2); font-weight:660; white-space:nowrap}
+.tbl td code{white-space:nowrap}
+
+/* faq */
+details{background:var(--surface); border:1px solid var(--border); border-radius:9px; margin-bottom:10px; overflow:hidden}
+summary{padding:14px 18px; cursor:pointer; font-weight:620; font-size:15px; list-style:none; position:relative; padding-right:44px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:""; position:absolute; right:19px; top:50%; width:7px; height:7px; margin-top:-5px;
+  border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(45deg); transition:.18s}
+details[open] summary::after{transform:rotate(225deg); margin-top:-2px}
+summary:hover{background:var(--surface-2)}
+.det-body{padding:2px 18px 18px; font-size:14.5px; color:var(--text)}
+.det-body > :last-child{margin-bottom:0}
+
+footer{margin-top:64px; border-top:1px solid var(--border); background:var(--surface)}
+.foot-in{max-width:760px; margin:0 auto; padding:30px 24px 40px; font-size:13.5px; color:var(--muted)}
+.foot-in p{margin:0 0 8px}
+.foot-links{display:flex; flex-wrap:wrap; gap:16px; margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7.2 16.2a3.7 3.7 0 0 1-.1-7.4 5.1 5.1 0 0 1 9.7 1.3 3.25 3.25 0 0 1 1 6.1H7.2Z"/>
+          <path d="M12 3.6v2"/><path d="m8 5.3 1.2 1.5"/><path d="m16 5.3-1.2 1.5"/>
+        </g>
+        <g fill="currentColor"><circle cx="8.7" cy="20" r=".85"/><circle cx="12" cy="20.7" r=".85"/><circle cx="15.3" cy="20" r=".85"/></g>
+      </svg>
+      <b>Nimbus</b>
+    </div>
+    <h1>Nimbus を入れて、<br>最初の 1 往復を動かすまで</h1>
+    <p class="lede">エージェントを操縦するためのコックピット。Claude Code のセッション・承認・並列タスク・コストを、
+      ひとつの IDE の中で見渡して操作できるようにすることを目指しています。</p>
+    <div class="cta">
+      <a class="btn btn-p" href="https://github.com/miyazakiryuji/nimbus-ide/releases">最新版をダウンロード</a>
+      <a class="btn btn-s" href="https://github.com/miyazakiryuji/nimbus-ide">GitHub リポジトリ</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <div class="note">
+    <p><strong>これは Anthropic 非公式・Microsoft 非公式の独立プロジェクトです。</strong>
+    Anthropic からも Microsoft からも承認・後援・提携を受けていません。</p>
+  </div>
+</section>
+
+<section>
+  <h2>はじめる前に</h2>
+  <p class="sub">この 2 つが揃っていれば、あとは上から順に進むだけです。</p>
+  <div class="reqs">
+    <div class="req">
+      <div class="k">動作環境</div>
+      <p><b>macOS（Apple Silicon）</b><br>配布している <code>.dmg</code> は Apple Silicon 向けです。
+        ほかの環境では「手元でビルドする」を見てください。</p>
+    </div>
+    <div class="req">
+      <div class="k">別途必要</div>
+      <p><b>Claude Code</b><br>Nimbus は Claude Code 本体を同梱していません。
+        未インストールなら先に入れておいてください。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>入れる</h2>
+  <p class="sub">リリースの <code>.dmg</code> から入れる、いちばん短い道です。</p>
+
+  <ol class="steps">
+
+    <li class="step">
+      <h3>.dmg をダウンロードする</h3>
+      <p><a href="https://github.com/miyazakiryuji/nimbus-ide/releases">Releases</a> から
+        <code>nimbus-&lt;版&gt;-darwin-arm64.dmg</code> を落とします。</p>
+    </li>
+
+    <li class="step">
+      <h3>「アプリケーション」へドラッグする</h3>
+      <p><code>.dmg</code> を開き、<code>Nimbus.app</code> を「アプリケーション」フォルダへドラッグします。</p>
+    </li>
+
+    <li class="step">
+      <h3>初回だけ、右クリックから開く</h3>
+      <p>そのままダブルクリックすると <b>「開発元を確認できないため開けません」</b> と出ます。
+        Apple の開発者証明書で署名していない（ad-hoc 署名の）ビルドのためです。次の手順で開いてください。</p>
+      <ol class="substeps">
+        <li>Finder で <code>Nimbus.app</code> を <b>右クリック → 開く</b></li>
+        <li>確認ダイアログで、もう一度 <b>開く</b></li>
+      </ol>
+      <p>以降は通常どおりダブルクリックで起動できます。</p>
+    </li>
+
+    <li class="step">
+      <h3>Claude Code を見つけてもらう</h3>
+      <p>Nimbus は <code>PATH</code> や <code>~/.local/bin</code> から自動で探します。
+        見つからない場合は、設定 <code>nimbus.claudeCodeExecutable</code> に実行ファイルのパスを指定してください。</p>
+      <div class="note">
+        <p>同梱していないのは、プラットフォーム別バイナリだけで 280MB あるうえ、
+          利用者はすでに認証済みのものを持っていることがほとんどのためです。</p>
+      </div>
+    </li>
+
+    <li class="step">
+      <h3>最初の 1 往復</h3>
+      <ol class="substeps">
+        <li><b>フォルダを開く。</b> 信頼していないフォルダでは<b>画面は開きますが Claude は実行しません</b>。
+          実行しようとすると理由と「このフォルダを信頼する」ボタンが出ます</li>
+        <li><b>アクティビティバーの雲アイコン → コックピット</b>に指示を書いて Enter</li>
+        <li>Claude がファイルを書き換えようとすると<b>差分が開く</b>ので、内容を見てから許可・拒否</li>
+        <li>もう 1 本走らせたいときはコックピットのタブ列の <code>+</code>。
+          作業ごと分けたいときは <b>Nimbus タスク</b>から「新しいタスク」（こちらは git worktree を切って完全に分離します）</li>
+      </ol>
+      <p>アクティビティバーには雲の家族が 4 つ並びます —
+        <b>雲（雨）</b>: コックピットと承認待ち／
+        <b>雲＋一覧「Nimbus タスク」</b>: 並列タスクの板／
+        <b>雲＋歯車「Nimbus 設定」</b>: スキル・CLAUDE.md・設定／
+        <b>雲＋虫「Nimbus デバッグ」</b>: エージェントが詰まったときの面。</p>
+    </li>
+
+  </ol>
+</section>
+
+<section>
+  <h2>最初に見ておくとよい設定</h2>
+  <p class="sub">既定のままでも動きます。気になったときに。</p>
+  <table class="tbl">
+    <thead><tr><th>設定</th><th>既定</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td><code>nimbus.claudeCodeExecutable</code></td><td>自動探索</td><td>使う Claude Code の実行ファイル</td></tr>
+      <tr><td><code>nimbus.permissions.autoApproveReadOnly</code></td><td>false</td><td>読み取り専用ツールを確認なしで許可</td></tr>
+      <tr><td><code>nimbus.permissions.showDiffBeforeApproval</code></td><td>true</td><td>承認の前に差分を開く</td></tr>
+      <tr><td><code>nimbus.tasks.maxConcurrent</code></td><td>2</td><td>同時に走らせるタスクの上限</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>詰まったとき</h2>
+  <p class="sub">よく引っかかるところを 4 つ。</p>
+
+  <details>
+    <summary>Claude が動かない／送信しても何も起きない</summary>
+    <div class="det-body">
+      <p><b>「制限モード（Restricted Mode）」を疑ってください。</b> 開いたフォルダは初回に信頼を聞かれ、
+        答えるまで制限モードのままです。制限モードでは Nimbus は<b>画面は開きますが Claude を実行しません</b>
+        （フォルダの中でコマンドを実行しファイルを書き換えるため）。</p>
+      <p>送信しようとすると理由と「このフォルダを信頼する」ボタンが出るので、そこから信頼できます。
+        画面下の「制限モード」からでも同じです。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>1 回目の起動だけ英語で出る</summary>
+    <div class="det-body">
+      <p><b>表示言語は日本語が既定です。</b> ただし真っさらな設定フォルダでは、言語パックの読み込みの都合で
+        <b>1 回目の起動だけ英語</b>になります（2 回目から日本語）。</p>
+      <p>英語のまま使いたいときは <code>--locale en</code> で起動するか、<code>argv.json</code> に
+        <code>"locale": "en"</code> を書きます。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>入れたい拡張機能が見つからない</summary>
+    <div class="det-body">
+      <p>Nimbus は拡張機能を <a href="https://open-vsx.org/">Open VSX</a>（Eclipse Foundation）から取得します。
+        Microsoft の Visual Studio Marketplace は、利用規約により Microsoft 製品以外での利用が認められていないためです。
+        Marketplace にしか無い拡張は入りません（VSIX の手動導入は可能です）。</p>
+      <p>Open VSX の拡張は Microsoft の署名を持たないため、署名検証は既定で無効にしてあります。
+        代わりに Eclipse が管理する「無効化すべき拡張」のリストを参照しています。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>SSH 先やコンテナの中で使いたい</summary>
+    <div class="det-body">
+      <p>リモート拡張ホストでの動作は確認済みです。ただし知っておくべきことが 1 つあります —
+        <b>Nimbus の拡張はリモート側で動きます。</b></p>
+      <p>その結果、Claude Code の実行ファイル・認証（<code>~/.claude</code>）・ターミナル・git は
+        <b>すべて繋いだ先のもの</b>が使われます。手元に入れた Claude Code は使われません。
+        <code>nimbus.claudeCodeExecutable</code> に書くパスも<b>リモート側のパス</b>です。</p>
+      <p>なお Microsoft の Remote-SSH / Dev Containers は<b>利用規約によりフォークでは使えません</b>。
+        Open VSX にある OSS のリモート拡張を入れる形になります。</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2>手元でビルドする</h2>
+  <p class="sub">開発ビルドを動かす、配布形式を自分で作る場合。</p>
+<pre><code>git clone https://github.com/miyazakiryuji/nimbus-ide.git
+cd nimbus-ide
+
+<span class="c"># Node を .nvmrc（24.18.0）に合わせる（nvm を使う場合: nvm install &amp;&amp; nvm use）</span>
+node --version   <span class="c"># v24.18.0</span>
+
+npm install                        <span class="c"># Xcode Command Line Tools と Python が必要</span>
+npm run compile
+./scripts/code.sh                  <span class="c"># 開発ビルドを起動</span>
+
+bash nimbus/scripts/package-app.sh      <span class="c"># 配布形式（.app）を作る</span>
+bash nimbus/scripts/make-dmg.sh 1.1.3   <span class="c"># .dmg にする（引数は版の名前）</span></code></pre>
+</section>
+
+<section>
+  <h2>もっと知る</h2>
+  <p>機能の全体像と、1 件ずつの正確な振る舞いはリポジトリにあります。</p>
+  <div class="cta">
+    <a class="btn btn-s" href="https://github.com/miyazakiryuji/nimbus-ide#readme">README</a>
+    <a class="btn btn-s" href="https://github.com/miyazakiryuji/nimbus-ide/blob/nimbus/nimbus/docs/specs/README.md">仕様書（1 機能 1 本）</a>
+    <a class="btn btn-s" href="https://github.com/miyazakiryuji/nimbus-ide/issues">Issues</a>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-links">
+      <a href="https://github.com/miyazakiryuji/nimbus-ide">GitHub</a>
+      <a href="https://github.com/miyazakiryuji/nimbus-ide/releases">Releases</a>
+      <a href="https://github.com/miyazakiryuji/nimbus-ide/blob/nimbus/LICENSE.txt">ライセンス</a>
+    </div>
+    <p>エディタ・ファイルツリー・SCM・検索・拡張機能といった IDE の土台は
+      <a href="https://github.com/microsoft/vscode">Code - OSS</a> のもので、MIT ライセンスです。</p>
+    <p>Anthropic 非公式・Microsoft 非公式の独立プロジェクトです。</p>
+  </div>
+</footer>
+
+</body>
+</html>
