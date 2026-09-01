@@ -9,7 +9,7 @@
 import * as assert from 'assert';
 import { test } from 'node:test';
 import type { NimbusEvent } from '../events';
-import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns } from '../core/checkpoints';
+import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns, userTurnEvent } from '../core/checkpoints';
 import { canReconnect, describeServer, sortServers, statusLabel, toolBadge, type McpServer } from '../core/mcp';
 
 function checkpoint(timestamp: number, messageUuid: string, text: string): NimbusEvent {
@@ -158,4 +158,37 @@ test('戻り先が残っていない発言は、落とさず messageUuid 無し�
 		{ turnIndex: 0, text: '古い指示' },
 		{ turnIndex: 1, text: '新しい指示', messageUuid: 'uuid-2' }
 	]);
+});
+
+/**
+ * T-367 ① — 直すときには本文以外も要る。
+ *
+ * **そのとき走らせていたモデル**（会話の途中で `setModel()` できるので、いまのモデルとは
+ * 限らない）と、**付けていた添付の枚数**（実体は控えに載せていないので、付け直しを促すため）。
+ * 数えかたは `pairUserTurns()` と同じ並びでなければならない — ずれると**別の発言のモデルへ
+ * 戻してしまう**ので、同じ列で突き合わせて固定する。
+ */
+test('N 番目の発言そのものを引ける（モデルと添付の枚数を戻すため・T-367）', () => {
+	const events = [
+		{ kind: 'user-text', text: '一つ目', timestamp: 1, sessionId: 's', model: 'opus' },
+		{ kind: 'assistant-text', text: 'はい', timestamp: 2, sessionId: 's' },
+		{ kind: 'user-text', text: '二つ目', timestamp: 3, sessionId: 's', model: 'sonnet', attachmentCount: 2 }
+	] as unknown as Parameters<typeof userTurnEvent>[0];
+
+	assert.deepStrictEqual(
+		[0, 1, 2].map((index) => {
+			const event = userTurnEvent(events, index);
+			return event && { text: event.text, model: event.model, attachmentCount: event.attachmentCount };
+		}),
+		[
+			{ text: '一つ目', model: 'opus', attachmentCount: undefined },
+			{ text: '二つ目', model: 'sonnet', attachmentCount: 2 },
+			undefined
+		]
+	);
+	// **並びは `pairUserTurns()` と揃っていること**（ずれると別の発言のモデルへ戻す）
+	assert.deepStrictEqual(
+		pairUserTurns(events).map((turn) => turn.text),
+		[0, 1].map((index) => userTurnEvent(events, index)?.text)
+	);
 });

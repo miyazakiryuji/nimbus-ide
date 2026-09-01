@@ -168,7 +168,10 @@ export class SessionManager extends EventEmitter {
         kind: 'user-text',
         sessionId: id,
         timestamp: Date.now(),
-        text: input.firstMessage
+        text: input.firstMessage,
+        // 直すときに「そのときのモデル」「何を付けていたか」を戻せるように（T-367 ①）
+        ...(session.model ? { model: session.model } : {}),
+        ...(input.firstImages?.length ? { attachmentCount: input.firstImages.length } : {})
       })
     }
 
@@ -204,7 +207,10 @@ export class SessionManager extends EventEmitter {
       kind: 'user-text',
       sessionId,
       timestamp: Date.now(),
-      text
+      text,
+      // 直すときに「そのときのモデル」「何を付けていたか」を戻せるように（T-367 ①）
+      ...(session.model ? { model: session.model } : {}),
+      ...(images?.length ? { attachmentCount: images.length } : {})
     })
     this.setStatus(session, 'running')
   }

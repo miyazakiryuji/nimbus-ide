@@ -89,7 +89,7 @@ import { bar, costAlertLevel, formatCost } from './core/usage';
 import { ActivityViewProvider } from './activityView';
 import { McpViewProvider } from './mcpView';
 import { canReconnect, type McpServer } from './core/mcp';
-import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns } from './core/checkpoints';
+import { buildCheckpoints, checkpointLabel, describeRewind, pairUserTurns, userTurnEvent } from './core/checkpoints';
 import { searchTranscripts } from './transcriptSearch';
 import { openCompletionReport } from './completionReport';
 import { describeAttachments, parseDataUrl, toAttachment, type Attachment } from './core/attachments';
@@ -5080,16 +5080,53 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	 * 走っている最中は入口を出さない（初版）。`interrupt()` はツールの書き込み完了までは
 	 * 保証しないので、止め切る前に巻き戻すとファイルが壊れる（Codex の指摘 2026-08-31）。
 	 */
+	/**
+	 * 止まりきるまで待つ（T-367 ③）。`interrupt()` はツールの書き込み完了までは保証しないので、
+	 * **止め切る前に巻き戻すとファイルが壊れる**（Codex の指摘）。状態で確かめてから進む。
+	 */
+	async function waitUntilIdle(sessionId: string, timeoutMs = 15_000): Promise<boolean> {
+		const until = Date.now() + timeoutMs;
+		while (Date.now() < until) {
+			const status = sessions.get(sessionId)?.status;
+			if (status !== 'running' && status !== 'starting') {
+				return true;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		}
+		return false;
+	}
+
 	async function editRequest(turnIndex: number): Promise<void> {
 		if (!activeSessionId) {
 			return;
 		}
-		const summary = sessions.get(activeSessionId);
+		// `await` をまたぐので、狙う相手をここで固定する（途中で前面が変わっても取り違えない）
+		const sessionId = activeSessionId;
+		/*
+		 * **走っていたら「止めて直す」を出す**（T-367 ③）。以前はただ断っていたので、
+		 * 利用者は自分で停止を押してから押し直すしかなかった。
+		 * ただし**勝手には止めない** — 止めると作業が途中で切れるので、聞いてから止める。
+		 * 止めたあとは `awaiting-input` 相当になるまで待つ。`interrupt()` はツールの書き込みを
+		 * 待ってくれないので、**止め切る前に巻き戻すとファイルが壊れる**（Codex の指摘）。
+		 */
+		const summary = sessions.get(sessionId);
 		if (summary && (summary.status === 'running' || summary.status === 'starting')) {
-			void vscode.window.showWarningMessage(
-				'Nimbus: 動いている間は指示を直せません。止めてからやり直してください。'
+			const STOP = '止めて直す';
+			const answer = await vscode.window.showWarningMessage(
+				'このセッションは動いています。指示を直すには、いったん止める必要があります。',
+				{ modal: true, detail: '止めると、いま走っている応答はそこで終わります。書き込み済みのファイルはそのまま残ります。' },
+				STOP
 			);
-			return;
+			if (answer !== STOP) {
+				return;
+			}
+			await sessions.interrupt(sessionId).catch(() => undefined);
+			if (!(await waitUntilIdle(sessionId))) {
+				void vscode.window.showErrorMessage(
+					'Nimbus: 止め切れませんでした。ファイルを壊さないよう、巻き戻しは行いません。'
+				);
+				return;
+			}
 		}
 		const turns = pairUserTurns(retained);
 		const turn = turns[turnIndex];
@@ -5103,12 +5140,43 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 			);
 			return;
 		}
-		const preview = await sessions.rewind(activeSessionId, turn.messageUuid, true);
+		const preview = await sessions.rewind(sessionId, turn.messageUuid, true);
 		if (!preview?.canRewind) {
 			void vscode.window.showErrorMessage(`Nimbus: ${describeRewind(preview ?? { canRewind: false })}。`);
 			return;
 		}
 		const files = preview.filesChanged?.length ?? 0;
+		/*
+		 * **他のセッションが触っているファイルが混ざっていたら名指しで言う**（T-367 ④・Nimbus 固有）。
+		 * セッション A のチェックポイントは、B が後から入れた変更を知らない。
+		 * `SessionFilesTracker` はツール呼び出しからの推定なので**完全な鍵ではない** —
+		 * 止めるのではなく、決めるための材料として出す。
+		 */
+		const overlapping = [
+			...new Set(
+				(preview.filesChanged ?? []).filter(
+					(path) => sessionFiles.conflictFor(sessionId, path) !== undefined
+				)
+			)
+		];
+		if (overlapping.length > 0) {
+			const KEEP = '承知のうえで戻す';
+			const shown = overlapping.slice(0, 5).map((path) => vscode.workspace.asRelativePath(path));
+			const more = overlapping.length > shown.length ? `\nほか ${overlapping.length - shown.length} 件` : '';
+			const answer = await vscode.window.showWarningMessage(
+				'戻すファイルを、別のセッションも触っています。',
+				{
+					modal: true,
+					detail:
+						`このチェックポイントは、別のセッションが後から入れた変更を知りません。\n` +
+						`戻すと、そちらの作業も一緒に巻き戻ります。\n\n${shown.join('\n')}${more}`
+				},
+				KEEP
+			);
+			if (answer !== KEEP) {
+				return;
+			}
+		}
 		if (files > 0) {
 			// 戻すファイルがあるときだけ確認する（Copilot と同じ）。
 			// 文面は「何が消えて、何が戻るか」を実数で言う
@@ -5127,15 +5195,63 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 				return; // やめても何も壊れていない
 			}
 		}
-		const result = await sessions.rewind(activeSessionId, turn.messageUuid, false);
+		const result = await sessions.rewind(sessionId, turn.messageUuid, false);
 		if (!result?.canRewind) {
 			// **会話も消さず、本文も戻さない。** 半端な状態を作らない
 			void vscode.window.showErrorMessage(`Nimbus: ${describeRewind(result ?? { canRewind: false })}。`);
 			return;
 		}
 		log(`[edit] ${describeRewind(result)}`);
+		/*
+		 * **会話は切り詰めない**（T-367 ②・2026-09-02 に方針を決め直した）。
+		 *
+		 * 仕様には当初「会話を切り詰める」と書いていたが、SDK の `rewindFiles()` は
+		 * **ファイルしか戻さない**（`sdk.d.ts:2478-2488`。会話を戻す口はどこにも無い）。
+		 * 画面だけ消すと、**Claude は覚えているのに画面には無い**状態になり、
+		 * 「戻したつもりで戻っていない」（T-364・T-365 で 2 度直した嘘）を作り直すことになる。
+		 * だから消さず、**何が戻って何が戻っていないかを会話の中に残す**。
+		 * トーストは消えるので、面を開き直した人にも伝わるようここへ置く。
+		 */
+		const skipped = result.skippedLinks ?? 0;
+		retained.push({
+			kind: 'notice',
+			sessionId: sessionId,
+			timestamp: Date.now(),
+			text:
+				`ここから上の指示をやり直します（${describeRewind(result)}）。` +
+				(skipped > 0 ? `${skipped} 件は安全のため戻していません。` : '') +
+				'ファイルは戻しましたが、**この後のやり取りは Claude の記憶に残っています**。'
+		});
+		/*
+		 * **そのときのモデルへ戻す**（T-367 ①・Copilot の `requestModelByIdentifier` に相当）。
+		 * 会話の途中で `setModel()` できるので、いまのモデルとは限らない。
+		 */
+		const original = userTurnEvent(retained, turnIndex);
+		if (original?.model && original.model !== sessions.get(sessionId)?.model) {
+			const moved = await sessions.setModel(sessionId, original.model).catch(() => false);
+			if (moved) {
+				log(`[edit] モデルを ${original.model} へ戻しました`);
+			}
+		}
+		cockpit.post({ type: 'history', events: retained, session: sessions.get(sessionId) });
 		cockpit.post({ type: 'restoreInput', text: turn.text });
-		if (files > 0) {
+		/*
+		 * **添付は付け直してもらう**（T-367 ①）。実体（dataUrl）は控えに載せていないので
+		 * 戻せない — 画像は 1 枚 5MB まで許しており、会話の控えに載せると面を開き直すたびに
+		 * 丸ごと送り直すことになる（T-377 で器を用意してから戻す）。
+		 * **黙って落とさない。** 何枚付いていたかは言う。
+		 */
+		if (original?.attachmentCount) {
+			void vscode.window.showInformationMessage(
+				`Nimbus: この指示には画像が ${original.attachmentCount} 枚付いていました。必要なら付け直してください。`
+			);
+		}
+		if (skipped > 0) {
+			// **成功と呼ばない**（仕様 `edit-request.md`）。名指しで出す
+			void vscode.window.showWarningMessage(
+				`Nimbus: 一部戻せませんでした（${skipped} 件）。リンクや所在の変わったファイルは安全のため触っていません。`
+			);
+		} else if (files > 0) {
 			void vscode.window.showInformationMessage(`Nimbus: 戻しました（${describeRewind(result)}）。直して送り直せます。`);
 		}
 	}

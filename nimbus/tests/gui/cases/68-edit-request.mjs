@@ -110,6 +110,40 @@ export default {
 			`押しただけで会話が変わった（押した時点では何も壊してはいけない）: ${before} → ${after} 件`
 		);
 
+		/*
+		 * ④ **但し書き（`notice`）が会話の中に描かれる**（T-367 ②）。
+		 *
+		 * 巻き戻しても会話は切り詰めない — SDK の `rewindFiles()` はファイルしか戻さず、
+		 * 画面だけ消すと「Claude は覚えているのに画面には無い」嘘になる。代わりに
+		 * **何が戻って何が戻っていないか**を会話へ残す。トーストは消えるので、
+		 * 面を開き直した人にも伝わるのはこちらだけ。
+		 */
+		await frame.evaluate(() => {
+			window.postMessage(
+				{
+					type: 'history',
+					events: [
+						{ kind: 'user-text', sessionId: 's1', timestamp: 1, text: 'ここを直して' },
+						{
+							kind: 'notice',
+							sessionId: 's1',
+							timestamp: 2,
+							text: 'ここから上の指示をやり直します（2 ファイル · +3 / -1）。'
+						}
+					]
+				},
+				'*'
+			);
+		});
+		await page.waitForTimeout(900);
+		const notice = await frame.evaluate(() =>
+			[...document.querySelectorAll('.turn')].map((turn) => (turn.textContent ?? '').trim())
+		);
+		ctx.expect(
+			notice.some((text) => text.includes('やり直します')),
+			`巻き戻しの但し書きが会話に出ていない（トーストだけだと開き直した人に伝わらない）: ${JSON.stringify(notice)}`
+		);
+
 		await ctx.shot('edit-request');
 	}
 };

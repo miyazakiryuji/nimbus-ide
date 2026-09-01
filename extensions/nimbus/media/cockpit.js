@@ -689,6 +689,15 @@
 			case 'session-error':
 				plainTurn('error', 'エラー', event.message, 'error');
 				break;
+
+			/*
+			 * Nimbus が足した但し書き（T-367）。**会話の流れの中に置く** —
+			 * 通知（トースト）は消えるので、「巻き戻した」のような後から効いてくる事実は
+			 * ここに残さないと、面を開き直した人に伝わらない
+			 */
+			case 'notice':
+				plainTurn('system', null, event.text);
+				break;
 		}
 	}
 

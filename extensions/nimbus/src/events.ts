@@ -44,6 +44,20 @@ export interface SessionInitEvent extends EventBase {
 export interface UserTextEvent extends EventBase {
 	kind: 'user-text';
 	text: string;
+	/**
+	 * このとき走らせていたモデル（T-367 ①）。指示を直すとき、**そのときのモデルへ戻す**ために要る。
+	 * 会話の途中で `setModel()` できるので、いまのモデルとは限らない。
+	 */
+	model?: string;
+	/**
+	 * このとき付けていた添付の**枚数だけ**（T-367 ①）。
+	 *
+	 * **実体（dataUrl）はここに置かない。** 画像は 1 枚 5MB まで許しているので、
+	 * 会話の控え（`retained`）に載せると、面を開き直すたびに丸ごと送り直すことになる。
+	 * 枚数だけでも「付け直しが要る」ことは言えるので、黙って失うよりずっとよい。
+	 * 実体の復元は、控えとは別の器を用意してから（T-377）。
+	 */
+	attachmentCount?: number;
 }
 
 export interface AssistantTextEvent extends EventBase {
@@ -161,6 +175,17 @@ export interface SessionErrorEvent extends EventBase {
 	message: string;
 }
 
+/**
+ * 画面にだけ出す但し書き（T-367）。SDK から来たのではなく **Nimbus が足す 1 行**。
+ *
+ * 「巻き戻したのに会話が残っている」ような、**見えているものと実際が食い違う場面**を
+ * 黙らせないために要る。会話の流れの中に置くので、面を開き直しても消えない。
+ */
+export interface NoticeEvent extends EventBase {
+	kind: 'notice';
+	text: string;
+}
+
 export type NimbusEvent =
 	| SessionInitEvent
 	| UserTextEvent
@@ -171,6 +196,7 @@ export type NimbusEvent =
 	| TurnResultEvent
 	| StatusEvent
 	| SessionErrorEvent
+	| NoticeEvent
 	| HookEvent
 	| SubagentEvent
 	| CheckpointEvent

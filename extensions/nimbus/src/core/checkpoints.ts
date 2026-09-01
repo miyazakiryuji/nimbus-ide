@@ -7,7 +7,7 @@
  * 巻き戻しの実体は SDK の `Query.rewindFiles(userMessageId)`。
  * ここはイベント列から候補を組み立て、結果を言葉にするだけ（VS Code 非依存）。
  */
-import type { NimbusEvent } from '../events';
+import type { NimbusEvent, UserTextEvent } from '../events';
 
 export interface Checkpoint {
 	/** `rewindFiles()` に渡す UUID */
@@ -100,6 +100,28 @@ export function pairUserTurns(events: readonly NimbusEvent[]): UserTurn[] {
 		}
 	}
 	return turns;
+}
+
+/**
+ * 画面の N 番目の利用者発言**そのもの**を引く（T-367 ①）。
+ *
+ * `pairUserTurns()` が返すのは「本文と戻り先」だけ。直すときには本文以外
+ * （**そのとき走らせていたモデル**・**付けていた添付の枚数**）も要るので、
+ * 元のイベントを取り出せるようにしておく。並びの数えかたは `pairUserTurns()` と同じ —
+ * `user-text` の出てくる順。
+ */
+export function userTurnEvent(events: readonly NimbusEvent[], turnIndex: number): UserTextEvent | undefined {
+	let seen = 0;
+	for (const event of events) {
+		if (event.kind !== 'user-text') {
+			continue;
+		}
+		if (seen === turnIndex) {
+			return event;
+		}
+		seen += 1;
+	}
+	return undefined;
 }
 
 /**
