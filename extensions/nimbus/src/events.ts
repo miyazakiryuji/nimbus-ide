@@ -55,7 +55,7 @@ export interface UserTextEvent extends EventBase {
 	 * **実体（dataUrl）はここに置かない。** 画像は 1 枚 5MB まで許しているので、
 	 * 会話の控え（`retained`）に載せると、面を開き直すたびに丸ごと送り直すことになる。
 	 * 枚数だけでも「付け直しが要る」ことは言えるので、黙って失うよりずっとよい。
-	 * 実体の復元は、控えとは別の器を用意してから（T-377）。
+	 * 実体の復元は、控えとは別の器を用意してから（T-378）。
 	 */
 	attachmentCount?: number;
 }

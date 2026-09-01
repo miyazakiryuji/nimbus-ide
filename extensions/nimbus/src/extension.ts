@@ -5238,7 +5238,7 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 		/*
 		 * **添付は付け直してもらう**（T-367 ①）。実体（dataUrl）は控えに載せていないので
 		 * 戻せない — 画像は 1 枚 5MB まで許しており、会話の控えに載せると面を開き直すたびに
-		 * 丸ごと送り直すことになる（T-377 で器を用意してから戻す）。
+		 * 丸ごと送り直すことになる（T-378 で器を用意してから戻す）。
 		 * **黙って落とさない。** 何枚付いていたかは言う。
 		 */
 		if (original?.attachmentCount) {

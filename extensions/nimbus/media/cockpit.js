@@ -1512,6 +1512,12 @@
 			button.setAttribute('role', 'tab');
 			button.tabIndex = 0;
 			const draft = tab.sessionId.startsWith('draft-');
+			/*
+			 * どのセッションのタブなのかを DOM に残す（T-373 の確認で要った）。
+			 * これが無いと、自動確認は**並び順で当てる**しかない — 並びが変わるたびに
+			 * 別のタブを押して、通っているのに何も確かめていない状態になる
+			 */
+			button.dataset.sessionId = tab.sessionId;
 			button.className = `session-tab${tab.active ? ' active' : ''}${tab.pinned ? ' pinned' : ''}`;
 			// 指を置けば全文が読める（幅が無くても失われない・T-301）。
 			// 名前の変えかたはここでしか案内できない（T-313・鉛筆を常設すると幅が無い）

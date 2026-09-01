@@ -150,6 +150,33 @@ test('台帳にだけ在るセッションは、束から刈られない（T-370
 	});
 });
 
+/**
+ * T-372 — **復元候補のピン・名前・番号が、起動のたびに消されていた。**
+ *
+ * `updateSessionTabs()` の掃除も「生きている」を `sessions.list()` だけで作っていた。
+ * 復元候補は台帳に居るだけで `SessionManager` にはまだ無いので、`restoreResumables()` が
+ * 呼ぶ掃除でピン・名前・番号が消え、そのあと番号が振り直される。
+ * 仕様書 `session-registry.md` の「同じ番号・同じ名前で出る」と正面から矛盾していた。
+ *
+ * ここで固定するのは `liveMembership()` の契約 —
+ * **開き直した直後（走っているものが 0 件）でも、台帳に在るものは生きている。**
+ */
+test('開き直した直後でも、台帳に在るセッションは「生きている」に数える（T-372）', () => {
+	assert.deepStrictEqual(
+		[
+			...liveMembership({
+				// 復元候補（台帳から拾ったもの）。この窓ではまだ 1 つも動いていない
+				ledger: ['resumable-1', 'resumable-2'],
+				running: [],
+				drafts: ['draft-1']
+			})
+		].sort(),
+		['draft-1', 'resumable-1', 'resumable-2']
+	);
+	// 走っているものだけで数えると空になる ＝ ピン・名前・番号が全部刈られていた
+	assert.strictEqual(liveMembership({ ledger: [], running: [], drafts: [] }).size, 0);
+});
+
 test('横断の一覧は束で畳み、止まっているもの（許可待ち）が先頭（T-316）', () => {
 	let file = emptyGroups();
 	file = addGroup(file, 'g-login', 'ログイン改修', 1);
