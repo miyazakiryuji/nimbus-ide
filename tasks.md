@@ -157,8 +157,6 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
-- 🔒 @session-j | T-377 | 2026-09-01 12:43 | README.md, nimbus/site/（新規）
-
 
 
 
@@ -188,14 +186,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 ## 次にやる
 
-- [ ] T-377 **導入手順のサイトを作って GitHub Pages で公開し、README から張る** — 利用者依頼 2026-09-01
-      「IDE のセッション管理が完了したら、一旦導入手順サイトを構築して、Git で公開して、URL を Readme に
-      張り付けましょう」。README の「ダウンロードと実行」を、**初めての人が上から順に読んで動かせる 1 枚**に
-      起こす（前提 → 入手 → Gatekeeper → Claude Code → 最初の 1 往復 → 詰まったとき）。
-      原本は `nimbus/site/`、公開は orphan `gh-pages`（`nimbus` の木を汚さず upstream 追従の邪魔をしない）。
-      URL は https://miyazakiryuji.github.io/nimbus-ide/ 。push 前に個人情報の grep を通す。 @session-j
-      済: `nimbus/site/index.html`（1 ファイル・外部依存なし・Nimbus テーマの配色・ライト/ダーク確認済み）
-      ／ 残: gh-pages 作成・Pages 有効化・README 追記 ／ 次の一手: orphan gh-pages を切って中身を置く
+- [x] T-377 **導入手順のサイトを作って GitHub Pages で公開し、README から張る** — 2026-09-01 / @session-j
+      <https://miyazakiryuji.github.io/nimbus-ide/> — 原本 `nimbus/site/index.html`（1 ファイル・外部依存なし）、
+      公開は orphan `gh-pages`（`nimbus` の木に触らず plumbing で組んだので upstream 追従の邪魔をしない）。
+      内容は README の記述だけから起こし、新しい事実は足していない。配色は Nimbus Light / Dark テーマの値。
+      README は 2 か所から張った（冒頭・「ダウンロードと実行」）。個人情報の grep は通過済み。
+      **更新のしかた**: `nimbus/site/` を直して commit → 同じ中身を `gh-pages` へ push（root に `index.html`）。
 
 - [x] T-368 **閉じて開き直すと、開いていたセッションが全部消える** — 利用者報告 2026-09-01。
       **データが失われる不具合。最優先。** @session-i

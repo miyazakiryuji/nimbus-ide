@@ -6,6 +6,9 @@
 > ⚠️ **これは Anthropic 非公式・Microsoft 非公式の独立プロジェクトです。**
 > Anthropic からも Microsoft からも承認・後援・提携を受けていません。
 
+**はじめての方へ** — 入れて最初の 1 往復を動かすまでを 1 枚にまとめた
+[**導入手順のページ**](https://miyazakiryuji.github.io/nimbus-ide/) があります。
+
 ## できること
 
 エディタ・ファイルツリー・SCM・検索・拡張機能といった IDE の土台は
@@ -65,6 +68,9 @@
   利用者設定の上限として効きます
 
 ## ダウンロードと実行（macOS / Apple Silicon）
+
+> この節と同じ内容を、順番に読める 1 枚のページにしてあります —
+> <https://miyazakiryuji.github.io/nimbus-ide/>
 
 ### リリースから入れる
 
