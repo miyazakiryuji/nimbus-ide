@@ -4943,7 +4943,24 @@ export function activate(context: vscode.ExtensionContext): NimbusApi {
 	const boardSync = setInterval(() => void tasks.syncWithStore(), 5000);
 	boardSync.unref?.();
 	context.subscriptions.push(new vscode.Disposable(() => clearInterval(boardSync)));
-	void tasks.syncWithStore();
+	/*
+	 * **最初の突き合わせは、セッション台帳を読んでから**（T-375）。
+	 *
+	 * `TaskService` は起動時に `running` / `awaiting-approval` を「レビュー待ち」へ倒すが、
+	 * `updatedAt` は触らないので、そのまま突き合わせると `mergeTasks()` の
+	 * 「同時刻ならディスク側」に負けて `running` に戻っていた（仕様は「再起動後はレビュー待ち」）。
+	 * かといって無条件に倒すと、**別の生きた窓が本当に走らせているタスク**まで倒してしまう。
+	 * 台帳で持ち主の生死を見てから決める。
+	 */
+	void (async () => {
+		const now = Date.now();
+		const records = await sessionStore.list({ fresh: true }).catch(() => []);
+		tasks.reconcileAfterRestart(
+			new Set(records.filter((record) => isOwnerAlive(record, now)).map((record) => record.sessionId)),
+			now
+		);
+		await tasks.syncWithStore();
+	})();
 
 	// 置き去りの記録を掃除してから、前回の続きを出す（T-252）。
 	// 自動確認（GUI テスト）のときは黙っている — 画面に出す知らせが操作の邪魔になる

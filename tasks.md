@@ -248,8 +248,12 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       直し: 打つたびに `setState({draftText})`・起動時に戻す・**送ったら消す**。
       守り: GUI ケース 71（A/B で修正前は落ちる）。
 
-- [ ] T-375 **タスクを「レビュー待ち」へ倒しても、起動直後の同期で `running` に戻る** —
-      Codex の棚卸し A-4。**一撃では直せないので手を付けていない。**
+- [x] T-375 **タスクを「レビュー待ち」へ倒しても、起動直後の同期で `running` に戻る** —
+      Codex の棚卸し A-4。**直した（2026-09-02）** — `reconcileAfterRestart()` を足し、
+      セッション台帳で持ち主の生死を見てから倒す。呼ぶ順番は「台帳を読む →
+      `reconcileAfterRestart()` → 最初の `syncWithStore()`」。
+      守りは `taskRestart.test.ts` 3 本（**起動の順番を組み立てる**）。A/B 済み。
+      仕様: [`parallel-tasks.md`](nimbus/docs/specs/parallel-tasks.md)
       `TaskService` は Memento から読んだ `running` / `awaiting-approval` を `restoreState()` で
       `review` へ倒すが、`updatedAt` を触らない。起動直後の `syncWithStore()` で
       `mergeTasks()` が「同時刻ならディスク側を採用」するため、ディスクの `running` に戻る。

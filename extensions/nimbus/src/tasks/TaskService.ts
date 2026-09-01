@@ -49,6 +49,16 @@ export class TaskService extends EventEmitter {
 
 	/** 前回の突き合わせでディスクに在った ID。消されたのか、まだ書いていないのかを分ける（T-259） */
 	private knownIds = new Set<string>();
+	/**
+	 * 起動時に「レビュー待ち」へ倒したタスク（T-375）。
+	 *
+	 * 倒しただけでは**ディスクの `running` に押し戻される** — `restoreState()` は状態しか
+	 * 変えず `updatedAt` を触らないので、`mergeTasks()` の「同時刻ならディスク側」に負ける。
+	 * かといって無条件に `updatedAt` を進めると、**生きている別の窓が本当に走らせている
+	 * タスクまで**レビュー待ちへ倒してしまう（Memento には他の窓のぶんも入っている）。
+	 * だから倒した相手を覚えておき、台帳を読んでから `reconcileAfterRestart()` で確かめる。
+	 */
+	private readonly restoredToReview = new Set<string>();
 	/** taskId → 直近の進捗の 1 行（T-261）。他のウィンドウのぶんは突き合わせのときに拾う */
 	private readonly progressText = new Map<string, string>();
 
@@ -65,9 +75,46 @@ export class TaskService extends EventEmitter {
 	) {
 		super();
 		for (const task of storage.get<KanbanTask[]>(STORAGE_KEY, [])) {
-			this.tasks.set(task.taskId, { ...task, state: restoreState(task.state) });
+			const state = restoreState(task.state);
+			if (state !== task.state) {
+				// 倒した相手は覚えておく（T-375）。生死を確かめるのは台帳を読んだあと
+				this.restoredToReview.add(task.taskId);
+			}
+			this.tasks.set(task.taskId, { ...task, state });
 		}
 		this.sessions.on('event', (event: NimbusEvent) => this.onSessionEvent(event));
+	}
+
+	/**
+	 * 再起動あとの整合（T-375）。**セッション台帳を読んでから、最初の突き合わせより前に**呼ぶ。
+	 *
+	 * 起動時に「レビュー待ち」へ倒したタスクのうち、**担当セッションの持ち主がもう居ない**もの
+	 * だけ `updatedAt` を進めて、ディスクに残っている `running` より新しくする。
+	 * 生きている窓が走らせているものは触らない — その窓のほうが正しいので、
+	 * 突き合わせでディスク側（`running`）が勝つのが正解。
+	 *
+	 * @param liveSessionIds 台帳で**持ち主が生きている**セッションの ID
+	 * @returns 倒したまま確定させた件数
+	 */
+	reconcileAfterRestart(liveSessionIds: ReadonlySet<string>, now: number = Date.now()): number {
+		let settled = 0;
+		for (const taskId of this.restoredToReview) {
+			const task = this.tasks.get(taskId);
+			if (!task) {
+				continue;
+			}
+			if (task.sessionId && liveSessionIds.has(task.sessionId)) {
+				// 別の窓が本当に走らせている。倒さず、突き合わせでディスク側に戻してもらう
+				continue;
+			}
+			this.tasks.set(taskId, { ...task, updatedAt: now });
+			settled += 1;
+		}
+		this.restoredToReview.clear();
+		if (settled > 0) {
+			this.log(`[task] 前回動いていた ${settled} 件をレビュー待ちにしました`);
+		}
+		return settled;
 	}
 
 	/**
