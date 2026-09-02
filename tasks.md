@@ -157,6 +157,8 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
 
 書式: `- 🔒 @session-x | T-123 | 2026-08-25 20:00 | 触るファイル（カンマ区切り）`
 
+- 🔒 @session-i | T-379 | 2026-09-02 11:40 | nimbus/tests/gui/cases/adv-17-*.mjs, nimbus/tests/gui/cases/adv-18-*.mjs, nimbus/tests/gui/cases/adv-19-*.mjs, nimbus/tests/gui/cases/adv-20-*.mjs, nimbus/tests/gui/cases/adv-21-*.mjs, nimbus/tests/gui/run.mjs, nimbus/docs/testing/adversarial.md, extensions/nimbus/src/test/sessionRegistry.test.ts, extensions/nimbus/src/extension.ts, extensions/nimbus/src/core/sessionRegistry.ts
+
 
 
 
@@ -324,6 +326,13 @@ Nimbus の「やること」と「やりたいこと」を 1 か所に集めた�
       ④ `dryRun.filesChanged` を `SessionFilesTracker.conflictFor()` に当て、他のセッションが
          触っているファイルが混ざっていたら名指しで警告（推定なので止めはしない）
       ＋ `skippedLinks` が 0 でなければ「一部戻せませんでした」と件数を出す（成功と呼ばない）
+
+- [ ] T-379 **敵対的試験・第 2 回** — 利用者依頼 2026-09-02「敵対的なテストを実施してください」。 @session-i
+      第 1 回（T-345・8/31）以降に増えた面を狙う: **再起動をまたぐ永続化**（下書きタブ・打ちかけ・
+      幅・台帳・束・タスク）、**プロンプト編集**（notice・止めて直す・重なり警告）、
+      **台帳の掃除の新しい式**（`max(updatedAt, heartbeatAt)`）。まだケースの無い観点
+      「中断とキャンセル」もここで足す。手順は `adversarial-test` スキル。
+      済: — / 残: 既存 16 本の再実行 → 新ケース → 切り分け → 直し / 次: 固めて既存束を回す
 
 - [ ] T-378 **編集で添付の実体まで戻す** — T-367 ① の残り。 [P3]
       いまは枚数を言うだけ。実体（dataUrl）を戻すには、会話の控え（`retained`）とは

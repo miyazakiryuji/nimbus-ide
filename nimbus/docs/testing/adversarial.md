@@ -154,6 +154,48 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
   `extensions/nimbus/src/core/tasks.ts:91-97` / `extensions/nimbus/src/tasks/BoardViewProvider.ts:78-79, 94, 96` /
   `extensions/nimbus/src/extension.ts:4785` / 既存ケース `cases/42-editor-tabs.mjs:47-56`
 
+#### adv-17 保存した番号・名前・ピンの値が壊れていても、有効化は落ちない（`cases/adv-17-workspace-state-garbage.mjs`）
+
+- **疑っている壊れかた** — 起動時の復元が `workspaceState` の値を**そのまま `new Map(...)` / `new Set(...)`
+  に渡している**（`extension.ts:429-440`）。`Map` は「対の配列」しか受けないので、保存値が文字列・数値・
+  オブジェクトだと **TypeError で `activate()` ごと落ち**、サイドバーもコックピットも一切出ない。
+  `nimbus.sessionCounter` が文字列 `"9"` なら `+= 1` が文字列結合になり、番号が `91`・`911` と化ける。
+  下書き（`nimbus.drafts`）の読み出しだけは 1 件ずつ検めていて（`:394-407`）、不揃い。
+- **期待する振る舞い** — 壊れた値は無かったことにして起動する（adv-01 で決めた「読めないものは
+  読み飛ばし、無事なものは生かす」）。「+」は効き、番号は整数のまま振られる。
+- **手順の要点**
+  - `state.vscdb` は**アプリが開いている間は書き換えられない**（終了時に覚えている値で上書き）。
+    `ctx.restart({ beforeLaunch })`（T-379 で足した口）で、閉じてから開くまでの間に毒を置く。
+  - 行は `workspaceStorage/<hash>/state.vscdb` の `ItemTable` にあり、鍵は拡張 id `idris.nimbus`、
+    値は全鍵をまとめた JSON 1 つ。`sqlite3 -json` で読み、`UPDATE` で書く（`'` は `''` に）。
+  - **関門は `nimbus.drafts` が配列であること。** 「+」で書かれるのは下書きだけで、番号の台帳は
+    閉じる・名前を変える・ピンのときにしか書かれない（実測: 番号を関門にしたら `had: false` で止まった）。
+    毒は**無い鍵にも置く** — 無い鍵に壊れた値が入っているのが、疑っている形そのもの。
+  - 判定は 3 本。①サイドバーとコックピットが開く ②通知に有効化の失敗が無い
+    ③「+」のあと番号が `^\d{1,3}$` で重複なし（文字列結合を掴む）。
+- **根拠** — `extensions/nimbus/src/extension.ts:394-407（drafts の検め）, 429-440（Map/Set）` /
+  `src/vs/workbench/api/common/extHostMemento.ts:25-36`（鍵は拡張 id）
+
+#### adv-18 持ち主の心拍が欠けた記録は、前回のセッションとして戻らず、有効化も落ちない（`cases/adv-18-ledger-owner-no-heartbeat.mjs`）
+
+- **疑っている壊れかた** — 関門 `isSessionRecord()`（`core/sessionRegistry.ts`）は `owner` が
+  **オブジェクトであること**しか見ず、`owner.heartbeatAt` の型を見ない（T-347 で型を見るように
+  したのは平らな項目だけ）。`owner: { windowId, pid }` が素通りすると、`isOwnerAlive()` は
+  `NaN < ttl` で「持ち主なし」、`forgettable()` は T-374 の `Math.max(updatedAt, heartbeatAt)` が
+  NaN になって**永遠に掃除されず**、`resumeCandidates()` の条件を全部満たすので
+  **開き直すたびに「前回のセッション」として戻り続ける**。T-374 の式は 9/1 に自分で入れたもの。
+- **期待する振る舞い** — 持ち主の形が崩れた記録は「読めない記録」として数に入れない（adv-01 と同じ
+  原則）。戻らず、落ちず、無事な記録は戻り、置き去りは掃除される。
+- **手順の要点**
+  - `beforeLaunch` で記録を 3 本置く — ①無事な前回（心拍 10 分前・鍵あり・cwd は `ctx.workspace`）
+    → **戻るはず**（戻らなければ cwd の当てかたが違う ＝ 偽の緑の関門）②30 日前で心拍も止まった置き去り
+    → **掃除されるはず**（`sweep()` が走った証拠）③心拍の欠けた毒（30 日前・鍵あり）→ **戻らないはず**。
+  - タブは **`title` 属性で探す。** `textContent` は畳まれる（実測: `■1無事な前回 adv…`）。
+  - 実測（直す前）: `["1. 無事な前回 adv-18 …", "2. 心拍の無い記録 adv-18 …"]` — 毒が戻っていた。
+- **根拠** — `extensions/nimbus/src/core/sessionRegistry.ts`（`isSessionRecord` / `isOwnerAlive` /
+  `forgettable` / `resumeCandidates`）/ `extensions/nimbus/src/extension.ts`（`restoreResumables`）/
+  `extensions/nimbus/src/test/sessionRegistry.test.ts`「持ち主の心拍・窓・pid の型が崩れた記録は関門で止める」
+
 ### 3.2 敵意のある入力（hostile-input）
 
 名前の欄は「読み手が信用してよい」と暗黙に決めてしまいやすい場所。決めていないことを毎回確かめる。
@@ -222,6 +264,22 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
   - Enter も送信ボタンも押さない。
 - **根拠** — `extensions/nimbus/media/cockpit.js:697, 708-717, 891-902` /
   `extensions/nimbus/media/cockpit.css:1146-1157` / `extensions/nimbus/src/cockpit/CockpitViewProvider.ts:203`
+
+#### adv-19 打ちかけの本文は、敵意のある文字でも 120KB でも、閉じて開いたら一字も欠けない（`cases/adv-19-draft-text-hostile.mjs`）
+
+- **疑っている壊れかた** — 打ちかけは `vscode.setState({ draftText })` で覚える（T-376）。ケース 71 は
+  短い日本語 1 行しか通していない。保存 → 終了 → 読み直しで化けうるのは、改行・タブ・引用符と `\\`・
+  HTML のかけら・RTL 制御文字（U+202E）・ZWJ つき絵文字・そして**大きさ**（ログを貼った 120KB）。
+  webview の state は workbench の保存領域に JSON で入るので、上限があるなら**黙って切れる**か
+  **丸ごと戻らない**。
+- **期待する振る舞い** — 閉じる前と一字も違わない。HTML のかけらがどこにも要素として現れない。
+- **手順の要点**
+  - 値を代入して `input` イベントを送る（打鍵の配線はケース 71 が見ている。ここは大きさと文字）。
+  - **比べる相手は「置いた直後に読み返した値」。** textarea は CRLF を LF に**正規化する**
+    （実測: 元の文字列と `value` が一致せず、関門で止まった）。
+  - 失敗メッセージは長さと**最初の違いの位置**（前後 30 字を JSON で）。
+- **根拠** — `extensions/nimbus/media/cockpit.js`（`rememberDraftText` / `restoreDraftText`）/
+  ケース 71
 
 ### 3.3 空と欠け（empty-and-missing）
 
@@ -536,6 +594,37 @@ NIMBUS_APP=/tmp/nimbus-gui-app/Nimbus.app \
   `extensions/nimbus/src/events.ts:164-178`（流し込む形）
   （※ タブ切り替えで送られるのは `MAX_ARCHIVED_EVENTS = 500`。2,000 件が一度に届くのは
   面を開き直したときの `snapshot()` 経路。このケースは後者を模している）
+
+#### adv-21 下書きが上限を超えていたら、黙って捨てずに数を言う（`cases/adv-21-drafts-over-cap.mjs`）
+
+- **疑っている壊れかた** — 下書きの復元には上限 `MAX_RESTORED_DRAFTS = 20` がある。コードのコメントは
+  「あふれたぶんは**黙って捨てずに数を言う**」と宣言しているが、実装は `sound.slice(-20)` で
+  **黙って切っている**（T-364 と同じ「コメントが嘘をつく」形）。捨てられるのは古い 5 本で、
+  番号（名札・T-316）も一緒に消える — 利用者から見れば T-368 の再発と区別が付かない。
+- **期待する振る舞い** — 25 本あったなら 25 本戻るか、20 本に畳んだことと**捨てた本数**を言う。
+- **手順の要点** — コマンドパレットは 1 回 4 秒かかる（`runCommand` の待ち）ので、列が出たら
+  `+`（`.session-tab-add`）を直接押す。関門は閉じる前に 25 本あること。判定は
+  「25 本」または「20 本 かつ 通知に `古い 5 件`」。
+- **根拠** — `extensions/nimbus/src/extension.ts`（`const drafts: Draft[]` の IIFE）
+- **実測（2026-09-02・直す前）**: 25 本 → 20 本、通知なし。
+
+### 3.8 中断とキャンセル（interrupt-and-cancel）
+
+途中でやめる・待たずに閉じる。**人は flush を待たない。** この観点はスキルの表で
+「まだケースが無い」だった。ここが最初の 1 本。
+
+#### adv-20 「+」と打鍵の直後に閉じても、下書きタブと打ちかけは残る（`cases/adv-20-close-right-after.mjs`）
+
+- **疑っている壊れかた** — 下書きの保存は `void context.workspaceState.update(...)` で
+  **待たずに投げっぱなし**（拡張ホスト → main の IPC）。打ちかけの `vscode.setState` も webview →
+  ホストへの postMessage で、書き込みは終了時の flush 頼み。ケース 69/71 は押してから
+  **0.6〜0.9 秒待ってから**閉じている。
+- **期待する振る舞い** — 押した直後・打った直後に閉じても、同じタブ・同じ本文がある
+  （T-368 / T-376 の約束は「閉じても消えない」であって「1 秒待ってから閉じれば消えない」ではない）。
+- **手順の要点** — 列を出すまで（2 本）は普通に待つ。以後は `+` → 打鍵 → 閉じる直前の状態を読む
+  （数十 ms）→ **待たずに** `ctx.restart()`。判定は番号の集合と本文の一致。
+- **根拠** — `extensions/nimbus/src/extension.ts`（`persistDrafts`）/ `media/cockpit.js`（`rememberDraftText`）
+- **実測（2026-09-02）**: 通った。終了時の flush は待たなくても効いている。
 
 ## 4. 落ちたときの読みかた
 

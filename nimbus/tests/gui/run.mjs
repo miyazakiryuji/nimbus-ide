@@ -342,11 +342,19 @@ async function main() {
 		 *
 		 * 返すのは新しい `page`。**ケース側は返り値を使い直すこと**（古い `page` は死んでいる）。
 		 */
-		async restart() {
+		async restart({ beforeLaunch } = {}) {
 			await app.close().catch(() => undefined);
 			// 終了処理（flush・dispose）が終わるのを待つ。待たずに開くと、
 			// 「書き終える前に読む」を製品の不具合と読み違える
 			await new Promise((resolve) => setTimeout(resolve, 3000));
+			/*
+			 * **閉じてから開くまでの間に、外から状態を壊す**ための口（T-379・敵対的試験）。
+			 * 保存ファイル（`state.vscdb`・台帳）はアプリが開いている間は書き換えられない
+			 * （終了時に覚えている値で上書きされる）。ここでだけ安全に毒を置ける。
+			 */
+			if (beforeLaunch) {
+				await beforeLaunch();
+			}
 			/*
 			 * ここで**閉包の `page` ごと差し替える**。ケースの失敗経路でも入れ替わるので、
 			 * 以後のケースが死んだ `page` を触ることはない（返り値は当のケース用）。
